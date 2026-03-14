@@ -1,0 +1,223 @@
+
+<style>
+  .sec{font-size:11px;color:var(--color-text-secondary);font-weight:500;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;}
+  .explain{background:var(--color-background-secondary);border-radius:10px;padding:10px 14px;border:.5px solid var(--color-border-tertiary);font-size:13px;line-height:1.6;margin:8px 0;color:var(--color-text-primary);min-height:38px;}
+  .btn{padding:6px 16px;border-radius:8px;border:.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);font-size:13px;cursor:pointer;}
+  .btn:hover{background:var(--color-background-secondary);}
+  .btn.p{background:#B5D4F4;color:#0C447C;border-color:#378ADD;}
+  .pbar{height:3px;background:var(--color-border-tertiary);border-radius:2px;overflow:hidden;margin:6px 0 10px;}
+  .pfill{height:100%;background:#378ADD;border-radius:2px;transition:width .3s;}
+  .phase{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:6px;}
+  .arow{display:flex;flex-wrap:wrap;gap:2px;}
+  .acell{display:flex;flex-direction:column;align-items:center;}
+  .abox{width:50px;height:36px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:12px;font-weight:600;transition:background .2s,color .2s;}
+  .abox.def{background:#E8E6DE;color:#2C2C2A;border:.5px solid #B4B2A9;}
+  .abox.hi {background:#FAC775;color:#633806;border:.5px solid #BA7517;}
+  .abox.ok {background:#C0DD97;color:#27500A;border:.5px solid #639922;}
+  .abox.col{background:#B5D4F4;color:#0C447C;border:.5px solid #378ADD;}
+  .aidx{font-size:10px;color:var(--color-text-tertiary);margin-top:2px;}
+  .brow{display:flex;align-items:center;min-height:28px;margin:2px 0;border-radius:6px;padding:2px 4px;}
+  .brow.active{background:var(--color-background-secondary);}
+  .bidx{width:26px;font-size:11px;color:var(--color-text-secondary);font-family:monospace;text-align:right;margin-right:5px;flex-shrink:0;}
+  .brange{width:68px;font-size:10px;color:var(--color-text-tertiary);font-family:monospace;margin-right:5px;flex-shrink:0;}
+  .bitem{width:50px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:11px;font-weight:600;margin:1px;transition:background .2s;}
+  .bitem.def{background:#E8E6DE;color:#2C2C2A;border:.5px solid #B4B2A9;}
+  .bitem.new{background:#FAC775;color:#633806;border:.5px solid #BA7517;}
+  .bitem.ok {background:#C0DD97;color:#27500A;border:.5px solid #639922;}
+  .bitem.col{background:#B5D4F4;color:#0C447C;border:.5px solid #378ADD;}
+  .bitem.mv {background:#F4C0D1;color:#72243E;border:.5px solid #D4537E;}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--color-text-secondary);margin-top:8px;}
+  .ld{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:3px;vertical-align:middle;}
+</style>
+
+<div style="padding:1rem 0">
+  <div style="font-size:15px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px;">Bucket Sort 단계별 실행</div>
+  <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px;">arr = {0.78, 0.17, 0.39, 0.26, 0.72, 0.94, 0.21, 0.12, 0.23, 0.67} / num_buckets = 10</div>
+
+  <div class="pbar"><div class="pfill" id="pf"></div></div>
+  <div id="phase-el"></div>
+
+  <div class="sec">arr</div>
+  <div class="arow" id="arr-el" style="margin-bottom:10px;"></div>
+
+  <div class="explain" id="exp"></div>
+
+  <div class="sec" id="blabel">buckets[0..9]</div>
+  <div id="buckets-el" style="margin-bottom:8px;"></div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px;">
+    <button class="btn p" onclick="prev()">◀ 이전</button>
+    <button class="btn p" onclick="next()">다음 ▶</button>
+    <button class="btn" onclick="autoPlay()" id="abtn">▶ 자동재생</button>
+    <button class="btn" onclick="reset()">↺ 초기화</button>
+    <span style="font-size:12px;color:var(--color-text-secondary);" id="sc"></span>
+  </div>
+
+  <div class="legend">
+    <span><span class="ld" style="background:#FAC775;"></span>현재 처리 중</span>
+    <span><span class="ld" style="background:#F4C0D1;"></span>이동 중 (InsertionSort)</span>
+    <span><span class="ld" style="background:#C0DD97;"></span>정렬 완료</span>
+    <span><span class="ld" style="background:#B5D4F4;"></span>arr로 수집 중</span>
+  </div>
+</div>
+
+<script>
+const INIT=[0.78,0.17,0.39,0.26,0.72,0.94,0.21,0.12,0.23,0.67];
+const NB=10;
+const r2=v=>Math.round(v*100)/100;
+
+const PHASES={
+  init:    {label:'초기화',       bg:'#EDE7F6',tc:'#6A1B9A'},
+  predist: {label:'1단계: 분배',  bg:'#FFF9E6',tc:'#854F0B'},
+  dist:    {label:'1단계: 분배',  bg:'#FFF9E6',tc:'#854F0B'},
+  bsort:   {label:'2단계: 정렬', bg:'#E8F5D0',tc:'#27500A'},
+  aftersort:{label:'정렬 완료',   bg:'#E8F5D0',tc:'#27500A'},
+  collect: {label:'3단계: 수집', bg:'#EBF2FB',tc:'#0C447C'},
+  done:    {label:'완료',         bg:'#E8F5D0',tc:'#27500A'},
+};
+
+function buildSteps(){
+  const steps=[];
+  const arr=[...INIT];
+  const bkts=Array.from({length:NB},()=>[]);
+
+  const snap=(arrHL,bHL,phase,exp,sorted,ci)=>({
+    arr:[...arr],bkts:bkts.map(b=>[...b]),
+    arrHL:{...arrHL},bHL:{...bHL},
+    phase,exp,sorted:new Set(sorted||[]),ci:ci??-1
+  });
+
+  steps.push(snap({},{},'init','초기 상태: arr에 10개의 float 값, buckets는 10개의 빈 vector<float>로 초기화됩니다.'));
+
+  for(let i=0;i<arr.length;i++){
+    const idx=Math.floor(arr[i]*NB);
+    steps.push(snap({[i]:'hi'},{},'predist',
+      `[1단계 분배] i=${i}: arr[${i}] = ${arr[i]}\nbucket_index = (int)(${arr[i]} × 10) = ${idx}`));
+    bkts[idx].push(r2(arr[i]));
+    steps.push(snap({[i]:'hi'},{bucket:idx,item:bkts[idx].length-1,state:'new'},'dist',
+      `[1단계 분배] ${arr[i]} → buckets[${idx}].push_back() 완료 (범위: ${(idx*0.1).toFixed(1)}~${((idx+1)*0.1).toFixed(1)})`));
+  }
+  steps.push(snap({},{},'predist','분배 완료 (Before sorting). 각 버킷에 해당 범위의 값이 담겼습니다. 이제 InsertionSort를 각 버킷에 적용합니다.'));
+
+  const sortedSet=new Set();
+  for(let bi=0;bi<NB;bi++){
+    if(bkts[bi].length===0){sortedSet.add(bi);continue;}
+    if(bkts[bi].length===1){
+      steps.push(snap({},{bucket:bi,allSorted:true},'bsort',
+        `[2단계 정렬] buckets[${bi}]: 원소 1개 → 정렬 불필요`,[...sortedSet,bi]));
+      sortedSet.add(bi);continue;
+    }
+    const b=bkts[bi];
+    for(let i=1;i<b.length;i++){
+      const key=b[i];
+      steps.push(snap({},{bucket:bi,keyItem:i,state:'key'},'bsort',
+        `[2단계 정렬] buckets[${bi}]: key = ${key}, j = ${i-1}부터 왼쪽 비교 시작`,[...sortedSet]));
+      let j=i-1;
+      while(j>=0&&b[j]>key){
+        b[j+1]=b[j];
+        steps.push(snap({},{bucket:bi,mvItem:j+1,state:'mv'},'bsort',
+          `[2단계 정렬] buckets[${bi}]: ${b[j]} > key(${key}) → b[${j+1}] ← ${b[j]} 오른쪽 이동`,[...sortedSet]));
+        j--;
+      }
+      b[j+1]=key;
+      steps.push(snap({},{bucket:bi,keyItem:j+1,state:'placed'},'bsort',
+        `[2단계 정렬] buckets[${bi}]: key(${key}) → b[${j+1}] 삽입 완료`,[...sortedSet]));
+    }
+    sortedSet.add(bi);
+    steps.push(snap({},{bucket:bi,allSorted:true},'bsort',
+      `[2단계 정렬] buckets[${bi}] 정렬 완료: [${bkts[bi].join(', ')}]`,[...sortedSet]));
+  }
+  steps.push(snap({},{allDone:true},'aftersort',
+    '모든 버킷 정렬 완료 (After sorting). buckets[0]부터 순서대로 arr에 수집합니다.',[...sortedSet]));
+
+  let ci=0;
+  for(let i=0;i<NB;i++){
+    for(let j=0;j<bkts[i].length;j++){
+      arr[ci]=bkts[i][j];
+      const aHL={};
+      for(let k=0;k<ci;k++) aHL[k]='ok';
+      aHL[ci]='col';
+      steps.push({arr:[...arr],bkts:bkts.map(b=>[...b]),
+        arrHL:aHL,bHL:{bucket:i,colItem:j,allDone:true},
+        phase:'collect',
+        exp:`[3단계 수집] buckets[${i}][${j}] = ${bkts[i][j]} → arr[${ci}] (index++)`,
+        sorted:new Set([...sortedSet]),ci});
+      ci++;
+    }
+  }
+  const fHL={};
+  for(let k=0;k<arr.length;k++) fHL[k]='ok';
+  steps.push({arr:[...arr],bkts:bkts.map(b=>[...b]),
+    arrHL:fHL,bHL:{allDone:true},phase:'done',
+    exp:`정렬 완료! 결과: [${arr.map(r2).join(', ')}]`,
+    sorted:new Set([...sortedSet]),ci:-1});
+  return steps;
+}
+
+const steps=buildSteps();
+let cur=0,timer=null;
+
+function render(){
+  cur=Math.max(0,Math.min(cur,steps.length-1));
+  const s=steps[cur];
+  const ph=PHASES[s.phase]||PHASES.init;
+
+  document.getElementById('pf').style.width=((cur/(steps.length-1))*100)+'%';
+  document.getElementById('sc').textContent=`${cur+1} / ${steps.length}`;
+  document.getElementById('phase-el').innerHTML=
+    `<span class="phase" style="background:${ph.bg};color:${ph.tc};">${ph.label}</span>`;
+  document.getElementById('exp').textContent=s.exp;
+  document.getElementById('blabel').textContent=
+    (s.phase==='aftersort'||s.phase==='collect'||s.phase==='done')
+      ?'buckets[0..9] (정렬 후)':'buckets[0..9]';
+
+  document.getElementById('arr-el').innerHTML=s.arr.map((v,i)=>{
+    const cls=s.arrHL[i]||'def';
+    return `<div class="acell"><div class="abox ${cls}">${r2(v)}</div><div class="aidx">[${i}]</div></div>`;
+  }).join('');
+
+  document.getElementById('buckets-el').innerHTML=s.bkts.map((b,bi)=>{
+    const isAct=s.bHL.bucket===bi;
+    const isDone=s.sorted&&s.sorted.has(bi);
+    const allD=s.bHL.allDone;
+    let items='';
+    if(b.length===0){
+      items=`<span style="font-size:10px;color:var(--color-text-tertiary);padding:0 6px;opacity:.4;">empty</span>`;
+    } else {
+      items=b.map((v,ji)=>{
+        let cls='def';
+        if(allD) cls='ok';
+        else if(isDone) cls='ok';
+        else if(isAct){
+          if(s.bHL.allSorted) cls='ok';
+          else if(s.bHL.keyItem===ji) cls=(s.bHL.state==='placed')?'ok':'new';
+          else if(s.bHL.mvItem===ji) cls='mv';
+          else if(s.bHL.item===ji&&s.bHL.state==='new') cls='new';
+          else if(s.bHL.colItem===ji) cls='col';
+        }
+        return `<div class="bitem ${cls}">${v}</div>`;
+      }).join('');
+    }
+    const rng=`${(bi*.1).toFixed(1)}~${((bi+1)*.1).toFixed(1)}`;
+    return `<div class="brow ${isAct?'active':''}">
+      <div class="bidx">[${bi}]</div>
+      <div class="brange">${rng}</div>
+      <div style="display:flex;flex-wrap:wrap;">${items}</div>
+    </div>`;
+  }).join('');
+}
+
+function next(){cur++;render();}
+function prev(){cur--;render();}
+function reset(){stopA();cur=0;render();}
+function autoPlay(){
+  if(timer){stopA();return;}
+  document.getElementById('abtn').textContent='⏸ 일시정지';
+  timer=setInterval(()=>{if(cur>=steps.length-1){stopA();return;}cur++;render();},850);
+}
+function stopA(){
+  clearInterval(timer);timer=null;
+  document.getElementById('abtn').textContent='▶ 자동재생';
+}
+render();
+</script>
