@@ -1,223 +1,679 @@
-
-<style>
-  .sec{font-size:11px;color:var(--color-text-secondary);font-weight:500;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;}
-  .explain{background:var(--color-background-secondary);border-radius:10px;padding:10px 14px;border:.5px solid var(--color-border-tertiary);font-size:13px;line-height:1.6;margin:8px 0;color:var(--color-text-primary);min-height:38px;}
-  .btn{padding:6px 16px;border-radius:8px;border:.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);font-size:13px;cursor:pointer;}
-  .btn:hover{background:var(--color-background-secondary);}
-  .btn.p{background:#B5D4F4;color:#0C447C;border-color:#378ADD;}
-  .pbar{height:3px;background:var(--color-border-tertiary);border-radius:2px;overflow:hidden;margin:6px 0 10px;}
-  .pfill{height:100%;background:#378ADD;border-radius:2px;transition:width .3s;}
-  .phase{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:6px;}
-  .arow{display:flex;flex-wrap:wrap;gap:2px;}
-  .acell{display:flex;flex-direction:column;align-items:center;}
-  .abox{width:50px;height:36px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:12px;font-weight:600;transition:background .2s,color .2s;}
-  .abox.def{background:#E8E6DE;color:#2C2C2A;border:.5px solid #B4B2A9;}
-  .abox.hi {background:#FAC775;color:#633806;border:.5px solid #BA7517;}
-  .abox.ok {background:#C0DD97;color:#27500A;border:.5px solid #639922;}
-  .abox.col{background:#B5D4F4;color:#0C447C;border:.5px solid #378ADD;}
-  .aidx{font-size:10px;color:var(--color-text-tertiary);margin-top:2px;}
-  .brow{display:flex;align-items:center;min-height:28px;margin:2px 0;border-radius:6px;padding:2px 4px;}
-  .brow.active{background:var(--color-background-secondary);}
-  .bidx{width:26px;font-size:11px;color:var(--color-text-secondary);font-family:monospace;text-align:right;margin-right:5px;flex-shrink:0;}
-  .brange{width:68px;font-size:10px;color:var(--color-text-tertiary);font-family:monospace;margin-right:5px;flex-shrink:0;}
-  .bitem{width:50px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:11px;font-weight:600;margin:1px;transition:background .2s;}
-  .bitem.def{background:#E8E6DE;color:#2C2C2A;border:.5px solid #B4B2A9;}
-  .bitem.new{background:#FAC775;color:#633806;border:.5px solid #BA7517;}
-  .bitem.ok {background:#C0DD97;color:#27500A;border:.5px solid #639922;}
-  .bitem.col{background:#B5D4F4;color:#0C447C;border:.5px solid #378ADD;}
-  .bitem.mv {background:#F4C0D1;color:#72243E;border:.5px solid #D4537E;}
-  .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--color-text-secondary);margin-top:8px;}
-  .ld{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:3px;vertical-align:middle;}
-</style>
-
-<div style="padding:1rem 0">
-  <div style="font-size:15px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px;">Bucket Sort 단계별 실행</div>
-  <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px;">arr = {0.78, 0.17, 0.39, 0.26, 0.72, 0.94, 0.21, 0.12, 0.23, 0.67} / num_buckets = 10</div>
-
-  <div class="pbar"><div class="pfill" id="pf"></div></div>
-  <div id="phase-el"></div>
-
-  <div class="sec">arr</div>
-  <div class="arow" id="arr-el" style="margin-bottom:10px;"></div>
-
-  <div class="explain" id="exp"></div>
-
-  <div class="sec" id="blabel">buckets[0..9]</div>
-  <div id="buckets-el" style="margin-bottom:8px;"></div>
-
-  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px;">
-    <button class="btn p" onclick="prev()">◀ 이전</button>
-    <button class="btn p" onclick="next()">다음 ▶</button>
-    <button class="btn" onclick="autoPlay()" id="abtn">▶ 자동재생</button>
-    <button class="btn" onclick="reset()">↺ 초기화</button>
-    <span style="font-size:12px;color:var(--color-text-secondary);" id="sc"></span>
-  </div>
-
-  <div class="legend">
-    <span><span class="ld" style="background:#FAC775;"></span>현재 처리 중</span>
-    <span><span class="ld" style="background:#F4C0D1;"></span>이동 중 (InsertionSort)</span>
-    <span><span class="ld" style="background:#C0DD97;"></span>정렬 완료</span>
-    <span><span class="ld" style="background:#B5D4F4;"></span>arr로 수집 중</span>
-  </div>
-</div>
-
-<script>
-const INIT=[0.78,0.17,0.39,0.26,0.72,0.94,0.21,0.12,0.23,0.67];
-const NB=10;
-const r2=v=>Math.round(v*100)/100;
-
-const PHASES={
-  init:    {label:'초기화',       bg:'#EDE7F6',tc:'#6A1B9A'},
-  predist: {label:'1단계: 분배',  bg:'#FFF9E6',tc:'#854F0B'},
-  dist:    {label:'1단계: 분배',  bg:'#FFF9E6',tc:'#854F0B'},
-  bsort:   {label:'2단계: 정렬', bg:'#E8F5D0',tc:'#27500A'},
-  aftersort:{label:'정렬 완료',   bg:'#E8F5D0',tc:'#27500A'},
-  collect: {label:'3단계: 수집', bg:'#EBF2FB',tc:'#0C447C'},
-  done:    {label:'완료',         bg:'#E8F5D0',tc:'#27500A'},
-};
-
-function buildSteps(){
-  const steps=[];
-  const arr=[...INIT];
-  const bkts=Array.from({length:NB},()=>[]);
-
-  const snap=(arrHL,bHL,phase,exp,sorted,ci)=>({
-    arr:[...arr],bkts:bkts.map(b=>[...b]),
-    arrHL:{...arrHL},bHL:{...bHL},
-    phase,exp,sorted:new Set(sorted||[]),ci:ci??-1
-  });
-
-  steps.push(snap({},{},'init','초기 상태: arr에 10개의 float 값, buckets는 10개의 빈 vector<float>로 초기화됩니다.'));
-
-  for(let i=0;i<arr.length;i++){
-    const idx=Math.floor(arr[i]*NB);
-    steps.push(snap({[i]:'hi'},{},'predist',
-      `[1단계 분배] i=${i}: arr[${i}] = ${arr[i]}\nbucket_index = (int)(${arr[i]} × 10) = ${idx}`));
-    bkts[idx].push(r2(arr[i]));
-    steps.push(snap({[i]:'hi'},{bucket:idx,item:bkts[idx].length-1,state:'new'},'dist',
-      `[1단계 분배] ${arr[i]} → buckets[${idx}].push_back() 완료 (범위: ${(idx*0.1).toFixed(1)}~${((idx+1)*0.1).toFixed(1)})`));
-  }
-  steps.push(snap({},{},'predist','분배 완료 (Before sorting). 각 버킷에 해당 범위의 값이 담겼습니다. 이제 InsertionSort를 각 버킷에 적용합니다.'));
-
-  const sortedSet=new Set();
-  for(let bi=0;bi<NB;bi++){
-    if(bkts[bi].length===0){sortedSet.add(bi);continue;}
-    if(bkts[bi].length===1){
-      steps.push(snap({},{bucket:bi,allSorted:true},'bsort',
-        `[2단계 정렬] buckets[${bi}]: 원소 1개 → 정렬 불필요`,[...sortedSet,bi]));
-      sortedSet.add(bi);continue;
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bucket Sort 단계별 실행</title>
+  <style>
+    :root {
+      --bg: #f2f2f0;
+      --panel: #ebeae4;
+      --border: #c8c6bf;
+      --text: #111;
+      --muted: #8b8b84;
+      --badge-bg: #ece3ff;
+      --badge-text: #6b39b8;
+      --button-bg: #cfe4fb;
+      --button-text: #0f4f8d;
+      --active: #ffd27d;
+      --moving: #f4cadc;
+      --sorted: #bddb8c;
+      --merged: #b9d8f6;
     }
-    const b=bkts[bi];
-    for(let i=1;i<b.length;i++){
-      const key=b[i];
-      steps.push(snap({},{bucket:bi,keyItem:i,state:'key'},'bsort',
-        `[2단계 정렬] buckets[${bi}]: key = ${key}, j = ${i-1}부터 왼쪽 비교 시작`,[...sortedSet]));
-      let j=i-1;
-      while(j>=0&&b[j]>key){
-        b[j+1]=b[j];
-        steps.push(snap({},{bucket:bi,mvItem:j+1,state:'mv'},'bsort',
-          `[2단계 정렬] buckets[${bi}]: ${b[j]} > key(${key}) → b[${j+1}] ← ${b[j]} 오른쪽 이동`,[...sortedSet]));
-        j--;
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 22px 18px calc(128px + env(safe-area-inset-bottom));
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .sub {
+      margin: 0 0 18px;
+      font-size: 14px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-bottom: 14px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: var(--badge-bg);
+      color: var(--badge-text);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .section {
+      margin-bottom: 26px;
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .arr-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 4px;
+    }
+
+    .arr-grid,
+    .idx-grid {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 78px;
+      gap: 8px;
+    }
+
+    .idx-grid {
+      margin-top: 6px;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      text-align: center;
+      color: #333;
+    }
+
+    .cell {
+      padding: 14px 8px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+      text-align: center;
+      font-family: Consolas, monospace;
+      font-size: 16px;
+      transition: background 0.15s ease;
+    }
+
+    .cell.active {
+      background: var(--active);
+    }
+
+    .cell.merged {
+      background: var(--merged);
+    }
+
+    .cell.empty {
+      color: #a0a09a;
+    }
+
+    .desc {
+      margin: 16px 0 0;
+      font-size: 16px;
+      line-height: 1.7;
+      word-break: keep-all;
+    }
+
+    .bucket-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .bucket-row {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 4px 0;
+    }
+
+    .bucket-row.active {
+      background: rgba(0, 0, 0, 0.03);
+      border-radius: 8px;
+    }
+
+    .bucket-meta {
+      padding-top: 6px;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      color: #222;
+      white-space: nowrap;
+    }
+
+    .bucket-values {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 34px;
+      align-items: center;
+    }
+
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .pill.moving {
+      background: var(--moving);
+    }
+
+    .pill.sorted {
+      background: var(--sorted);
+    }
+
+    .pill.merged {
+      background: var(--merged);
+    }
+
+    .pill.empty {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      padding-left: 0;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      margin-top: 14px;
+      font-size: 12px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 5px;
+      flex: 0 0 auto;
+    }
+
+    .dock {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 50;
+      border-top: 1px solid #d2d1cb;
+      background: rgba(242, 242, 240, 0.98);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    }
+
+    .dock-inner {
+      max-width: 920px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    button {
+      border: none;
+      border-radius: 14px;
+      min-height: 48px;
+      background: var(--button-bg);
+      color: var(--button-text);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .count {
+      font-family: Consolas, monospace;
+      font-size: 18px;
+      white-space: nowrap;
+      text-align: right;
+      padding-right: 2px;
+    }
+
+    @media (min-width: 760px) {
+      h1 {
+        font-size: 42px;
       }
-      b[j+1]=key;
-      steps.push(snap({},{bucket:bi,keyItem:j+1,state:'placed'},'bsort',
-        `[2단계 정렬] buckets[${bi}]: key(${key}) → b[${j+1}] 삽입 완료`,[...sortedSet]));
+
+      .sub {
+        font-size: 18px;
+      }
+
+      .badge {
+        font-size: 24px;
+        padding: 9px 18px;
+      }
+
+      .section-title {
+        font-size: 34px;
+      }
+
+      .arr-grid,
+      .idx-grid {
+        grid-auto-columns: 98px;
+      }
+
+      .idx-grid {
+        font-size: 26px;
+      }
+
+      .cell {
+        font-size: 36px;
+        padding: 16px 8px;
+      }
+
+      .desc {
+        font-size: 22px;
+      }
+
+      .bucket-row {
+        grid-template-columns: 170px 1fr;
+      }
+
+      .bucket-meta {
+        font-size: 26px;
+      }
+
+      .pill {
+        font-size: 24px;
+        padding: 8px 12px;
+      }
+
+      .legend {
+        font-size: 18px;
+      }
+
+      .dot {
+        width: 20px;
+        height: 20px;
+      }
+
+      button {
+        font-size: 28px;
+        min-height: 56px;
+      }
+
+      .count {
+        font-size: 34px;
+      }
     }
-    sortedSet.add(bi);
-    steps.push(snap({},{bucket:bi,allSorted:true},'bsort',
-      `[2단계 정렬] buckets[${bi}] 정렬 완료: [${bkts[bi].join(', ')}]`,[...sortedSet]));
-  }
-  steps.push(snap({},{allDone:true},'aftersort',
-    '모든 버킷 정렬 완료 (After sorting). buckets[0]부터 순서대로 arr에 수집합니다.',[...sortedSet]));
 
-  let ci=0;
-  for(let i=0;i<NB;i++){
-    for(let j=0;j<bkts[i].length;j++){
-      arr[ci]=bkts[i][j];
-      const aHL={};
-      for(let k=0;k<ci;k++) aHL[k]='ok';
-      aHL[ci]='col';
-      steps.push({arr:[...arr],bkts:bkts.map(b=>[...b]),
-        arrHL:aHL,bHL:{bucket:i,colItem:j,allDone:true},
-        phase:'collect',
-        exp:`[3단계 수집] buckets[${i}][${j}] = ${bkts[i][j]} → arr[${ci}] (index++)`,
-        sorted:new Set([...sortedSet]),ci});
-      ci++;
+    @media (max-width: 480px) {
+      .page {
+        padding: 16px 12px calc(122px + env(safe-area-inset-bottom));
+      }
+
+      .dock-inner {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .count {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding-top: 2px;
+      }
     }
-  }
-  const fHL={};
-  for(let k=0;k<arr.length;k++) fHL[k]='ok';
-  steps.push({arr:[...arr],bkts:bkts.map(b=>[...b]),
-    arrHL:fHL,bHL:{allDone:true},phase:'done',
-    exp:`정렬 완료! 결과: [${arr.map(r2).join(', ')}]`,
-    sorted:new Set([...sortedSet]),ci:-1});
-  return steps;
-}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Bucket Sort 단계별 실행</h1>
+    <p class="sub">arr = {0.78, 0.17, 0.39, 0.26, 0.72, 0.94, 0.21, 0.12, 0.23, 0.67} / num_buckets = 10</p>
 
-const steps=buildSteps();
-let cur=0,timer=null;
+    <div class="badge" id="phaseBadge">초기화</div>
 
-function render(){
-  cur=Math.max(0,Math.min(cur,steps.length-1));
-  const s=steps[cur];
-  const ph=PHASES[s.phase]||PHASES.init;
+    <section class="section">
+      <h2 class="section-title">ARR</h2>
+      <div class="arr-scroll">
+        <div class="arr-grid" id="inputValues"></div>
+        <div class="idx-grid" id="inputIndices"></div>
+      </div>
+      <p class="desc" id="description"></p>
+    </section>
 
-  document.getElementById('pf').style.width=((cur/(steps.length-1))*100)+'%';
-  document.getElementById('sc').textContent=`${cur+1} / ${steps.length}`;
-  document.getElementById('phase-el').innerHTML=
-    `<span class="phase" style="background:${ph.bg};color:${ph.tc};">${ph.label}</span>`;
-  document.getElementById('exp').textContent=s.exp;
-  document.getElementById('blabel').textContent=
-    (s.phase==='aftersort'||s.phase==='collect'||s.phase==='done')
-      ?'buckets[0..9] (정렬 후)':'buckets[0..9]';
+    <section class="section">
+      <h2 class="section-title">BUCKETS[0..9]</h2>
+      <div class="bucket-list" id="bucketList"></div>
+      <div class="legend">
+        <span class="legend-item"><span class="dot" style="background: var(--active);"></span>현재 처리 중</span>
+        <span class="legend-item"><span class="dot" style="background: var(--moving);"></span>이동 중</span>
+        <span class="legend-item"><span class="dot" style="background: var(--sorted);"></span>정렬 완료</span>
+        <span class="legend-item"><span class="dot" style="background: var(--merged);"></span>arr로 수집 중</span>
+      </div>
+    </section>
 
-  document.getElementById('arr-el').innerHTML=s.arr.map((v,i)=>{
-    const cls=s.arrHL[i]||'def';
-    return `<div class="acell"><div class="abox ${cls}">${r2(v)}</div><div class="aidx">[${i}]</div></div>`;
-  }).join('');
+    <section class="section">
+      <h2 class="section-title">RESULT ARR</h2>
+      <div class="arr-scroll">
+        <div class="arr-grid" id="outputValues"></div>
+        <div class="idx-grid" id="outputIndices"></div>
+      </div>
+    </section>
+  </main>
 
-  document.getElementById('buckets-el').innerHTML=s.bkts.map((b,bi)=>{
-    const isAct=s.bHL.bucket===bi;
-    const isDone=s.sorted&&s.sorted.has(bi);
-    const allD=s.bHL.allDone;
-    let items='';
-    if(b.length===0){
-      items=`<span style="font-size:10px;color:var(--color-text-tertiary);padding:0 6px;opacity:.4;">empty</span>`;
-    } else {
-      items=b.map((v,ji)=>{
-        let cls='def';
-        if(allD) cls='ok';
-        else if(isDone) cls='ok';
-        else if(isAct){
-          if(s.bHL.allSorted) cls='ok';
-          else if(s.bHL.keyItem===ji) cls=(s.bHL.state==='placed')?'ok':'new';
-          else if(s.bHL.mvItem===ji) cls='mv';
-          else if(s.bHL.item===ji&&s.bHL.state==='new') cls='new';
-          else if(s.bHL.colItem===ji) cls='col';
+  <div class="dock">
+    <div class="dock-inner">
+      <button id="prevBtn">◀ 이전</button>
+      <button id="nextBtn">다음 ▶</button>
+      <button id="playBtn">▶ 자동재생</button>
+      <button id="resetBtn">↻ 초기화</button>
+      <div class="count" id="stepCount">1 / 1</div>
+    </div>
+  </div>
+
+  <script>
+    const arr = [0.78, 0.17, 0.39, 0.26, 0.72, 0.94, 0.21, 0.12, 0.23, 0.67];
+    const numBuckets = 10;
+
+    const inputValuesEl = document.getElementById("inputValues");
+    const inputIndicesEl = document.getElementById("inputIndices");
+    const outputValuesEl = document.getElementById("outputValues");
+    const outputIndicesEl = document.getElementById("outputIndices");
+    const bucketListEl = document.getElementById("bucketList");
+    const descriptionEl = document.getElementById("description");
+    const phaseBadgeEl = document.getElementById("phaseBadge");
+    const stepCountEl = document.getElementById("stepCount");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const playBtn = document.getElementById("playBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    let currentStep = 0;
+    let timer = null;
+
+    function format(value) {
+      return value == null ? "..." : value.toFixed(2);
+    }
+
+    function bucketRange(index) {
+      return `${(index / numBuckets).toFixed(1)}~${((index + 1) / numBuckets).toFixed(1)}`;
+    }
+
+    function cloneBuckets(buckets) {
+      return buckets.map((bucket) => bucket.slice());
+    }
+
+    function buildSnapshots() {
+      const snapshots = [];
+      const buckets = Array.from({ length: numBuckets }, () => []);
+      const output = Array(arr.length).fill(null);
+
+      function push(snapshot) {
+        snapshots.push({
+          phase: "초기화",
+          description: "",
+          activeInput: -1,
+          activeBucket: -1,
+          activeValue: null,
+          mergedCount: output.filter((v) => v != null).length,
+          sortedBucket: Array(numBuckets).fill(false),
+          input: arr.slice(),
+          output: output.slice(),
+          buckets: cloneBuckets(buckets),
+          ...snapshot
+        });
+      }
+
+      push({
+        phase: "초기화",
+        description: "초기 상태: arr에 10개의 float 값, buckets는 10개의 빈 vector<float>로 초기화됩니다."
+      });
+
+      arr.forEach((value, index) => {
+        const bucketIndex = Math.min(numBuckets - 1, Math.floor(value * numBuckets));
+        buckets[bucketIndex].push(value);
+        push({
+          phase: "분배",
+          activeInput: index,
+          activeBucket: bucketIndex,
+          activeValue: value,
+          description: `${format(value)} 는 bucket_index = floor(${format(value)} * ${numBuckets}) = ${bucketIndex} 이므로 bucket[${bucketIndex}]에 들어갑니다.`
+        });
+      });
+
+      push({
+        phase: "분배 완료",
+        description: "모든 값을 버킷에 넣었습니다. 이제 각 버킷 내부를 Insertion Sort로 정렬합니다."
+      });
+
+      const sortedState = Array(numBuckets).fill(false);
+
+      for (let bucketIndex = 0; bucketIndex < numBuckets; bucketIndex++) {
+        if (buckets[bucketIndex].length <= 1) {
+          sortedState[bucketIndex] = true;
+          push({
+            phase: "버킷 정렬",
+            activeBucket: bucketIndex,
+            sortedBucket: sortedState.slice(),
+            description:
+              buckets[bucketIndex].length === 0
+                ? `bucket[${bucketIndex}]는 비어 있어서 건너뜁니다.`
+                : `bucket[${bucketIndex}]는 원소가 하나라 이미 정렬된 상태입니다.`
+          });
+          continue;
         }
-        return `<div class="bitem ${cls}">${v}</div>`;
-      }).join('');
-    }
-    const rng=`${(bi*.1).toFixed(1)}~${((bi+1)*.1).toFixed(1)}`;
-    return `<div class="brow ${isAct?'active':''}">
-      <div class="bidx">[${bi}]</div>
-      <div class="brange">${rng}</div>
-      <div style="display:flex;flex-wrap:wrap;">${items}</div>
-    </div>`;
-  }).join('');
-}
 
-function next(){cur++;render();}
-function prev(){cur--;render();}
-function reset(){stopA();cur=0;render();}
-function autoPlay(){
-  if(timer){stopA();return;}
-  document.getElementById('abtn').textContent='⏸ 일시정지';
-  timer=setInterval(()=>{if(cur>=steps.length-1){stopA();return;}cur++;render();},850);
-}
-function stopA(){
-  clearInterval(timer);timer=null;
-  document.getElementById('abtn').textContent='▶ 자동재생';
-}
-render();
-</script>
+        for (let i = 1; i < buckets[bucketIndex].length; i++) {
+          const key = buckets[bucketIndex][i];
+          let j = i - 1;
+
+          push({
+            phase: "버킷 정렬",
+            activeBucket: bucketIndex,
+            activeValue: key,
+            sortedBucket: sortedState.slice(),
+            description: `bucket[${bucketIndex}]에서 key = ${format(key)} 의 위치를 찾습니다.`
+          });
+
+          while (j >= 0 && buckets[bucketIndex][j] > key) {
+            buckets[bucketIndex][j + 1] = buckets[bucketIndex][j];
+            push({
+              phase: "버킷 정렬",
+              activeBucket: bucketIndex,
+              activeValue: key,
+              sortedBucket: sortedState.slice(),
+              description: `${format(key)} 보다 큰 값을 오른쪽으로 이동합니다.`
+            });
+            j--;
+          }
+
+          buckets[bucketIndex][j + 1] = key;
+          push({
+            phase: "버킷 정렬",
+            activeBucket: bucketIndex,
+            activeValue: key,
+            sortedBucket: sortedState.slice(),
+            description: `${format(key)} 를 올바른 위치에 삽입했습니다.`
+          });
+        }
+
+        sortedState[bucketIndex] = true;
+        push({
+          phase: "버킷 정렬",
+          activeBucket: bucketIndex,
+          sortedBucket: sortedState.slice(),
+          description: `bucket[${bucketIndex}] 정렬 완료`
+        });
+      }
+
+      push({
+        phase: "병합 시작",
+        sortedBucket: sortedState.slice(),
+        description: "정렬된 버킷을 bucket[0]부터 차례대로 결과 배열에 복사합니다."
+      });
+
+      let outIndex = 0;
+      for (let bucketIndex = 0; bucketIndex < numBuckets; bucketIndex++) {
+        for (let j = 0; j < buckets[bucketIndex].length; j++) {
+          output[outIndex] = buckets[bucketIndex][j];
+          push({
+            phase: "병합",
+            activeBucket: bucketIndex,
+            activeValue: buckets[bucketIndex][j],
+            mergedCount: outIndex + 1,
+            sortedBucket: sortedState.slice(),
+            description: `${format(buckets[bucketIndex][j])} 를 결과 arr[${outIndex}] 로 복사합니다.`
+          });
+          outIndex++;
+        }
+      }
+
+      push({
+        phase: "완료",
+        mergedCount: output.length,
+        sortedBucket: sortedState.slice(),
+        description: `정렬 완료: ${output.map((value) => format(value)).join(", ")}`
+      });
+
+      return snapshots;
+    }
+
+    const snapshots = buildSnapshots();
+
+    function renderArray(valuesEl, indicesEl, values, activeIndex, mergedCount, outputMode) {
+      valuesEl.innerHTML = "";
+      indicesEl.innerHTML = "";
+
+      values.forEach((value, index) => {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        if (!outputMode && index === activeIndex) cell.classList.add("active");
+        if (outputMode && value != null && index < mergedCount) cell.classList.add("merged");
+        if (value == null) cell.classList.add("empty");
+        cell.textContent = format(value);
+        valuesEl.appendChild(cell);
+
+        const idx = document.createElement("div");
+        idx.textContent = `[${index}]`;
+        indicesEl.appendChild(idx);
+      });
+    }
+
+    function renderBuckets(snapshot) {
+      bucketListEl.innerHTML = "";
+
+      for (let i = 0; i < numBuckets; i++) {
+        const row = document.createElement("div");
+        row.className = "bucket-row";
+        if (snapshot.activeBucket === i) row.classList.add("active");
+
+        const meta = document.createElement("div");
+        meta.className = "bucket-meta";
+        meta.textContent = `[${i}] ${bucketRange(i)}`;
+
+        const values = document.createElement("div");
+        values.className = "bucket-values";
+
+        if (snapshot.buckets[i].length === 0) {
+          const empty = document.createElement("span");
+          empty.className = "pill empty";
+          empty.textContent = "empty";
+          values.appendChild(empty);
+        } else {
+          const hotIndex = snapshot.activeBucket === i ? snapshot.buckets[i].lastIndexOf(snapshot.activeValue) : -1;
+          snapshot.buckets[i].forEach((value, index) => {
+            const pill = document.createElement("span");
+            pill.className = "pill";
+            if (snapshot.phase.indexOf("정렬") !== -1 && index === hotIndex) pill.classList.add("moving");
+            if (snapshot.phase.indexOf("병합") !== -1 && index === hotIndex) pill.classList.add("merged");
+            if (snapshot.sortedBucket && snapshot.sortedBucket[i]) pill.classList.add("sorted");
+            pill.textContent = format(value);
+            values.appendChild(pill);
+          });
+        }
+
+        row.append(meta, values);
+        bucketListEl.appendChild(row);
+      }
+    }
+
+    function render(step) {
+      currentStep = Math.max(0, Math.min(step, snapshots.length - 1));
+      const snapshot = snapshots[currentStep];
+
+      phaseBadgeEl.textContent = snapshot.phase;
+      descriptionEl.textContent = snapshot.description;
+      stepCountEl.textContent = `${currentStep + 1} / ${snapshots.length}`;
+
+      renderArray(inputValuesEl, inputIndicesEl, snapshot.input, snapshot.activeInput, snapshot.mergedCount, false);
+      renderArray(outputValuesEl, outputIndicesEl, snapshot.output, -1, snapshot.mergedCount, true);
+      renderBuckets(snapshot);
+
+      prevBtn.disabled = currentStep === 0;
+      nextBtn.disabled = currentStep === snapshots.length - 1;
+    }
+
+    function stopAutoplay() {
+      if (!timer) return;
+      clearInterval(timer);
+      timer = null;
+      playBtn.textContent = "▶ 자동재생";
+    }
+
+    function startAutoplay() {
+      if (timer) return;
+      playBtn.textContent = "⏸ 일시정지";
+      timer = setInterval(() => {
+        if (currentStep >= snapshots.length - 1) {
+          stopAutoplay();
+          return;
+        }
+        render(currentStep + 1);
+      }, 1100);
+    }
+
+    prevBtn.addEventListener("click", () => {
+      stopAutoplay();
+      render(currentStep - 1);
+    });
+
+    nextBtn.addEventListener("click", () => {
+      stopAutoplay();
+      render(currentStep + 1);
+    });
+
+    playBtn.addEventListener("click", () => {
+      if (timer) stopAutoplay();
+      else startAutoplay();
+    });
+
+    resetBtn.addEventListener("click", () => {
+      stopAutoplay();
+      render(0);
+    });
+
+    render(0);
+  </script>
+</body>
+</html>
