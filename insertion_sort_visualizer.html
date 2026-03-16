@@ -1,0 +1,189 @@
+
+<style>
+  .cell { display:inline-flex; flex-direction:column; align-items:center; margin:2px; }
+  .box { width:46px; height:46px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:monospace; font-size:14px; font-weight:600; border:1px solid var(--color-border-secondary); background:var(--color-background-secondary); color:var(--color-text-primary); transition:background 0.2s, color 0.2s, border-color 0.2s; }
+  .box.key    { background:#FAC775; color:#633806; border-color:#BA7517; }
+  .box.sorted { background:#C0DD97; color:#27500A; border-color:#639922; }
+  .box.moving { background:#F4C0D1; color:#72243E; border-color:#D4537E; }
+  .box.placed { background:#B5D4F4; color:#0C447C; border-color:#378ADD; }
+  .box.empty  { background:transparent; border:1.5px dashed var(--color-border-tertiary); color:var(--color-text-tertiary); }
+  .idx { font-size:10px; color:var(--color-text-tertiary); margin-top:3px; }
+  .explain-box { background:var(--color-background-secondary); border-radius:10px; padding:10px 14px; border:0.5px solid var(--color-border-tertiary); font-size:13px; color:var(--color-text-primary); min-height:40px; line-height:1.6; margin:10px 0; }
+  .btn { padding:7px 18px; border-radius:8px; border:0.5px solid var(--color-border-secondary); background:var(--color-background-primary); color:var(--color-text-primary); font-size:13px; cursor:pointer; }
+  .btn:hover { background:var(--color-background-secondary); }
+  .btn.primary { background:#B5D4F4; color:#0C447C; border-color:#378ADD; }
+  .progress-bar { height:3px; background:var(--color-border-tertiary); border-radius:2px; overflow:hidden; margin:6px 0; }
+  .progress-fill { height:100%; background:#378ADD; border-radius:2px; transition:width 0.3s; }
+  .sec-label { font-size:11px; color:var(--color-text-secondary); margin-bottom:4px; font-weight:500; }
+  .legend-dot { width:12px; height:12px; border-radius:3px; display:inline-block; margin-right:4px; vertical-align:middle; }
+</style>
+
+<div style="padding:1rem 0;">
+  <div style="font-size:15px; font-weight:500; color:var(--color-text-primary); margin-bottom:2px;">Insertion Sort 시각화</div>
+  <div style="font-size:12px; color:var(--color-text-secondary); margin-bottom:12px)">예시 배열: [5, 3, 8, 1, 9, 2, 7, 4]</div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+  <div style="font-size:12px; color:var(--color-text-secondary); margin-bottom:8px;" id="pass-label"></div>
+
+  <div class="sec-label">배열 상태</div>
+  <div id="arr-display" style="display:flex; flex-wrap:wrap; gap:2px; margin-bottom:4px;"></div>
+  <div id="idx-display" style="display:flex; flex-wrap:wrap; gap:2px; margin-bottom:10px;"></div>
+
+  <div class="explain-box" id="explain"></div>
+
+  <!-- key value display -->
+  <div style="display:flex; align-items:center; gap:16px; margin-bottom:10px; font-size:13px;">
+    <div style="color:var(--color-text-secondary);">key =</div>
+    <div id="key-box" style="width:46px; height:46px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:monospace; font-size:14px; font-weight:600; background:#FAC775; color:#633806; border:1px solid #BA7517;">-</div>
+    <div id="j-info" style="font-size:12px; color:var(--color-text-secondary);"></div>
+  </div>
+
+  <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+    <button class="btn primary" onclick="prev()">◀ 이전</button>
+    <button class="btn primary" onclick="next()">다음 ▶</button>
+    <button class="btn" onclick="autoPlay()" id="auto-btn">▶ 자동 재생</button>
+    <button class="btn" onclick="resetViz()">↺ 초기화</button>
+    <span style="font-size:12px; color:var(--color-text-secondary);" id="step-counter"></span>
+  </div>
+
+  <div style="display:flex; gap:12px; flex-wrap:wrap; font-size:11px; color:var(--color-text-secondary); align-items:center; margin-top:10px;">
+    <span><span class="legend-dot" style="background:#C0DD97;"></span>정렬된 구간</span>
+    <span><span class="legend-dot" style="background:#FAC775;"></span>key (뽑은 값)</span>
+    <span><span class="legend-dot" style="background:#F4C0D1;"></span>오른쪽으로 이동 중</span>
+    <span><span class="legend-dot" style="background:#B5D4F4;"></span>key 삽입 완료</span>
+  </div>
+</div>
+
+<script>
+const INIT = [5, 3, 8, 1, 9, 2, 7, 4];
+
+function buildSteps() {
+  const steps = [];
+  const arr = [...INIT];
+  const n = arr.length;
+
+  steps.push({
+    arr: [...arr], highlights: {}, key: null, keyVal: null,
+    explain: '초기 배열입니다. i=1부터 시작해 각 원소를 올바른 위치에 삽입합니다.',
+    phase: 'init', jInfo: ''
+  });
+
+  for (let i = 1; i < n; i++) {
+    const keyVal = arr[i];
+    // mark sorted region before picking key
+    const h0 = {};
+    for (let k = 0; k < i; k++) h0[k] = 'sorted';
+    h0[i] = 'key';
+
+    steps.push({
+      arr: [...arr], highlights: { ...h0 }, key: i, keyVal,
+      explain: `i = ${i}: key = arr[${i}] = ${keyVal} 를 뽑습니다. j = ${i-1}부터 왼쪽으로 비교 시작.`,
+      phase: 'pick', jInfo: `j = ${i-1}`
+    });
+
+    let j = i - 1;
+    let moved = false;
+
+    while (j >= 0 && arr[j] > keyVal) {
+      const hShift = {};
+      for (let k = 0; k < i; k++) hShift[k] = 'sorted';
+      hShift[j] = 'moving';
+      hShift[j + 1] = 'empty';
+
+      steps.push({
+        arr: [...arr], highlights: { ...hShift }, key: i, keyVal,
+        explain: `arr[${j}] = ${arr[j]} > key(${keyVal}) → arr[${j+1}]에 arr[${j}] 복사 (한 칸 오른쪽 이동)`,
+        phase: 'shift', jInfo: `j = ${j}`
+      });
+
+      arr[j + 1] = arr[j];
+
+      const hAfter = {};
+      for (let k = 0; k <= i; k++) hAfter[k] = 'sorted';
+      hAfter[j + 1] = 'moving';
+
+      steps.push({
+        arr: [...arr], highlights: { ...hAfter }, key: null, keyVal,
+        explain: `arr[${j+1}] ← ${arr[j+1]}. 이동 완료. j-- → j = ${j-1}`,
+        phase: 'shifted', jInfo: `j = ${j-1}`
+      });
+
+      j--;
+      moved = true;
+    }
+
+    arr[j + 1] = keyVal;
+    const hPlace = {};
+    for (let k = 0; k <= i; k++) hPlace[k] = 'sorted';
+    hPlace[j + 1] = 'placed';
+
+    steps.push({
+      arr: [...arr], highlights: { ...hPlace }, key: null, keyVal,
+      explain: `arr[${j+1}] ← key(${keyVal}) 삽입!${!moved ? ' (이미 제자리)' : ''} 초록 구간이 한 칸 넓어졌습니다.`,
+      phase: 'insert', jInfo: ''
+    });
+  }
+
+  const hFinal = {};
+  for (let k = 0; k < n; k++) hFinal[k] = 'sorted';
+  steps.push({
+    arr: [...arr], highlights: { ...hFinal }, key: null, keyVal: null,
+    explain: '정렬 완료! 시간복잡도: 최선 O(n) / 평균·최악 O(n²)',
+    phase: 'done', jInfo: ''
+  });
+
+  return steps;
+}
+
+const steps = buildSteps();
+let cur = 0, autoTimer = null;
+
+function render() {
+  cur = Math.max(0, Math.min(cur, steps.length - 1));
+  const s = steps[cur];
+
+  document.getElementById('explain').textContent = s.explain;
+  document.getElementById('step-counter').textContent = `${cur+1} / ${steps.length}`;
+  document.getElementById('progress').style.width = ((cur / (steps.length-1)) * 100) + '%';
+  document.getElementById('j-info').textContent = s.jInfo;
+  document.getElementById('pass-label').textContent =
+    s.phase === 'init' ? '시작 전' :
+    s.phase === 'done' ? '정렬 완료' :
+    `i = ${s.key ?? ''} 패스`;
+
+  const keyBox = document.getElementById('key-box');
+  keyBox.textContent = s.keyVal !== null ? s.keyVal : '-';
+  keyBox.style.opacity = s.keyVal !== null ? '1' : '0.3';
+
+  const arrEl = document.getElementById('arr-display');
+  const idxEl = document.getElementById('idx-display');
+  arrEl.innerHTML = '';
+  idxEl.innerHTML = '';
+
+  s.arr.forEach((v, i) => {
+    const cls = s.highlights[i] || '';
+    const boxCls = cls === 'empty' ? 'box empty' : `box ${cls}`;
+    const display = cls === 'empty' ? '&nbsp;' : v;
+    arrEl.innerHTML += `<div class="cell"><div class="${boxCls}">${display}</div></div>`;
+    idxEl.innerHTML += `<div class="cell"><div class="idx">[${i}]</div></div>`;
+  });
+}
+
+function next() { cur++; render(); }
+function prev() { cur--; render(); }
+function resetViz() { stopAuto(); cur = 0; render(); }
+function autoPlay() {
+  if (autoTimer) { stopAuto(); return; }
+  document.getElementById('auto-btn').textContent = '⏸ 일시정지';
+  autoTimer = setInterval(() => {
+    if (cur >= steps.length - 1) { stopAuto(); return; }
+    cur++; render();
+  }, 900);
+}
+function stopAuto() {
+  clearInterval(autoTimer); autoTimer = null;
+  document.getElementById('auto-btn').textContent = '▶ 자동 재생';
+}
+
+render();
+</script>

@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>2-3 Tree Insert Visualization</title>
+  <style>
+    :root {
+      --bg: #f3f2ee;
+      --panel: #ebe9e1;
+      --border: #c8c5bb;
+      --text: #121212;
+      --muted: #7f7c74;
+      --badge-bg: #ece3ff;
+      --badge-text: #6c3ab8;
+      --button-bg: #cfe4fb;
+      --button-text: #0f4f8d;
+      --current: #ffd37f;
+      --split: #f2cade;
+      --promoted: #cdb2ef;
+      --found: #bddc8f;
+      --path: #bad8f6;
+      --code-bg: #1f1f1f;
+      --code-text: #dbdbdb;
+      --code-muted: #8a8a8a;
+      --code-highlight: rgba(255, 211, 127, 0.12);
+      --shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body { min-height: 100vh; }
+
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 12px 10px 18px;
+    }
+
+    .hero {
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+
+    .sub {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #2f2f2f;
+      word-break: keep-all;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-bottom: 8px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--badge-bg);
+      color: var(--badge-text);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .controls {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      margin-bottom: 10px;
+      padding: 8px 0;
+      background: linear-gradient(180deg, rgba(243, 242, 238, 0.98), rgba(243, 242, 238, 0.92));
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    .progress {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #7b56c4, #9c7bdd);
+      transition: width 0.2s ease;
+    }
+
+    .dock {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+      gap: 6px;
+      align-items: center;
+    }
+
+    button {
+      min-height: 34px;
+      border: none;
+      border-radius: 11px;
+      background: var(--button-bg);
+      color: var(--button-text);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      padding: 0 8px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    .step-count {
+      text-align: right;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.34);
+      box-shadow: var(--shadow);
+      padding: 12px;
+    }
+
+    .panel-title {
+      margin: 0 0 8px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .headline {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
+    .desc {
+      margin: 6px 0 0;
+      font-size: 13px;
+      line-height: 1.6;
+      word-break: keep-all;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .chip {
+      padding: 5px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .chip.emphasis {
+      background: #fff7de;
+    }
+
+    .tree-wrap {
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tree {
+      min-width: max-content;
+      margin: 0;
+      padding: 6px 0 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    .tree ul {
+      margin: 0;
+      padding-top: 16px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+
+    .tree li {
+      list-style: none;
+      text-align: center;
+      position: relative;
+      padding: 16px 5px 0;
+    }
+
+    .tree li::before,
+    .tree li::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 50%;
+      width: 50%;
+      height: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .tree li::after {
+      right: auto;
+      left: 50%;
+      border-left: 1px solid var(--border);
+    }
+
+    .tree li:only-child::before,
+    .tree li:only-child::after {
+      display: none;
+    }
+
+    .tree li:only-child {
+      padding-top: 0;
+    }
+
+    .tree li:first-child::before,
+    .tree li:last-child::after {
+      border: 0 none;
+    }
+
+    .tree li:last-child::before {
+      border-right: 1px solid var(--border);
+      border-radius: 0 10px 0 0;
+    }
+
+    .tree li:first-child::after {
+      border-radius: 10px 0 0 0;
+    }
+
+    .tree ul ul::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 0;
+      height: 16px;
+      border-left: 1px solid var(--border);
+    }
+
+    .node-card {
+      min-width: 56px;
+      padding: 10px 8px 8px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      font-family: Consolas, monospace;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .node-card.current { background: var(--current); }
+    .node-card.path { background: var(--path); }
+    .node-card.split { background: var(--split); }
+    .node-card.promoted { background: var(--promoted); }
+    .node-card.found { background: var(--found); }
+
+    .node-tags {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 5px;
+    }
+
+    .node-tag {
+      padding: 3px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .log-list {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .log-list li + li {
+      margin-top: 4px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      margin-top: 10px;
+      font-size: 11px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .code-panel {
+      overflow: hidden;
+      padding: 0;
+      background: var(--code-bg);
+      border-color: rgba(0, 0, 0, 0.18);
+    }
+
+    .code-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      color: #f1f1f1;
+    }
+
+    .code-head strong {
+      font-size: 12px;
+      letter-spacing: 0.03em;
+    }
+
+    .code-label {
+      color: #c7c7c7;
+      font-size: 11px;
+      font-family: Consolas, monospace;
+    }
+
+    .code-body {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .code-line {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 12px;
+      padding: 0 12px;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--code-text);
+      white-space: pre;
+    }
+
+    .code-line.active {
+      background: var(--code-highlight);
+    }
+
+    .line-no {
+      color: var(--code-muted);
+      text-align: right;
+      user-select: none;
+    }
+
+    .kw { color: #5fb0ff; }
+    .fn { color: #dfdfb2; }
+    .num { color: #c6e7a9; }
+
+    .footer-note {
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    @media (min-width: 760px) {
+      .page {
+        padding: 20px 16px 28px;
+      }
+
+      h1 {
+        font-size: 34px;
+      }
+
+      .sub {
+        font-size: 15px;
+      }
+
+      .badge {
+        font-size: 14px;
+        padding: 7px 12px;
+      }
+
+      .dock {
+        grid-template-columns: repeat(4, 120px) auto;
+        justify-content: start;
+      }
+
+      button {
+        min-height: 40px;
+        font-size: 14px;
+      }
+
+      .step-count {
+        min-width: 84px;
+        font-size: 14px;
+      }
+
+      .grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .headline {
+        font-size: 23px;
+      }
+
+      .desc,
+      .log-list {
+        font-size: 14px;
+      }
+
+      .node-card {
+        min-width: 72px;
+        font-size: 18px;
+        padding: 12px 10px 10px;
+      }
+
+      .node-tag,
+      .chip,
+      .legend,
+      .footer-note {
+        font-size: 12px;
+      }
+
+      .code-head strong,
+      .code-label {
+        font-size: 13px;
+      }
+
+      .code-line {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="badge">2-3 TREE VISUALIZATION</div>
+      <h1>2-3 Tree 삽입 / 탐색 단계 실행</h1>
+      <p class="sub">주어진 C++ 코드의 흐름에 맞춰 <code>insert("N")</code>, <code>insert("B")</code>, <code>insert("F")</code>, <code>search("N")</code> 과정을 단계별로 확인할 수 있는 단일 HTML 페이지입니다.</p>
+    </header>
+
+    <section class="controls">
+      <div class="progress"><div id="progressBar" class="progress-bar"></div></div>
+      <div class="dock">
+        <button id="firstBtn" type="button">처음</button>
+        <button id="prevBtn" type="button">이전</button>
+        <button id="playBtn" type="button">자동재생</button>
+        <button id="nextBtn" type="button">다음</button>
+        <div id="stepCount" class="step-count">1 / 1</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">현재 단계</div>
+      <h2 id="headline" class="headline"></h2>
+      <p id="description" class="desc"></p>
+      <div id="chips" class="chips"></div>
+    </section>
+
+    <section class="grid">
+      <section class="panel">
+        <div class="panel-title">TREE</div>
+        <div class="tree-wrap">
+          <div id="treeRoot" class="tree"></div>
+        </div>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-dot" style="background: var(--current);"></span>현재 노드</span>
+          <span class="legend-item"><span class="legend-dot" style="background: var(--path);"></span>방문 경로</span>
+          <span class="legend-item"><span class="legend-dot" style="background: var(--split);"></span>split 대상</span>
+          <span class="legend-item"><span class="legend-dot" style="background: var(--promoted);"></span>승격 키</span>
+          <span class="legend-item"><span class="legend-dot" style="background: var(--found);"></span>완료 / 찾음</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">실행 로그</div>
+        <ol id="logList" class="log-list"></ol>
+      </section>
+
+      <section class="panel code-panel">
+        <div class="code-head">
+          <strong>CURRENT CODE</strong>
+          <span id="codeLabel" class="code-label"></span>
+        </div>
+        <div id="codeBody" class="code-body"></div>
+      </section>
+
+      <p class="footer-note">표시는 학습용으로 단순화되어 있으며, 실제 구현은 아래 코드 조각처럼 동일한 분기 구조를 따릅니다. 모바일에서는 트리 패널이 가로로 아주 조금만 스크롤될 수 있습니다.</p>
+    </section>
+
+    <script>
+      const codeBlocks = {
+        insert: [
+          "SplitResult insertHelper(Node23* node, string key) {",
+          "  SplitResult noSplit;",
+          "",
+          "  if (node->isLeaf()) {",
+          "    insertKeyToNode(node, key);",
+          "    if ((int)node->keys.size() <= 2) return noSplit;",
+          "    return splitNode(node);",
+          "  }",
+          "",
+          "  int childIndex = 0;",
+          "  if ((int)node->keys.size() == 1) {",
+          "    if (key > node->keys[0]) childIndex = 1;",
+          "  } else {",
+          "    if      (key > node->keys[1]) childIndex = 2;",
+          "    else if (key > node->keys[0]) childIndex = 1;",
+          "  }",
+          "",
+          "  SplitResult childResult = insertHelper(node->children[childIndex], key);",
+          "  if (!childResult.occurred) return noSplit;",
+          "",
+          "  insertKeyToNode(node, childResult.promoted);",
+          "  node->children.insert(node->children.begin() + childIndex + 1, childResult.right);",
+          "",
+          "  if ((int)node->keys.size() > 2) return splitNode(node);",
+          "  return noSplit;",
+          "}"
+        ],
+        search: [
+          "Node23* search(Node23* node, string target) {",
+          "  if (node == NULL) return NULL;",
+          "",
+          "  for (int i = 0; i < (int)node->keys.size(); i++) {",
+          "    if (node->keys[i] == target) return node;",
+          "  }",
+          "",
+          "  if (node->isLeaf()) return NULL;",
+          "",
+          "  if ((int)node->keys.size() == 1) {",
+          "    if (target < node->keys[0]) return search(node->children[0], target);",
+          "    return search(node->children[1], target);",
+          "  }",
+          "",
+          "  if (target < node->keys[0]) return search(node->children[0], target);",
+          "  if (target < node->keys[1]) return search(node->children[1], target);",
+          "  return search(node->children[2], target);",
+          "}"
+        ]
+      };
+
+      const steps = [
+        {
+          title: "초기 트리",
+          description: "main()에서 수동으로 조립한 시작 상태입니다. 루트 [M] 아래에 [E|J], [R]이 있고, 리프들은 [A|C], [H], [L], [P], [S|X]로 구성됩니다.",
+          chips: ["phase: setup", "root = [M]", "다음 단계부터 insert(\"N\") 시작"],
+          codeBlock: "insert",
+          activeLines: [],
+          logs: [
+            "초기 루트는 [M] 입니다.",
+            "왼쪽 내부 노드는 [E|J], 오른쪽 내부 노드는 [R] 입니다.",
+            "이제 N, B, F 순서로 삽입한 뒤 N 탐색을 수행합니다."
+          ],
+          tree: {
+            keys: ["M"],
+            marks: ["current"],
+            tags: ["root"],
+            children: [
+              {
+                keys: ["E", "J"],
+                children: [
+                  { keys: ["A", "C"] },
+                  { keys: ["H"] },
+                  { keys: ["L"] }
+                ]
+              },
+              {
+                keys: ["R"],
+                children: [
+                  { keys: ["P"] },
+                  { keys: ["S", "X"] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          title: "insert(\"N\") 시작",
+          description: "루트 [M]은 키가 1개인 2-노드입니다. N은 M보다 크므로 자식[1]인 오른쪽 서브트리로 내려갑니다.",
+          chips: ["phase: insert", "key = N", "현재 노드 = [M]", "childIndex = 1"],
+          codeBlock: "insert",
+          activeLines: [10, 11, 12, 18],
+          logs: [
+            "[삽입] 'N'",
+            "[M] -> 자식[1] 방향으로 이동",
+            "2-노드이므로 key > node->keys[0] 분기만 확인합니다."
+          ],
+          tree: {
+            keys: ["M"],
+            marks: ["current"],
+            tags: ["root"],
+            children: [
+              {
+                keys: ["E", "J"],
+                marks: ["path"],
+                children: [
+                  { keys: ["A", "C"] },
+                  { keys: ["H"] },
+                  { keys: ["L"] }
+                ]
+              },
+              {
+                keys: ["R"],
+                marks: ["path"],
+                tags: ["child[1]"],
+                children: [
+                  { keys: ["P"] },
+                  { keys: ["S", "X"] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          title: "insert(\"N\") - [R]에서 리프로 이동",
+          description: "[R] 역시 2-노드입니다. N은 R보다 작으므로 자식[0]인 [P] 리프로 내려갑니다.",
+          chips: ["phase: insert", "key = N", "현재 노드 = [R]", "childIndex = 0"],
+          codeBlock: "insert",
+          activeLines: [10, 11, 12, 18],
+          logs: [
+            "[R] -> 자식[0] 방향으로 이동",
+            "N < R 이므로 왼쪽 리프 [P]가 삽입 위치입니다."
+          ],
+          tree: {
+            keys: ["M"],
+            marks: ["path"],
+            children: [
+              {
+                keys: ["E", "J"],
+                children: [
+                  { keys: ["A", "C"] },
+                  { keys: ["H"] },
+                  { keys: ["L"] }
+                ]
+              },
+              {
+                keys: ["R"],
+                marks: ["current"],
+                tags: ["현재"],
+                children: [
+                  { keys: ["P"], marks: ["path"], tags: ["target leaf"] },
+                  { keys: ["S", "X"] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          title: "insert(\"N\") - 리프 삽입 완료",
+          description: "리프 [P]에 N을 넣으면 [N|P]가 됩니다. 키가 2개이므로 split은 발생하지 않고 그대로 종료됩니다.",
+          chips: ["phase: insert", "leaf = [P]", "삽입 결과 = [N|P]", "split 없음"],
+          codeBlock: "insert",
+          activeLines: [4, 5, 6, 7],
+          logs: [
+            "리프 노드에서 insertKeyToNode(node, key)를 수행합니다.",
+            "[P] + N -> [N|P]",
+            "keys.size() == 2 이므로 noSplit 반환"
+          ],
+          tree: {
+            keys: ["M"],
+            children: [
+              {
+                keys: ["E", "J"],
+                children: [
+                  { keys: ["A", "C"] },
+                  { keys: ["H"] },
+                  { keys: ["L"] }
+                ]
+              },
+              {
+                keys: ["R"],
+                marks: ["path"],
+                children: [
+                  { keys: ["N", "P"], marks: ["found"], tags: ["inserted"] },
+                  { keys: ["S", "X"] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          title: "insert(\"B\") 시작",
+          description: "다음 삽입은 B입니다. 루트 [M]에서 B < M 이므로 왼쪽 자식 [E|J]로 내려갑니다.",
+          chips: ["phase: insert", "key = B", "현재 노드 = [M]", "childIndex = 0"],
+          codeBlock: "insert",
+          activeLines: [10, 11, 18],
+          logs: [
+            "[삽입] 'B'",
+            "[M] -> 자식[0] 방향으로 이동",
+            "왼쪽 내부 노드 [E|J]가 다음 탐색 대상입니다."
+          ],
+          tree: {
+            keys: ["M"],
+            marks: ["current"],
+            children: [
+              {
+                keys: ["E", "J"],
+                marks: ["path"],
+                tags: ["child[0]"],
+                children: [
+                  { keys: ["A", "C"] },
+                  { keys: ["H"] },
+                  { keys: ["L"] }
+                ]
+              },
+              {
+                keys: ["R"],
+                children: [
+                  { keys: ["N", "P"] },
+                  { keys: ["S", "X"] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          title: "insert(\"B\") - [E|J]에서 [A|C] 선택",
+          description: "[E|J]는 3-노드입니다. B는 E보다 작기 때문에 childIndex = 0, 즉 리프 [A|C]로 내려갑니다.",
+          chips: ["phase: insert", "key = B", "현재 노드 = [E|J]", "childIndex = 0"],
+          codeBlock: "insert",
+          activeLines: [13, 14, 15, 18],
+          logs: [
+            "[E|J] -> 자식[0] 방향으로 이동",
+            "3-노드에서는 key > keys[1], key > keys[0] 순서로 childIndex를 정합니다.",
+            "B는 E보다 작으므로 가장 왼쪽 리프 [A|C]로 갑니다."
+          ],
+          tree: {
+            keys: ["M"],
+            marks: ["path"],
+            children: [
+              {
+                keys: ["E", "J"],
+                marks: ["current"],
+                children: [
+                  { keys: ["A", "C"], marks: ["path"], tags: ["target leaf"] },
+                  { keys: ["H"] },
+                  { keys: ["L"] }
+                ]
+              },
+              {
+                keys: ["R"],
+                children: [
+                  { keys: ["N", "P"] },
+                  { keys: ["S", "X"] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          title: "리프 [A|C]에 B 삽입",
+          description: "리프에 B를 정렬 삽입하면 [A|B|C]가 됩니다. 이 노드는 임시로 키 3개를 가진 상태이며, 즉시 split 대상이 됩니다.",
+          chips: ["phase: split", "leaf = [A|C]", "삽입 결과 = [A|B|C]", "promoted = B"],
+          codeBlock: "insert",
+          activeLines: [4, 5, 6, 7],
+          logs: [
+            "리프 [A|C]에서 insertKeyToNode(node, 'B') 수행",
+            "[A|C] -> [A|B|C]",
+            "keys.size() == 3 이므로 splitNode(node) 호출"
+          ],
+          tree: {
+            keys: ["M"],
+            children: [
+              {
+                keys: ["E", "J"],
+                marks: ["path"],
+                children: [
+                  { keys: ["A", "B", "C"], marks: ["split"], tags: ["split", "B 승격"] },
+                  { keys: ["H"] },
+                  { keys: ["L"] }
+                ]
+              },
+              {
+                keys: ["R"],
+                children: [
+                  { keys: ["N", "P"] },
+                  { keys: ["S", "X"] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          title: "B 승격, 부모 [E|J]가 과포화",
+          description: "splitNode 결과로 [A]와 [C]가 남고, 중간값 B가 부모로 올라갑니다. 부모 [E|J]는 B를 흡수해 [B|E|J]가 되며 다시 split 대상이 됩니다.",
+          chips: ["phase: split chain", "child promoted = B", "parent = [E|J]", "parent after absorb = [B|E|J]"],
+          codeBlock: "insert",
+          activeLines: [18, 19, 21, 22, 24],
+          logs: [
+            "'B' 흡수 <- [E|J]",
+            "children.insert(...) 로 새 right child [C]를 childIndex+1 자리에 끼워 넣습니다.",
+            "부모 키가 3개가 되어 [B|E|J]가 되었으므로 부모도 splitNode(node) 대상입니다."
+          ],
+          tree: {
+            keys: ["M"],
+            children: [
+              {
+                keys: ["B", "E", "J"],
+                marks: ["split"],
+                tags: ["parent split", "E 승격"],
+                children: [
+                  { keys: ["A"] },
+                  { keys: ["C"] },
+                  { keys: ["H"] },
+                  { keys: ["L"] }
+                ]
+              },
+              {
+                keys: ["R"],
+                children: [
+                  { keys: ["N", "P"] },
+                  { keys: ["S", "X"] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          title: "E 승격 후 루트가 [E|M]으로 정리",
+          description: "부모 [B|E|J]가 split되면 E가 다시 루트 [M]으로 승격됩니다. 루트는 E를 흡수해 [E|M]이 되고, 세 자식 [B], [J], [R]을 가지는 정상 3-노드가 됩니다.",
+          chips: ["phase: insert complete", "key = B", "root = [E|M]", "split chain 종료"],
+          codeBlock: "insert",
+          activeLines: [18, 19, 21, 22, 24, 25],
+          logs: [
+            "'E' 흡수 <- [M]",
+            "루트는 [E|M]으로 확장되며 추가 split 없이 종료됩니다.",
+            "실행 결과 예시와 동일하게 트리가 재구성됩니다."
+          ],
+          tree: {
+            keys: ["E", "M"],
+            marks: ["found"],
+            tags: ["after B"],
+            children: [
+              {
+                keys: ["B"],
+                children: [
+                  { keys: ["A"] },
+                  { keys: ["C"] }
+                ]
+              },
+              {
+                keys: ["J"],
+                children: [
+                  { keys: ["H"] },
+                  { keys: ["L"] }
+                ]
+              },
+              {
+                keys: ["R"],
+                children: [
+                  { keys: ["N", "P"] },
+                  { keys: ["S", "X"] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          title: "insert(\"F\") 경로 선택",
+          description: "이제 F를 삽입합니다. 루트 [E|M]에서 E < F < M 이므로 가운데 자식 [J]로, 이어서 F < J 이므로 왼쪽 리프 [H]로 내려갑니다.",
+          chips: ["phase: insert", "key = F", "root = [E|M]", "경로 = [E|M] -> [J] -> [H]"],
+          codeBlock: "insert",
+          activeLines: [13, 14, 15, 18],
+          logs: [
+            "[E|M] 에서 key > E 이고 key < M 이므로 childIndex = 1",
+            "[J] 에서는 F < J 이므로 childIndex = 0",
+            "도착 리프는 [H] 입니다."
+          ],
+          tree: {
+            keys: ["E", "M"],
+            marks: ["path"],
+            children: [
+              {
+                keys: ["B"],
+                children: [
+                  { keys: ["A"] },
+                  { keys: ["C"] }
+                ]
+              },
+              {
+                keys: ["J"],
+                marks: ["current"],
+                children: [
+                  { keys: ["H"], marks: ["path"], tags: ["target leaf"] },
+                  { keys: ["L"] }
+                ]
+              },
+              {
+                keys: ["R"],
+                children: [
+                  { keys: ["N", "P"] },
+                  { keys: ["S", "X"] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          title: "insert(\"F\") 완료",
+          description: "리프 [H]에 F를 삽입하면 [F|H]가 됩니다. 키가 2개이므로 split 없이 삽입이 끝나고, 전체 트리 구조는 유지됩니다.",
+          chips: ["phase: insert complete", "key = F", "leaf result = [F|H]", "split 없음"],
+          codeBlock: "insert",
+          activeLines: [4, 5, 6],
+          logs: [
+            "[H] + F -> [F|H]",
+            "keys.size() <= 2 이므로 noSplit 반환",
+            "루트와 내부 노드는 변하지 않습니다."
+          ],
+          tree: {
+            keys: ["E", "M"],
+            tags: ["after F"],
+            children: [
+              {
+                keys: ["B"],
+                children: [
+                  { keys: ["A"] },
+                  { keys: ["C"] }
+                ]
+              },
+              {
+                keys: ["J"],
+                children: [
+                  { keys: ["F", "H"], marks: ["found"], tags: ["inserted"] },
+                  { keys: ["L"] }
+                ]
+              },
+              {
+                keys: ["R"],
+                children: [
+                  { keys: ["N", "P"] },
+                  { keys: ["S", "X"] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          title: "search(\"N\") - 루트에서 오른쪽으로",
+          description: "탐색은 현재 노드 키와 먼저 비교한 뒤, 조건에 따라 자식 방향을 고릅니다. [E|M]에서는 N이 M보다 크므로 오른쪽 자식 [R]로 갑니다.",
+          chips: ["phase: search", "target = N", "현재 노드 = [E|M]", "다음 = [R]"],
+          codeBlock: "search",
+          activeLines: [4, 5, 10, 15, 16, 17],
+          logs: [
+            "현재 노드: [E|M]",
+            "N은 E도 아니고 M도 아닙니다.",
+            "N > M 이므로 오른쪽 자식 [R]을 탐색합니다."
+          ],
+          tree: {
+            keys: ["E", "M"],
+            marks: ["current"],
+            children: [
+              {
+                keys: ["B"],
+                children: [
+                  { keys: ["A"] },
+                  { keys: ["C"] }
+                ]
+              },
+              {
+                keys: ["J"],
+                children: [
+                  { keys: ["F", "H"] },
+                  { keys: ["L"] }
+                ]
+              },
+              {
+                keys: ["R"],
+                marks: ["path"],
+                tags: ["next"],
+                children: [
+                  { keys: ["N", "P"] },
+                  { keys: ["S", "X"] }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          title: "search(\"N\") - [N|P]에서 찾음",
+          description: "[R]에서는 N < R 이므로 왼쪽 자식 [N|P]로 내려갑니다. 리프 [N|P]의 첫 번째 키가 N과 같으므로 탐색 성공입니다.",
+          chips: ["phase: search complete", "target = N", "found at = [N|P]", "return node"],
+          codeBlock: "search",
+          activeLines: [4, 5, 11],
+          logs: [
+            "현재 노드: [R] -> N < R 이므로 왼쪽",
+            "현재 노드: [N|P]",
+            "찾았다! N"
+          ],
+          tree: {
+            keys: ["E", "M"],
+            children: [
+              {
+                keys: ["B"],
+                children: [
+                  { keys: ["A"] },
+                  { keys: ["C"] }
+                ]
+              },
+              {
+                keys: ["J"],
+                children: [
+                  { keys: ["F", "H"] },
+                  { keys: ["L"] }
+                ]
+              },
+              {
+                keys: ["R"],
+                marks: ["path"],
+                children: [
+                  { keys: ["N", "P"], marks: ["found"], tags: ["found N"] },
+                  { keys: ["S", "X"] }
+                ]
+              }
+            ]
+          }
+        }
+      ];
+
+      const headlineEl = document.getElementById("headline");
+      const descriptionEl = document.getElementById("description");
+      const chipsEl = document.getElementById("chips");
+      const treeRootEl = document.getElementById("treeRoot");
+      const logListEl = document.getElementById("logList");
+      const codeBodyEl = document.getElementById("codeBody");
+      const codeLabelEl = document.getElementById("codeLabel");
+      const stepCountEl = document.getElementById("stepCount");
+      const progressBarEl = document.getElementById("progressBar");
+
+      const firstBtn = document.getElementById("firstBtn");
+      const prevBtn = document.getElementById("prevBtn");
+      const playBtn = document.getElementById("playBtn");
+      const nextBtn = document.getElementById("nextBtn");
+
+      let currentStep = 0;
+      let timer = null;
+
+      function escapeHtml(text) {
+        return text
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      function colorizeCode(line) {
+        let html = escapeHtml(line);
+        html = html.replace(/\b(return|if|else|int|bool|string|NULL)\b/g, '<span class="kw">$1</span>');
+        html = html.replace(/\b(insertHelper|splitNode|insertKeyToNode|search)\b/g, '<span class="fn">$1</span>');
+        html = html.replace(/\b(0|1|2)\b/g, '<span class="num">$1</span>');
+        return html;
+      }
+
+      function createTreeNode(node) {
+        const li = document.createElement("li");
+        const marks = Array.isArray(node.marks) ? node.marks : [];
+
+        const card = document.createElement("div");
+        card.className = "node-card" + (marks.length ? " " + marks.join(" ") : "");
+        card.textContent = "[" + node.keys.join("|") + "]";
+        li.appendChild(card);
+
+        if (node.tags && node.tags.length) {
+          const tagWrap = document.createElement("div");
+          tagWrap.className = "node-tags";
+          node.tags.forEach((tag) => {
+            const tagEl = document.createElement("span");
+            tagEl.className = "node-tag";
+            tagEl.textContent = tag;
+            tagWrap.appendChild(tagEl);
+          });
+          li.appendChild(tagWrap);
+        }
+
+        if (node.children && node.children.length) {
+          const childList = document.createElement("ul");
+          node.children.forEach((child) => childList.appendChild(createTreeNode(child)));
+          li.appendChild(childList);
+        }
+
+        return li;
+      }
+
+      function renderTree(tree) {
+        treeRootEl.innerHTML = "";
+        const rootList = document.createElement("ul");
+        rootList.appendChild(createTreeNode(tree));
+        treeRootEl.appendChild(rootList);
+      }
+
+      function renderLogs(logs) {
+        logListEl.innerHTML = "";
+        logs.forEach((log) => {
+          const item = document.createElement("li");
+          item.textContent = log;
+          logListEl.appendChild(item);
+        });
+      }
+
+      function renderChips(chips) {
+        chipsEl.innerHTML = "";
+        chips.forEach((chip, index) => {
+          const el = document.createElement("span");
+          el.className = "chip" + (index === 0 ? " emphasis" : "");
+          el.textContent = chip;
+          chipsEl.appendChild(el);
+        });
+      }
+
+      function renderCode(blockName, activeLines) {
+        const lines = codeBlocks[blockName];
+        codeBodyEl.innerHTML = "";
+        codeLabelEl.textContent = blockName === "insert" ? "insertHelper / splitNode flow" : "search flow";
+
+        lines.forEach((line, index) => {
+          const row = document.createElement("div");
+          row.className = "code-line" + (activeLines.includes(index + 1) ? " active" : "");
+
+          const no = document.createElement("div");
+          no.className = "line-no";
+          no.textContent = String(index + 1).padStart(2, "0");
+
+          const code = document.createElement("div");
+          code.innerHTML = colorizeCode(line);
+
+          row.appendChild(no);
+          row.appendChild(code);
+          codeBodyEl.appendChild(row);
+        });
+      }
+
+      function updateButtons() {
+        firstBtn.disabled = currentStep === 0;
+        prevBtn.disabled = currentStep === 0;
+        nextBtn.disabled = currentStep === steps.length - 1;
+        playBtn.textContent = timer ? "정지" : "자동재생";
+      }
+
+      function renderStep(index) {
+        currentStep = index;
+        const step = steps[index];
+
+        headlineEl.textContent = step.title;
+        descriptionEl.textContent = step.description;
+        renderChips(step.chips);
+        renderTree(step.tree);
+        renderLogs(step.logs);
+        renderCode(step.codeBlock, step.activeLines);
+
+        stepCountEl.textContent = (index + 1) + " / " + steps.length;
+        progressBarEl.style.width = (((index + 1) / steps.length) * 100).toFixed(2) + "%";
+
+        updateButtons();
+      }
+
+      function stopAuto() {
+        if (timer) {
+          clearInterval(timer);
+          timer = null;
+          updateButtons();
+        }
+      }
+
+      function nextStep() {
+        if (currentStep < steps.length - 1) {
+          renderStep(currentStep + 1);
+        } else {
+          stopAuto();
+        }
+      }
+
+      firstBtn.addEventListener("click", () => {
+        stopAuto();
+        renderStep(0);
+      });
+
+      prevBtn.addEventListener("click", () => {
+        stopAuto();
+        renderStep(Math.max(0, currentStep - 1));
+      });
+
+      nextBtn.addEventListener("click", () => {
+        stopAuto();
+        nextStep();
+      });
+
+      playBtn.addEventListener("click", () => {
+        if (timer) {
+          stopAuto();
+          return;
+        }
+
+        timer = setInterval(() => {
+          if (currentStep >= steps.length - 1) {
+            stopAuto();
+            return;
+          }
+          renderStep(currentStep + 1);
+        }, 1800);
+
+        updateButtons();
+      });
+
+      renderStep(0);
+    </script>
+  </main>
+</body>
+</html>
