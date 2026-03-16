@@ -198,26 +198,32 @@
     }
 
     .tree {
-      min-width: max-content;
+      width: 100%;
+      min-width: 720px;
       margin: 0;
       padding: 6px 0 0;
-      display: flex;
-      justify-content: center;
+    }
+
+    .tree > ul {
+      width: 100%;
     }
 
     .tree ul {
+      width: 100%;
       margin: 0;
       padding-top: 16px;
       position: relative;
       display: flex;
-      justify-content: center;
+      justify-content: stretch;
     }
 
     .tree li {
+      flex: 1 1 0;
+      min-width: 0;
       list-style: none;
       text-align: center;
       position: relative;
-      padding: 16px 5px 0;
+      padding: 16px 6px 0;
     }
 
     .tree li::before,
@@ -271,6 +277,9 @@
     }
 
     .node-card {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       min-width: 56px;
       padding: 10px 8px 8px;
       border-radius: 14px;
