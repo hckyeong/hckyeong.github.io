@@ -1,336 +1,304 @@
 
 <style>
-#rv4{padding:.4rem 0 1.2rem}
-#rv4 *{box-sizing:border-box}
-.r4tabs{display:flex;border-bottom:.5px solid var(--color-border-tertiary);margin-bottom:14px}
-.r4tab{padding:8px 20px;font-size:13px;font-weight:500;color:var(--color-text-secondary);cursor:pointer;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
-.r4tab.on{color:var(--color-text-primary);border-bottom-color:var(--color-text-primary)}
-.r4tab:hover:not(.on){color:var(--color-text-primary)}
-.r4code{font-family:var(--font-mono);font-size:12px;background:var(--color-background-secondary);border:.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:8px 14px;margin-bottom:10px;line-height:2.1}
-.r4svg{display:block;transition:opacity .15s}
-.r4desc{font-size:13px;color:var(--color-text-secondary);margin:7px 0 10px;min-height:40px;line-height:1.7}
+#vx{padding:.4rem 0 1.2rem;font-family:system-ui,sans-serif}
+#vx *{box-sizing:border-box}
+.vxt{display:flex;border-bottom:1px solid #ddd;margin-bottom:14px}
+.vxtb{padding:8px 20px;font-size:13px;font-weight:500;color:#888;cursor:pointer;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.vxtb.on{color:#111;border-bottom-color:#111}
+.vxtb:hover:not(.on){color:#111}
+.vxcd{font-family:monospace;font-size:12px;background:#f6f6f4;border:1px solid #e0e0e0;border-radius:6px;padding:8px 14px;margin-bottom:10px;line-height:2.1;min-height:36px}
+.vxsv{display:block;transition:opacity .15s}
+.vxde{font-size:13px;color:#555;margin:7px 0 10px;min-height:40px;line-height:1.7}
+.hl{background:#fef3c7;color:#92400e;border-radius:3px;padding:1px 5px}
+.cm{color:#aaa}
+.kw{color:#2563eb}
 </style>
-<div id="rv4">
-  <div class="r4tabs">
-    <button class="r4tab on" onclick="r4tab(0)">RotateLeft</button>
-    <button class="r4tab" onclick="r4tab(1)">RotateRight</button>
-    <button class="r4tab" onclick="r4tab(2)">FlipColors</button>
+<div id="vx">
+  <div class="vxt">
+    <button class="vxtb on" onclick="vxtab(0)">RotateLeft</button>
+    <button class="vxtb" onclick="vxtab(1)">RotateRight</button>
+    <button class="vxtb" onclick="vxtab(2)">FlipColors</button>
   </div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-    <span id="r4t" style="font-size:14px;font-weight:500;color:var(--color-text-primary)"></span>
-    <div id="r4d" style="display:flex;gap:5px"></div>
+    <span id="vxti" style="font-size:14px;font-weight:500;color:#111"></span>
+    <div id="vxdo" style="display:flex;gap:5px"></div>
   </div>
-  <div id="r4c" class="r4code"></div>
-  <svg id="r4s" class="r4svg" width="100%" viewBox="0 0 680 330"></svg>
-  <div id="r4e" class="r4desc"></div>
+  <div id="vxcd" class="vxcd"></div>
+  <svg id="vxsv" class="vxsv" width="100%" viewBox="0 0 680 320"></svg>
+  <div id="vxde" class="vxde"></div>
   <div style="display:flex;gap:8px;align-items:center">
-    <button id="r4pb" onclick="r4prev()">← Prev</button>
-    <button id="r4nb" onclick="r4next()">Next →</button>
-    <span id="r4i" style="font-size:12px;color:var(--color-text-tertiary);margin-left:2px"></span>
+    <button id="vxpb" onclick="vxprev()" style="padding:6px 14px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:13px">← Prev</button>
+    <button id="vxnb" onclick="vxnext()" style="padding:6px 14px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:13px">Next →</button>
+    <span id="vxci" style="font-size:12px;color:#aaa;margin-left:2px"></span>
   </div>
 </div>
 <script>
 (function(){
-const RED='#E24B4A',NR=24,TW=40,TH=17;
-const HL=s=>`<span style="background:var(--color-background-warning);color:var(--color-text-warning);padding:1px 5px;border-radius:3px">${s}</span>`;
-const CM=s=>`<span style="color:var(--color-text-tertiary)">${s}</span>`;
-const KW=s=>`<span style="color:var(--color-text-info)">${s}</span>`;
+// ── palette (all hardcoded, no CSS vars) ─────────────────────────────────────
+const RED='#E24B4A', GRN='#16A34A', GRY='#888888';
+// node modes
+const NM={
+  k:{f:'#F5F5F0',sk:'#999999',sw:1.5,t:'#1a1a1a'},
+  r:{f:'#FEF2F2',sk:'#E24B4A',sw:2,  t:'#991B1B'},
+  hl:{f:'#EBF4FF',sk:'#3B82F6',sw:2.5,t:'#1D4ED8'}
+};
+const NR=24, TH=17, TW=40;
 
-const MK=`<defs>
-<marker id="r4ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="${RED}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="r4ab" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--color-border-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="r4ag" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--color-border-tertiary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<marker id="r4an" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--color-text-success)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
-</defs>`;
+function defs(){
+  return`<defs>
+<marker id="vxmr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="${RED}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="vxmk" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="${GRY}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="vxmg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="${GRN}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>`;}
 
-// edge: circle→circle or circle→triangle-top
-// col: r=red b=black g=gray n=green  dash: bool
+// edge: x1,y1 → x2,y2   toTri: end at triangle apex  col:'r'|'k'|'g'  dash:bool
 function eg(x1,y1,x2,y2,toTri,col,dash){
   const ty=toTri?y2-TH:y2;
-  const dx=x2-x1,dy=ty-y1,len=Math.sqrt(dx*dx+dy*dy);
+  const dx=x2-x1,dy=ty-y1,len=Math.sqrt(dx*dx+dy*dy)||1;
   const ux=dx/len,uy=dy/len;
   const sx=(x1+(NR+2)*ux).toFixed(1),sy=(y1+(NR+2)*uy).toFixed(1);
   const ex=toTri?(x2-4*ux).toFixed(1):(x2-(NR+2)*ux).toFixed(1);
   const ey=toTri?(ty-4*uy).toFixed(1):(y2-(NR+2)*uy).toFixed(1);
-  const cs={r:RED,b:'var(--color-border-primary)',g:'var(--color-border-tertiary)',n:'var(--color-text-success)'};
-  const ms={r:'r4ar',b:'r4ab',g:'r4ag',n:'r4an'};
-  const da=dash?'stroke-dasharray="5 4"':'';
-  return`<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="${cs[col]||cs.b}" stroke-width="${col==='r'||col==='n'?2:1.5}" ${da} marker-end="url(#${ms[col]||ms.b})"/>`;
-}
-// circle node: mode b=black r=red hl=highlight-blue
-function nd(cx,cy,lbl,m){
-  const S={b:{f:'var(--color-background-secondary)',sk:'var(--color-border-primary)',sw:1.5,t:'var(--color-text-primary)'},
-            r:{f:'#FEF2F2',sk:RED,sw:2,t:'#991B1B'},
-            hl:{f:'var(--color-background-info)',sk:'var(--color-border-info)',sw:2.5,t:'var(--color-text-info)'}}[m]||
-           {f:'var(--color-background-secondary)',sk:'var(--color-border-primary)',sw:1.5,t:'var(--color-text-primary)'};
-  return`<circle cx="${cx}" cy="${cy}" r="${NR}" fill="${S.f}" stroke="${S.sk}" stroke-width="${S.sw}"/>
-<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-family="var(--font-mono)" font-size="13" font-weight="500" fill="${S.t}">${lbl}</text>`;
-}
-// triangle subtree
-function tr(cx,cy,lbl,hl){
-  const sk=hl?RED:'var(--color-border-secondary)',sw=hl?2:0.75,tc=hl?RED:'var(--color-text-secondary)';
-  return`<polygon points="${cx},${cy-TH} ${cx-TW},${cy+TH} ${cx+TW},${cy+TH}" fill="var(--color-background-secondary)" stroke="${sk}" stroke-width="${sw}"/>
-<text x="${cx}" y="${cy+2}" text-anchor="middle" dominant-baseline="central" font-family="var(--font-mono)" font-size="13" fill="${tc}">${lbl}</text>`;
-}
-// small annotation
-function lb(x,y,s,col,a){
-  return`<text x="${x}" y="${y}" text-anchor="${a||'middle'}" font-family="var(--font-mono)" font-size="10" fill="${col||'var(--color-text-tertiary)'}">${s}</text>`;
-}
-function lbs(x,y,s,col,a){
-  return`<text x="${x}" y="${y}" text-anchor="${a||'middle'}" font-family="var(--font-sans)" font-size="10" fill="${col||'var(--color-text-tertiary)'}">${s}</text>`;
+  const C={r:RED,k:GRY,g:GRN}[col||'k'];
+  const M={r:'vxmr',k:'vxmk',g:'vxmg'}[col||'k'];
+  const SW={r:2,k:1.5,g:2}[col||'k'];
+  const DA=dash?'stroke-dasharray="5 4" stroke-opacity="0.4"':'';
+  return`<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="${C}" stroke-width="${SW}" ${DA} marker-end="url(#${M})"/>`;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RotateLeft
-// BEFORE positions: h(300,70) α(165,190) x(460,190) β(380,290) γ(545,290)
-// AFTER positions:  x(300,70) h(165,190) γ(460,190) α(90,290)  β(245,290)
-// ─────────────────────────────────────────────────────────────────────────────
+// circle node
+function nd(cx,cy,lab,m){
+  const s=NM[m]||NM.k;
+  return`<circle cx="${cx}" cy="${cy}" r="${NR}" fill="${s.f}" stroke="${s.sk}" stroke-width="${s.sw}"/>
+<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-family="monospace" font-size="13" font-weight="600" fill="${s.t}">${lab}</text>`;
+}
+
+// triangle subtree  hl=amber
+function tr(cx,cy,lab,hl){
+  const f=hl?'#FEF3C7':'#F5F5F0', sk=hl?'#D97706':'#999', sw=hl?2:0.75, tc=hl?'#92400E':'#666';
+  return`<polygon points="${cx},${cy-TH} ${cx-TW},${cy+TH} ${cx+TW},${cy+TH}" fill="${f}" stroke="${sk}" stroke-width="${sw}"/>
+<text x="${cx}" y="${cy+2}" text-anchor="middle" dominant-baseline="central" font-family="monospace" font-size="13" fill="${tc}">${lab}</text>`;
+}
+
+// small label
+function lb(x,y,s,col,anc){
+  return`<text x="${x}" y="${y}" text-anchor="${anc||'middle'}" font-family="monospace" font-size="10" fill="${col||'#aaa'}">${s}</text>`;
+}
+
+// ── RotateLeft ───────────────────────────────────────────────────────────────
+// BEFORE: h(300,70) α(155,175) x(455,175) β(380,280) γ(535,280)
+// AFTER:  x(300,70) h(145,175) γ(455,175) α(75,280)  β(220,280)
 const RL=[
-{title:'초기 상태',
- code:`${KW('Node*')} RotateLeft(${KW('Node*')} h) {`,
- desc:'h의 오른쪽 자식 x가 RED 링크입니다. α는 h의 왼쪽, β·γ는 x의 하위 서브트리입니다.',
- draw(){return MK+
-  eg(300,70,165,190,1,'b')+eg(300,70,460,190,0,'r')+
-  eg(460,190,380,290,1,'b')+eg(460,190,545,290,1,'b')+
-  lb(398,108,'RED',RED)+
-  tr(165,190,'α')+tr(380,290,'β')+tr(545,290,'γ')+
-  nd(300,70,'h','b')+nd(460,190,'x','r');}
-},
-{title:'1단계 — Node* x = h->right',
- code:HL('Node* x = h-&gt;right;')+' '+CM('// 오른쪽 자식 x를 포인터에 저장'),
- desc:'h->right인 x를 지역 변수에 저장합니다. 이 x가 회전 후 새 루트가 될 노드입니다.',
- draw(){return MK+
-  eg(300,70,165,190,1,'b')+eg(300,70,460,190,0,'r')+
-  eg(460,190,380,290,1,'b')+eg(460,190,545,290,1,'b')+
-  lb(398,108,'RED',RED)+
-  tr(165,190,'α')+tr(380,290,'β')+tr(545,290,'γ')+
-  nd(300,70,'h','b')+nd(460,190,'x','hl')+
-  lb(495,162,'← 저장','var(--color-text-info)','start');}
-},
-{title:'2단계 — h->right = x->left',
- code:HL('h-&gt;right = x-&gt;left;')+' '+CM('// β를 h의 오른쪽으로 이동'),
- desc:'x의 왼쪽 서브트리 β를 h의 오른쪽으로 이동합니다. 점선은 끊기는 연결, 초록 화살표는 새 연결입니다.',
- draw(){return MK+
-  eg(300,70,165,190,1,'b')+
-  eg(300,70,460,190,0,'g',1)+
-  eg(300,70,380,290,1,'n')+
-  eg(460,190,380,290,1,'g',1)+
-  eg(460,190,545,290,1,'b')+
-  lb(312,180,'NEW','var(--color-text-success)','end')+
-  tr(165,190,'α')+tr(380,290,'β',1)+tr(545,290,'γ')+
-  nd(300,70,'h','b')+nd(460,190,'x','r');}
-},
-{title:'3단계 — x->left = h  (회전 완료!)',
- code:HL('x-&gt;left = h;')+' '+CM('// h를 x의 왼쪽으로 → 회전 완료!'),
- desc:'h(α·β 포함)를 x의 왼쪽 자식으로 만듭니다. x가 루트 자리를 차지합니다. 트리 구조가 바뀌었습니다.',
- draw(){return MK+
-  eg(300,70,165,190,0,'r')+
-  eg(300,70,460,190,1,'b')+
-  eg(165,190,90,290,1,'b')+
-  eg(165,190,245,290,1,'b')+
-  lb(217,108,'RED',RED)+
-  tr(460,190,'γ')+tr(90,290,'α')+tr(245,290,'β')+
-  nd(165,190,'h','b')+nd(300,70,'x','b');}
-},
-{title:'4단계 — x->color = h->color  /  h->color = kRed',
- code:HL('x-&gt;color = h-&gt;color;')+`<br>`+HL('h-&gt;color = kRed;'),
- desc:'x는 h의 원래 색상(C)을 물려받고, h는 RED로 설정됩니다. 블랙 높이가 그대로 유지됩니다.',
- draw(){return MK+
-  eg(300,70,165,190,0,'r')+
-  eg(300,70,460,190,1,'b')+
-  eg(165,190,90,290,1,'b')+
-  eg(165,190,245,290,1,'b')+
-  lb(217,108,'RED',RED)+
-  tr(460,190,'γ')+tr(90,290,'α')+tr(245,290,'β')+
-  nd(165,190,'h','r')+nd(300,70,'x','b')+
-  lb(165,225,'→ RED',RED)+lb(300,107,'color=C','var(--color-text-tertiary)');}
-},
-{title:'5단계 — size 재계산 후 return x',
- code:HL('x-&gt;size = h-&gt;size;')+`<br>`+HL('h-&gt;size = 1 + Size(h-&gt;left) + Size(h-&gt;right);')+`<br>`+KW('return')+' x;',
- desc:'x의 size는 h의 기존 size를 승계하고, h의 size는 새 서브트리(α,β)로 재계산합니다. 새 루트 x를 반환합니다.',
- draw(){return MK+
-  eg(300,70,165,190,0,'r')+
-  eg(300,70,460,190,1,'b')+
-  eg(165,190,90,290,1,'b')+
-  eg(165,190,245,290,1,'b')+
-  lb(217,108,'RED',RED)+
-  tr(460,190,'γ')+tr(90,290,'α')+tr(245,290,'β')+
-  nd(165,190,'h','r')+nd(300,70,'x','hl')+
-  lb(300,107,'return','var(--color-text-info)');}
-}];
+{t:'초기 상태',
+ c:`<span class="kw">Node*</span> RotateLeft(<span class="kw">Node*</span> h) {`,
+ d:'h의 오른쪽 자식 x가 RED 링크입니다. α는 h의 왼쪽, β·γ는 x의 왼쪽·오른쪽 서브트리입니다.',
+ f(){return defs()+
+  eg(300,70,155,175,1,'k')+eg(300,70,455,175,0,'r')+
+  eg(455,175,380,280,1,'k')+eg(455,175,535,280,1,'k')+
+  tr(155,175,'α')+tr(380,280,'β')+tr(535,280,'γ')+
+  nd(300,70,'h','k')+nd(455,175,'x','r')+lb(405,107,'RED',RED);}},
+{t:'1단계 — Node* x = h->right',
+ c:`<span class="hl">Node* x = h-&gt;right;</span> <span class="cm">// x 포인터 저장</span>`,
+ d:'h->right인 x를 지역 변수에 저장합니다. 이 x가 회전 후 새 루트 자리를 차지합니다.',
+ f(){return defs()+
+  eg(300,70,155,175,1,'k')+eg(300,70,455,175,0,'r')+
+  eg(455,175,380,280,1,'k')+eg(455,175,535,280,1,'k')+
+  tr(155,175,'α')+tr(380,280,'β')+tr(535,280,'γ')+
+  nd(300,70,'h','k')+nd(455,175,'x','hl')+lb(405,107,'RED',RED);}},
+{t:'2단계 — h->right = x->left',
+ c:`<span class="hl">h-&gt;right = x-&gt;left;</span> <span class="cm">// β를 h의 오른쪽으로</span>`,
+ d:'β를 x에서 분리해 h의 오른쪽으로 연결합니다. 점선=끊기는 연결, 초록=새 연결.',
+ f(){return defs()+
+  eg(300,70,155,175,1,'k')+
+  eg(300,70,455,175,0,'r',true)+
+  eg(300,70,380,280,1,'g')+
+  eg(455,175,380,280,1,'k',true)+
+  eg(455,175,535,280,1,'k')+
+  tr(155,175,'α')+tr(380,280,'β',1)+tr(535,280,'γ')+
+  nd(300,70,'h','k')+nd(455,175,'x','r');}},
+{t:'3단계 — x->left = h  (회전 완료!)',
+ c:`<span class="hl">x-&gt;left = h;</span> <span class="cm">// h를 x의 왼쪽으로</span>`,
+ d:'h(α, β 포함)가 x의 왼쪽 자식이 됩니다. x가 새 루트입니다. 아직 색상 승계 전입니다.',
+ f(){return defs()+
+  eg(300,70,145,175,0,'k')+
+  eg(300,70,455,175,1,'k')+
+  eg(145,175,75,280,1,'k')+
+  eg(145,175,220,280,1,'k')+
+  tr(455,175,'γ')+tr(75,280,'α')+tr(220,280,'β')+
+  nd(300,70,'x','r')+nd(145,175,'h','k');}},
+{t:'4단계 — x->color = h->color  /  h->color = kRed',
+ c:`<span class="hl">x-&gt;color = h-&gt;color;</span><br><span class="hl">h-&gt;color = kRed;</span>`,
+ d:'x는 h의 원래 색(C=BLACK)을 받고, h는 RED가 됩니다. h->color=RED이므로 x→h 링크가 RED 링크가 됩니다.',
+ f(){return defs()+
+  eg(300,70,145,175,0,'r')+
+  eg(300,70,455,175,1,'k')+
+  eg(145,175,75,280,1,'k')+
+  eg(145,175,220,280,1,'k')+
+  tr(455,175,'γ')+tr(75,280,'α')+tr(220,280,'β')+
+  nd(300,70,'x','k')+nd(145,175,'h','r')+
+  lb(207,107,'RED',RED)+lb(300,107,'color=C','#aaa')+lb(145,215,'→ RED',RED);}},
+{t:'5단계 — size 재계산 후 return x',
+ c:`<span class="hl">x-&gt;size = h-&gt;size;</span><br><span class="hl">h-&gt;size = 1 + Size(h-&gt;left) + Size(h-&gt;right);</span><br><span class="kw">return</span> x;`,
+ d:'x의 size는 h의 기존 size를 승계하고, h의 size는 α·β로 재계산합니다. 새 루트 x를 반환합니다.',
+ f(){return defs()+
+  eg(300,70,145,175,0,'r')+
+  eg(300,70,455,175,1,'k')+
+  eg(145,175,75,280,1,'k')+
+  eg(145,175,220,280,1,'k')+
+  tr(455,175,'γ')+tr(75,280,'α')+tr(220,280,'β')+
+  nd(300,70,'x','hl')+nd(145,175,'h','r')+
+  lb(207,107,'RED',RED)+lb(300,107,'return ↑','#2563eb');}}
+];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RotateRight
-// BEFORE: h(380,70) x(225,190) γ(540,190) α(145,290) β(315,290)
-// AFTER:  x(300,70) α(145,190) h(455,190) β(370,290) γ(545,290)
-// ─────────────────────────────────────────────────────────────────────────────
+// ── RotateRight ──────────────────────────────────────────────────────────────
+// BEFORE: h(300,70) x(155,175) γ(455,175) α(80,280) β(235,280)
+// AFTER:  x(300,70) α(145,175) h(455,175) β(375,280) γ(540,280)
 const RR=[
-{title:'초기 상태',
- code:`${KW('Node*')} RotateRight(${KW('Node*')} h) {`,
- desc:'h의 왼쪽 자식 x가 RED입니다. Balance()에서 조건 2(왼쪽-왼쪽 RED)를 감지했을 때 호출됩니다.',
- draw(){return MK+
-  eg(380,70,225,190,0,'r')+eg(380,70,540,190,1,'b')+
-  eg(225,190,145,290,1,'b')+eg(225,190,315,290,1,'b')+
-  lb(287,108,'RED',RED)+
-  tr(540,190,'γ')+tr(145,290,'α')+tr(315,290,'β')+
-  nd(380,70,'h','b')+nd(225,190,'x','r');}
-},
-{title:'1단계 — Node* x = h->left',
- code:HL('Node* x = h-&gt;left;')+' '+CM('// 왼쪽 자식 x를 포인터에 저장'),
- desc:'h->left인 x를 지역 변수에 저장합니다. x가 회전 후 새 루트가 될 노드입니다.',
- draw(){return MK+
-  eg(380,70,225,190,0,'r')+eg(380,70,540,190,1,'b')+
-  eg(225,190,145,290,1,'b')+eg(225,190,315,290,1,'b')+
-  lb(287,108,'RED',RED)+
-  tr(540,190,'γ')+tr(145,290,'α')+tr(315,290,'β')+
-  nd(380,70,'h','b')+nd(225,190,'x','hl')+
-  lb(168,162,'← 저장','var(--color-text-info)','end');}
-},
-{title:'2단계 — h->left = x->right',
- code:HL('h-&gt;left = x-&gt;right;')+' '+CM('// β를 h의 왼쪽으로 이동'),
- desc:'x의 오른쪽 서브트리 β를 h의 왼쪽으로 이동합니다. 점선은 끊기는 연결, 초록 화살표는 새 연결입니다.',
- draw(){return MK+
-  eg(380,70,225,190,0,'g',1)+
-  eg(380,70,315,290,1,'n')+
-  eg(380,70,540,190,1,'b')+
-  eg(225,190,145,290,1,'b')+
-  eg(225,190,315,290,1,'g',1)+
-  lb(437,175,'NEW','var(--color-text-success)','start')+
-  tr(540,190,'γ')+tr(145,290,'α')+tr(315,290,'β',1)+
-  nd(380,70,'h','b')+nd(225,190,'x','r');}
-},
-{title:'3단계 — x->right = h  (회전 완료!)',
- code:HL('x-&gt;right = h;')+' '+CM('// h를 x의 오른쪽으로 → 회전 완료!'),
- desc:'h(β·γ 포함)를 x의 오른쪽 자식으로 만듭니다. x가 루트 자리를 차지합니다. RotateLeft와 완전 대칭입니다.',
- draw(){return MK+
-  eg(300,70,145,190,1,'b')+
-  eg(300,70,455,190,0,'r')+
-  eg(455,190,370,290,1,'b')+
-  eg(455,190,545,290,1,'b')+
-  lb(393,108,'RED',RED)+
-  tr(145,190,'α')+tr(370,290,'β')+tr(545,290,'γ')+
-  nd(300,70,'x','b')+nd(455,190,'h','b');}
-},
-{title:'4단계 — x->color = h->color  /  h->color = kRed',
- code:HL('x-&gt;color = h-&gt;color;')+`<br>`+HL('h-&gt;color = kRed;'),
- desc:'x는 h의 원래 색상(C)을 물려받고, h는 RED로 설정됩니다. RotateLeft와 동일한 패턴입니다.',
- draw(){return MK+
-  eg(300,70,145,190,1,'b')+
-  eg(300,70,455,190,0,'r')+
-  eg(455,190,370,290,1,'b')+
-  eg(455,190,545,290,1,'b')+
-  lb(393,108,'RED',RED)+
-  tr(145,190,'α')+tr(370,290,'β')+tr(545,290,'γ')+
-  nd(300,70,'x','b')+nd(455,190,'h','r')+
-  lb(455,225,'→ RED',RED)+lb(300,107,'color=C','var(--color-text-tertiary)');}
-},
-{title:'5단계 — size 재계산 후 return x',
- code:HL('x-&gt;size = h-&gt;size;')+`<br>`+HL('h-&gt;size = 1 + Size(h-&gt;left) + Size(h-&gt;right);')+`<br>`+KW('return')+' x;',
- desc:'x의 size는 h의 기존 size를 승계하고, h의 size는 새 서브트리(β,γ)로 재계산합니다. 새 루트 x를 반환합니다.',
- draw(){return MK+
-  eg(300,70,145,190,1,'b')+
-  eg(300,70,455,190,0,'r')+
-  eg(455,190,370,290,1,'b')+
-  eg(455,190,545,290,1,'b')+
-  lb(393,108,'RED',RED)+
-  tr(145,190,'α')+tr(370,290,'β')+tr(545,290,'γ')+
-  nd(300,70,'x','hl')+nd(455,190,'h','r')+
-  lb(300,107,'return','var(--color-text-info)');}
-}];
+{t:'초기 상태',
+ c:`<span class="kw">Node*</span> RotateRight(<span class="kw">Node*</span> h) {`,
+ d:'h의 왼쪽 자식 x가 RED입니다. Balance()에서 조건 2(왼쪽·왼쪽이 모두 RED)를 감지했을 때 호출됩니다.',
+ f(){return defs()+
+  eg(300,70,155,175,0,'r')+eg(300,70,455,175,1,'k')+
+  eg(155,175,80,280,1,'k')+eg(155,175,235,280,1,'k')+
+  tr(455,175,'γ')+tr(80,280,'α')+tr(235,280,'β')+
+  nd(300,70,'h','k')+nd(155,175,'x','r')+lb(200,107,'RED',RED);}},
+{t:'1단계 — Node* x = h->left',
+ c:`<span class="hl">Node* x = h-&gt;left;</span> <span class="cm">// x 포인터 저장</span>`,
+ d:'h->left인 x를 지역 변수에 저장합니다. x가 회전 후 새 루트가 될 노드입니다.',
+ f(){return defs()+
+  eg(300,70,155,175,0,'r')+eg(300,70,455,175,1,'k')+
+  eg(155,175,80,280,1,'k')+eg(155,175,235,280,1,'k')+
+  tr(455,175,'γ')+tr(80,280,'α')+tr(235,280,'β')+
+  nd(300,70,'h','k')+nd(155,175,'x','hl')+lb(200,107,'RED',RED);}},
+{t:'2단계 — h->left = x->right',
+ c:`<span class="hl">h-&gt;left = x-&gt;right;</span> <span class="cm">// β를 h의 왼쪽으로</span>`,
+ d:'β를 x에서 분리해 h의 왼쪽으로 연결합니다. 점선=끊기는 연결, 초록=새 연결.',
+ f(){return defs()+
+  eg(300,70,155,175,0,'r',true)+
+  eg(300,70,235,280,1,'g')+
+  eg(300,70,455,175,1,'k')+
+  eg(155,175,80,280,1,'k')+
+  eg(155,175,235,280,1,'k',true)+
+  tr(455,175,'γ')+tr(80,280,'α')+tr(235,280,'β',1)+
+  nd(300,70,'h','k')+nd(155,175,'x','r');}},
+{t:'3단계 — x->right = h  (회전 완료!)',
+ c:`<span class="hl">x-&gt;right = h;</span> <span class="cm">// h를 x의 오른쪽으로</span>`,
+ d:'h(β, γ 포함)가 x의 오른쪽 자식이 됩니다. x가 새 루트입니다. 아직 색상 승계 전입니다.',
+ f(){return defs()+
+  eg(300,70,145,175,1,'k')+
+  eg(300,70,455,175,0,'k')+
+  eg(455,175,375,280,1,'k')+
+  eg(455,175,540,280,1,'k')+
+  tr(145,175,'α')+tr(375,280,'β')+tr(540,280,'γ')+
+  nd(300,70,'x','r')+nd(455,175,'h','k');}},
+{t:'4단계 — x->color = h->color  /  h->color = kRed',
+ c:`<span class="hl">x-&gt;color = h-&gt;color;</span><br><span class="hl">h-&gt;color = kRed;</span>`,
+ d:'x는 h의 원래 색(C=BLACK)을 받고, h는 RED가 됩니다. x→h 링크가 RED 링크가 됩니다. RotateLeft와 완전히 동일한 패턴입니다.',
+ f(){return defs()+
+  eg(300,70,145,175,1,'k')+
+  eg(300,70,455,175,0,'r')+
+  eg(455,175,375,280,1,'k')+
+  eg(455,175,540,280,1,'k')+
+  tr(145,175,'α')+tr(375,280,'β')+tr(540,280,'γ')+
+  nd(300,70,'x','k')+nd(455,175,'h','r')+
+  lb(395,107,'RED',RED)+lb(300,107,'color=C','#aaa')+lb(455,215,'→ RED',RED);}},
+{t:'5단계 — size 재계산 후 return x',
+ c:`<span class="hl">x-&gt;size = h-&gt;size;</span><br><span class="hl">h-&gt;size = 1 + Size(h-&gt;left) + Size(h-&gt;right);</span><br><span class="kw">return</span> x;`,
+ d:'x의 size는 h의 기존 size를 승계하고, h의 size는 β·γ로 재계산합니다. 새 루트 x를 반환합니다.',
+ f(){return defs()+
+  eg(300,70,145,175,1,'k')+
+  eg(300,70,455,175,0,'r')+
+  eg(455,175,375,280,1,'k')+
+  eg(455,175,540,280,1,'k')+
+  tr(145,175,'α')+tr(375,280,'β')+tr(540,280,'γ')+
+  nd(300,70,'x','hl')+nd(455,175,'h','r')+
+  lb(395,107,'RED',RED)+lb(300,107,'return ↑','#2563eb');}}
+];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FlipColors
-// h(340,70)  L(185,185)  R(495,185)
-// α(110,285) β(265,285)  γ(420,285) δ(575,285)
-// ─────────────────────────────────────────────────────────────────────────────
+// ── FlipColors ───────────────────────────────────────────────────────────────
+// h(340,70) L(185,175) R(495,175)
+// α(110,275) β(265,275) γ(420,275) δ(575,275)
 const FC=[
-{title:'초기 상태 — 4-노드 (양쪽 자식 모두 RED)',
- code:`${KW('void')} FlipColors(${KW('Node*')} h) {`,
- desc:'h의 왼쪽 자식 L과 오른쪽 자식 R이 모두 RED입니다. 이것이 2-3 트리의 4-노드 상태입니다. Balance()에서 조건 3으로 감지됩니다.',
- draw(){return MK+
-  eg(340,70,185,185,0,'r')+eg(340,70,495,185,0,'r')+
-  eg(185,185,110,285,1,'b')+eg(185,185,265,285,1,'b')+
-  eg(495,185,420,285,1,'b')+eg(495,185,575,285,1,'b')+
-  lb(247,105,'RED',RED)+lb(433,105,'RED',RED)+
-  tr(110,285,'α')+tr(265,285,'β')+tr(420,285,'γ')+tr(575,285,'δ')+
-  nd(185,185,'L','r')+nd(495,185,'R','r')+nd(340,70,'h','b');}
-},
-{title:'1단계 — FlipColor(h->color)',
- code:HL('FlipColor(h-&gt;color);')+' '+CM('// h: BLACK → RED'),
- desc:'h의 색상을 반전합니다. h가 RED가 되는 것은 2-3 트리에서 부모 노드로 값을 올리는 "promote" 연산에 대응합니다.',
- draw(){return MK+
-  eg(340,70,185,185,0,'r')+eg(340,70,495,185,0,'r')+
-  eg(185,185,110,285,1,'b')+eg(185,185,265,285,1,'b')+
-  eg(495,185,420,285,1,'b')+eg(495,185,575,285,1,'b')+
-  lb(247,105,'RED',RED)+lb(433,105,'RED',RED)+
-  tr(110,285,'α')+tr(265,285,'β')+tr(420,285,'γ')+tr(575,285,'δ')+
-  nd(185,185,'L','r')+nd(495,185,'R','r')+nd(340,70,'h','hl')+
-  lb(340,107,'→ RED',RED);}
-},
-{title:'2단계 — FlipColor(h->left->color)',
- code:HL('FlipColor(h-&gt;left-&gt;color);')+' '+CM('// L: RED → BLACK'),
- desc:'왼쪽 자식 L의 색상을 반전합니다. L이 BLACK이 되면서 h→L 링크가 BLACK 링크로 바뀝니다.',
- draw(){return MK+
-  eg(340,70,185,185,0,'b')+
-  eg(340,70,495,185,0,'r')+
-  eg(185,185,110,285,1,'b')+eg(185,185,265,285,1,'b')+
-  eg(495,185,420,285,1,'b')+eg(495,185,575,285,1,'b')+
-  lb(433,105,'RED',RED)+
-  tr(110,285,'α')+tr(265,285,'β')+tr(420,285,'γ')+tr(575,285,'δ')+
-  nd(185,185,'L','hl')+nd(495,185,'R','r')+nd(340,70,'h','r')+
-  lbs(185,222,'→ BLACK','var(--color-text-info)');}
-},
-{title:'3단계 — FlipColor(h->right->color)',
- code:HL('FlipColor(h-&gt;right-&gt;color);')+' '+CM('// R: RED → BLACK'),
- desc:'오른쪽 자식 R의 색상을 반전합니다. R이 BLACK이 되면서 h→R 링크가 BLACK 링크로 바뀝니다.',
- draw(){return MK+
-  eg(340,70,185,185,0,'b')+
-  eg(340,70,495,185,0,'b')+
-  eg(185,185,110,285,1,'b')+eg(185,185,265,285,1,'b')+
-  eg(495,185,420,285,1,'b')+eg(495,185,575,285,1,'b')+
-  tr(110,285,'α')+tr(265,285,'β')+tr(420,285,'γ')+tr(575,285,'δ')+
-  nd(185,185,'L','b')+nd(495,185,'R','hl')+nd(340,70,'h','r')+
-  lbs(495,222,'→ BLACK','var(--color-text-info)');}
-},
-{title:'결과 — 4-노드 분해 완료',
- code:CM('// h: BLACK→RED   L: RED→BLACK   R: RED→BLACK'),
- desc:'4-노드가 분해됐습니다. h(RED)가 부모로 올라가고, L·R은 독립적인 2-노드가 됩니다. Delete 시에는 반대 방향으로도 동일하게 작동합니다.',
- draw(){return MK+
-  eg(340,70,185,185,0,'b')+
-  eg(340,70,495,185,0,'b')+
-  eg(185,185,110,285,1,'b')+eg(185,185,265,285,1,'b')+
-  eg(495,185,420,285,1,'b')+eg(495,185,575,285,1,'b')+
-  tr(110,285,'α')+tr(265,285,'β')+tr(420,285,'γ')+tr(575,285,'δ')+
-  nd(185,185,'L','b')+nd(495,185,'R','b')+nd(340,70,'h','r')+
-  lbs(340,38,'↑ 부모로 올라감',RED);}
-}];
+{t:'초기 상태 — 4-노드 (양쪽 자식 모두 RED)',
+ c:`<span class="kw">void</span> FlipColors(<span class="kw">Node*</span> h) {`,
+ d:'h의 왼쪽 L과 오른쪽 R이 모두 RED입니다. 이것이 2-3 트리의 4-노드 상태입니다. Balance() 조건 3이 감지합니다.',
+ f(){return defs()+
+  eg(340,70,185,175,0,'r')+eg(340,70,495,175,0,'r')+
+  eg(185,175,110,275,1,'k')+eg(185,175,265,275,1,'k')+
+  eg(495,175,420,275,1,'k')+eg(495,175,575,275,1,'k')+
+  tr(110,275,'α')+tr(265,275,'β')+tr(420,275,'γ')+tr(575,275,'δ')+
+  nd(185,175,'L','r')+nd(495,175,'R','r')+nd(340,70,'h','k')+
+  lb(248,105,'RED',RED)+lb(434,105,'RED',RED);}},
+{t:'1단계 — FlipColor(h->color)',
+ c:`<span class="hl">FlipColor(h-&gt;color);</span> <span class="cm">// h: BLACK → RED</span>`,
+ d:'h의 색상을 반전합니다. h가 RED로 올라가는 것은 2-3 트리에서 부모 노드로 키를 올리는 promote 연산에 대응합니다.',
+ f(){return defs()+
+  eg(340,70,185,175,0,'r')+eg(340,70,495,175,0,'r')+
+  eg(185,175,110,275,1,'k')+eg(185,175,265,275,1,'k')+
+  eg(495,175,420,275,1,'k')+eg(495,175,575,275,1,'k')+
+  tr(110,275,'α')+tr(265,275,'β')+tr(420,275,'γ')+tr(575,275,'δ')+
+  nd(185,175,'L','r')+nd(495,175,'R','r')+nd(340,70,'h','hl')+
+  lb(248,105,'RED',RED)+lb(434,105,'RED',RED)+lb(340,108,'→ RED',RED);}},
+{t:'2단계 — FlipColor(h->left->color)',
+ c:`<span class="hl">FlipColor(h-&gt;left-&gt;color);</span> <span class="cm">// L: RED → BLACK</span>`,
+ d:'L의 색상을 반전합니다. L이 BLACK이 되면서 h→L 링크가 BLACK으로 바뀝니다.',
+ f(){return defs()+
+  eg(340,70,185,175,0,'k')+
+  eg(340,70,495,175,0,'r')+
+  eg(185,175,110,275,1,'k')+eg(185,175,265,275,1,'k')+
+  eg(495,175,420,275,1,'k')+eg(495,175,575,275,1,'k')+
+  tr(110,275,'α')+tr(265,275,'β')+tr(420,275,'γ')+tr(575,275,'δ')+
+  nd(185,175,'L','hl')+nd(495,175,'R','r')+nd(340,70,'h','r')+
+  lb(434,105,'RED',RED)+lb(185,215,'→ BLACK','#2563eb');}},
+{t:'3단계 — FlipColor(h->right->color)',
+ c:`<span class="hl">FlipColor(h-&gt;right-&gt;color);</span> <span class="cm">// R: RED → BLACK</span>`,
+ d:'R의 색상을 반전합니다. R이 BLACK이 되면서 h→R 링크도 BLACK으로 바뀝니다.',
+ f(){return defs()+
+  eg(340,70,185,175,0,'k')+
+  eg(340,70,495,175,0,'k')+
+  eg(185,175,110,275,1,'k')+eg(185,175,265,275,1,'k')+
+  eg(495,175,420,275,1,'k')+eg(495,175,575,275,1,'k')+
+  tr(110,275,'α')+tr(265,275,'β')+tr(420,275,'γ')+tr(575,275,'δ')+
+  nd(185,175,'L','k')+nd(495,175,'R','hl')+nd(340,70,'h','r')+
+  lb(495,215,'→ BLACK','#2563eb');}},
+{t:'결과 — 4-노드 분해 완료',
+ c:`<span class="cm">// h: BLACK→RED   L: RED→BLACK   R: RED→BLACK</span>`,
+ d:'4-노드가 분해됩니다. h(RED)가 부모로 올라가고, L·R은 독립적인 2-노드가 됩니다. Delete 시에는 반대 방향으로도 동작합니다.',
+ f(){return defs()+
+  eg(340,70,185,175,0,'k')+
+  eg(340,70,495,175,0,'k')+
+  eg(185,175,110,275,1,'k')+eg(185,175,265,275,1,'k')+
+  eg(495,175,420,275,1,'k')+eg(495,175,575,275,1,'k')+
+  tr(110,275,'α')+tr(265,275,'β')+tr(420,275,'γ')+tr(575,275,'δ')+
+  nd(185,175,'L','k')+nd(495,175,'R','k')+nd(340,70,'h','r')+
+  lb(340,38,'↑ 부모로 올라감',RED);}}
+];
 
 const BANKS=[RL,RR,FC];
 let tab=0,cur=0;
 
 function render(anim){
-  const st=BANKS[tab],s=st[cur];
-  document.getElementById('r4t').textContent=s.title;
-  document.getElementById('r4c').innerHTML=s.code;
-  document.getElementById('r4e').textContent=s.desc;
-  document.getElementById('r4i').textContent=`${cur+1} / ${st.length}`;
-  document.getElementById('r4pb').disabled=cur===0;
-  document.getElementById('r4nb').disabled=cur===st.length-1;
-  document.getElementById('r4d').innerHTML=st.map((_,i)=>
-    `<div style="width:7px;height:7px;border-radius:50%;background:${i===cur?'var(--color-text-primary)':'var(--color-border-secondary)'}"></div>`
-  ).join('');
-  const sv=document.getElementById('r4s');
-  if(anim){sv.style.opacity='0';setTimeout(()=>{sv.innerHTML=s.draw();sv.style.opacity='1';},150);}
-  else{sv.innerHTML=s.draw();}
+  const B=BANKS[tab],s=B[cur];
+  document.getElementById('vxti').textContent=s.t;
+  document.getElementById('vxcd').innerHTML=s.c;
+  document.getElementById('vxde').textContent=s.d;
+  document.getElementById('vxci').textContent=`${cur+1} / ${B.length}`;
+  document.getElementById('vxpb').disabled=cur===0;
+  document.getElementById('vxnb').disabled=cur===B.length-1;
+  document.getElementById('vxdo').innerHTML=B.map((_,i)=>
+    `<div style="width:7px;height:7px;border-radius:50%;background:${i===cur?'#111':'#ddd'}"></div>`).join('');
+  const sv=document.getElementById('vxsv');
+  if(anim){sv.style.opacity='0';setTimeout(()=>{sv.innerHTML=s.f();sv.style.opacity='1';},150);}
+  else sv.innerHTML=s.f();
 }
 
-window.r4tab=function(t){
+window.vxtab=function(t){
   tab=t;cur=0;
-  document.querySelectorAll('.r4tab').forEach((b,i)=>b.classList.toggle('on',i===t));
+  document.querySelectorAll('.vxtb').forEach((b,i)=>b.classList.toggle('on',i===t));
   render(true);
 };
-window.r4prev=()=>{if(cur>0){cur--;render(true);}};
-window.r4next=()=>{if(cur<BANKS[tab].length-1){cur++;render(true);}};
+window.vxprev=()=>{if(cur>0){cur--;render(true);}};
+window.vxnext=()=>{if(cur<BANKS[tab].length-1){cur++;render(true);}};
 render(false);
 })();
 </script>
