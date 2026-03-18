@@ -1,0 +1,353 @@
+
+<div style="padding:0.75rem 0;font-family:sans-serif;">
+
+<div style="display:flex;gap:6px;justify-content:center;margin-bottom:14px;">
+  <button id="t0" onclick="sw(0)" style="padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;border:0.5px solid #888;background:#dde4f0;color:#1a3a6b;font-weight:500;">Case 1: 형제 = 2-노드 (FlipColors만)</button>
+  <button id="t1" onclick="sw(1)" style="padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;border:0.5px solid #ccc;background:transparent;color:#666;">Case 2: 형제 = 3-노드 (Borrow)</button>
+</div>
+
+<svg id="sv" width="100%" viewBox="0 0 680 290" style="display:block;border:0.5px solid #e0e0e0;border-radius:8px;background:#fafafa;"></svg>
+
+<div id="codebox" style="font-family:monospace;font-size:12px;line-height:1.9;background:#f0f0f8;border:0.5px solid #ccd;border-radius:8px;padding:10px 16px;margin:8px auto;max-width:640px;"></div>
+
+<div style="text-align:center;margin:5px 0 1px;">
+  <span id="badge" style="display:inline-flex;align-items:center;padding:3px 14px;border-radius:6px;font-size:12px;font-weight:500;"></span>
+</div>
+<div style="text-align:center;"><strong id="st" style="font-size:14px;color:#111;"></strong></div>
+<div style="text-align:center;margin:2px 0 10px;"><span id="sd" style="font-size:12px;color:#555;max-width:540px;display:inline-block;"></span></div>
+
+<div style="display:flex;gap:5px;justify-content:center;margin:5px 0;" id="dots"></div>
+<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:6px 0;">
+  <button id="pb" onclick="nav(-1)" style="padding:7px 24px;border-radius:8px;cursor:pointer;font-size:13px;border:0.5px solid #888;background:transparent;color:#111;">← 이전</button>
+  <span id="sl" style="font-size:12px;color:#666;min-width:50px;text-align:center;"></span>
+  <button id="nb" onclick="nav(1)" style="padding:7px 24px;border-radius:8px;cursor:pointer;font-size:13px;border:0.5px solid #888;background:transparent;color:#111;">다음 →</button>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-top:10px;">
+  <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#555;"><svg width="13" height="13"><circle cx="6.5" cy="6.5" r="5.5" fill="#E24B4A"/></svg>RED 노드</span>
+  <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#555;"><svg width="13" height="13"><circle cx="6.5" cy="6.5" r="5.5" fill="#1a1a1a" stroke="#888" stroke-width="1"/></svg>BLACK 노드</span>
+  <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#555;"><svg width="13" height="13"><circle cx="6.5" cy="6.5" r="5.5" fill="none" stroke="#EF9F27" stroke-width="2.5"/></svg>처리 대상</span>
+  <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#555;"><svg width="22" height="13"><line x1="0" y1="6.5" x2="22" y2="6.5" stroke="#E24B4A" stroke-width="2.5" stroke-linecap="round"/></svg>RED 링크</span>
+  <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#555;"><svg width="13" height="13"><circle cx="6.5" cy="6.5" r="5.5" fill="none" stroke="#E24B4A" stroke-width="1.5" stroke-dasharray="3,2"/></svg>삭제 예정</span>
+</div>
+</div>
+
+<script>
+var CASES = [], ci = 0, cur = 0;
+
+function draw(nodes, edges, annots) {
+  var s = '';
+  (edges||[]).forEach(function(e) {
+    var f = nodes.find(function(n){return n.id===e.f;});
+    var t = nodes.find(function(n){return n.id===e.t;});
+    if (!f||!t) return;
+    s += '<line x1="'+f.x+'" y1="'+(f.y+22)+'" x2="'+t.x+'" y2="'+(t.y-22)+'"'
+       + ' stroke="'+(e.r?'#E24B4A':'#888')+'" stroke-width="'+(e.r?2.5:1.5)+'"'
+       + ' stroke-linecap="round"'+(e.dash?' stroke-dasharray="5,3"':'')+'/>';
+  });
+  nodes.forEach(function(n) {
+    if (n.isNull) {
+      s += '<text x="'+n.x+'" y="'+n.y+'" text-anchor="middle" dominant-baseline="central"'
+         + ' font-size="11" font-family="sans-serif" fill="#bbb">null</text>';
+      return;
+    }
+    var fill = n.r ? '#E24B4A' : '#1a1a1a';
+    var stk  = n.r ? 'none' : '#888';
+    if (n.del) s += '<circle cx="'+n.x+'" cy="'+n.y+'" r="28" fill="none" stroke="#E24B4A" stroke-width="1.5" stroke-dasharray="4,3"/>';
+    if (n.hi)  s += '<circle cx="'+n.x+'" cy="'+n.y+'" r="28" fill="none" stroke="#EF9F27" stroke-width="2.5" opacity=".9"/>';
+    s += '<circle cx="'+n.x+'" cy="'+n.y+'" r="21" fill="'+fill+'" stroke="'+stk+'" stroke-width="1"/>';
+    s += '<text x="'+n.x+'" y="'+n.y+'" text-anchor="middle" dominant-baseline="central"'
+       + ' fill="white" font-size="13" font-weight="500" font-family="sans-serif">'+n.id+'</text>';
+    if (n.sub) s += '<text x="'+n.x+'" y="'+(n.y+35)+'" text-anchor="middle"'
+       + ' font-size="10" font-family="sans-serif" fill="'+(n.subr?'#E24B4A':'#888')+'">'+n.sub+'</text>';
+  });
+  (annots||[]).forEach(function(a) {
+    s += '<text x="'+a.x+'" y="'+a.y+'" text-anchor="'+(a.anchor||'middle')+'"'
+       + ' font-size="'+(a.size||11)+'" font-family="sans-serif" fill="'+(a.color||'#888')+'">'+a.text+'</text>';
+  });
+  document.getElementById('sv').innerHTML = s;
+}
+
+// ── 코드 하이라이트 헬퍼 ──────────────────────────
+var CODE_LINES = [
+  '<span style="color:#888;">Node* MoveRedLeft(Node* h) {</span>',
+  '    FlipColors(h);',
+  '    <span style="color:#888;">if (IsRed(h-&gt;right-&gt;left)) {</span>',
+  '        h-&gt;right = RotateRight(h-&gt;right);',
+  '        h = RotateLeft(h);',
+  '        FlipColors(h);',
+  '    <span style="color:#888;">}</span>',
+  '    <span style="color:#888;">return h;</span>',
+  '<span style="color:#888;">}</span>',
+];
+function renderCode(hiLines) {
+  return CODE_LINES.map(function(line, i) {
+    var isHi = hiLines && hiLines.indexOf(i) >= 0;
+    return '<div style="'+(isHi?'background:#fff3b0;border-radius:3px;margin:0 -8px;padding:0 8px;color:#1a1a1a;font-weight:500;':'color:#555;')+'">'
+      + line + '</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// CASE 1: 형제가 2-노드 — FlipColors만
+// 트리: h(R) → left=A(B,2-node), right=C(B,2-node)
+// ═══════════════════════════════════════════════════
+CASES[0] = [
+  {
+    title: "MoveRedLeft 호출 조건 확인",
+    desc:  "h=RED, left(A)=BLACK, left->left=null=BLACK → 두 조건 모두 true → 호출!",
+    badge: {l:"호출 조건 성립", bg:"#dce8f7", c:"#1a3a6b"},
+    code:  [],
+    nodes: [
+      {id:"h",  x:340,y:60,  r:true,  hi:true, sub:"RED (삭제 방향 ↓)"},
+      {id:"A",  x:200,y:155, r:false, del:true, sub:"삭제 대상 (2-node)"},
+      {id:"C",  x:480,y:155, r:false, sub:"형제 (2-node)"},
+      {id:"n1", x:130,y:235, isNull:true},
+      {id:"n2", x:270,y:235, isNull:true},
+      {id:"n3", x:410,y:235, isNull:true},
+      {id:"n4", x:550,y:235, isNull:true},
+    ],
+    edges:[
+      {f:"h",t:"A",r:false},{f:"h",t:"C",r:false},
+      {f:"A",t:"n1",r:false,dash:true},{f:"A",t:"n2",r:false,dash:true},
+      {f:"C",t:"n3",r:false,dash:true},{f:"C",t:"n4",r:false,dash:true},
+    ],
+    annots:[
+      {x:340,y:25,text:"MoveRedLeft 호출 전 상태",color:"#888",size:11},
+      {x:120,y:155,text:"!IsRed(left) ✓",color:"#1a3a6b",size:10},
+      {x:120,y:168,text:"!IsRed(left->left) ✓",color:"#1a3a6b",size:10},
+    ]
+  },
+  {
+    title: "① FlipColors(h) 실행",
+    desc:  "h: R→B, A: B→R, C: B→R. A가 RED로 변해 왼쪽으로 내려갈 수 있게 됨.",
+    badge: {l:"FlipColors(h) 실행", bg:"#fff3dc", c:"#7a4a00"},
+    code:  [1],
+    nodes: [
+      {id:"h",  x:340,y:60,  r:false, hi:true},
+      {id:"A",  x:200,y:155, r:true,  hi:true, sub:"BLACK→RED ✓"},
+      {id:"C",  x:480,y:155, r:true,  sub:"BLACK→RED"},
+      {id:"n1", x:130,y:235, isNull:true},
+      {id:"n2", x:270,y:235, isNull:true},
+      {id:"n3", x:410,y:235, isNull:true},
+      {id:"n4", x:550,y:235, isNull:true},
+    ],
+    edges:[
+      {f:"h",t:"A",r:true},{f:"h",t:"C",r:true},
+      {f:"A",t:"n1",r:false,dash:true},{f:"A",t:"n2",r:false,dash:true},
+      {f:"C",t:"n3",r:false,dash:true},{f:"C",t:"n4",r:false,dash:true},
+    ]
+  },
+  {
+    title: "② IsRed(h->right->left) 체크 → false",
+    desc:  "C->left = null = BLACK → 조건 불충족 → if 블록 건너뜀. FlipColors만으로 완료.",
+    badge: {l:"조건 false → 종료", bg:"#e8f5e9", c:"#1a4a2a"},
+    code:  [2],
+    nodes: [
+      {id:"h",  x:340,y:60,  r:false},
+      {id:"A",  x:200,y:155, r:true,  hi:true, sub:"→ 이제 안전하게 삭제 가능"},
+      {id:"C",  x:480,y:155, r:true},
+      {id:"n1", x:130,y:235, isNull:true},
+      {id:"n2", x:270,y:235, isNull:true},
+      {id:"n3", x:410,y:235, isNull:true},
+      {id:"n4", x:550,y:235, isNull:true},
+    ],
+    edges:[
+      {f:"h",t:"A",r:true},{f:"h",t:"C",r:true},
+      {f:"A",t:"n1",r:false,dash:true},{f:"A",t:"n2",r:false,dash:true},
+      {f:"C",t:"n3",r:false,dash:true},{f:"C",t:"n4",r:false,dash:true},
+    ],
+    annots:[
+      {x:555,y:155,text:"C->left=null",color:"#E24B4A",size:10},
+      {x:555,y:167,text:"IsRed=false",color:"#E24B4A",size:10},
+    ]
+  },
+  {
+    title: "MoveRedLeft 완료 → DeleteMin(A) 진행",
+    desc:  "A가 RED 상태 → DeleteMin(A) 호출 → A->left==null → 삭제. 이후 Balance 복귀.",
+    badge: {l:"Case 1 완료 ✓", bg:"#e8f5e9", c:"#1a4a2a"},
+    code:  [7],
+    nodes: [
+      {id:"h",  x:340,y:60,  r:false},
+      {id:"A",  x:200,y:155, r:true,  del:true, sub:"삭제!"},
+      {id:"C",  x:480,y:155, r:true},
+    ],
+    edges:[{f:"h",t:"A",r:true},{f:"h",t:"C",r:true}],
+    annots:[
+      {x:340,y:25,text:"핵심: FlipColors 1번으로 해결. 회전 없음.",color:"#1a4a2a",size:11},
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════════════
+// CASE 2: 형제가 3-노드 — Borrow (회전 2번)
+// 트리: h(R) → left=A(B,2-node), right=C(B) with C->left=D(R)
+// ═══════════════════════════════════════════════════
+CASES[1] = [
+  {
+    title: "MoveRedLeft 호출 조건 확인",
+    desc:  "h=RED, left(A)=BLACK 2-노드. 오른쪽 C의 왼쪽 자식 D=RED → 빌릴 수 있음!",
+    badge: {l:"호출 조건 성립 + Borrow 가능", bg:"#dce8f7", c:"#1a3a6b"},
+    code:  [],
+    nodes: [
+      {id:"h",  x:340,y:60,  r:true,  hi:true, sub:"RED (삭제 방향 ↓)"},
+      {id:"A",  x:190,y:155, r:false, del:true, sub:"삭제 대상 (2-node)"},
+      {id:"C",  x:490,y:155, r:false, sub:"형제 (3-node)"},
+      {id:"D",  x:410,y:240, r:true,  hi:true, sub:"빌릴 노드 (RED)"},
+      {id:"E",  x:570,y:240, r:false},
+    ],
+    edges:[
+      {f:"h",t:"A",r:false},{f:"h",t:"C",r:false},
+      {f:"C",t:"D",r:true},{f:"C",t:"E",r:false},
+    ],
+    annots:[
+      {x:120,y:155,text:"!IsRed(left) ✓",color:"#1a3a6b",size:10},
+      {x:120,y:167,text:"!IsRed(left->left) ✓",color:"#1a3a6b",size:10},
+      {x:340,y:25,text:"MoveRedLeft 호출 전 상태",color:"#888",size:11},
+    ]
+  },
+  {
+    title: "① FlipColors(h) 실행",
+    desc:  "h: R→B, A: B→R, C: B→R. 다음으로 IsRed(h->right->left) = IsRed(D) 확인.",
+    badge: {l:"FlipColors(h) 실행", bg:"#fff3dc", c:"#7a4a00"},
+    code:  [1],
+    nodes: [
+      {id:"h",  x:340,y:60,  r:false, hi:true},
+      {id:"A",  x:190,y:155, r:true,  sub:"BLACK→RED"},
+      {id:"C",  x:490,y:155, r:true,  hi:true, sub:"BLACK→RED"},
+      {id:"D",  x:410,y:240, r:true,  hi:true, sub:"D=RED 확인!"},
+      {id:"E",  x:570,y:240, r:false},
+    ],
+    edges:[
+      {f:"h",t:"A",r:true},{f:"h",t:"C",r:true},
+      {f:"C",t:"D",r:true},{f:"C",t:"E",r:false},
+    ]
+  },
+  {
+    title: "② IsRed(h->right->left) 체크 → true",
+    desc:  "D = RED → 조건 충족! 오른쪽 형제 C에서 D를 왼쪽으로 빌려오는 과정 시작.",
+    badge: {l:"조건 true → Borrow 시작!", bg:"#fde8e8", c:"#7a1a1a"},
+    code:  [2],
+    nodes: [
+      {id:"h",  x:340,y:60,  r:false},
+      {id:"A",  x:190,y:155, r:true},
+      {id:"C",  x:490,y:155, r:true},
+      {id:"D",  x:410,y:240, r:true,  hi:true, sub:"← 이 노드를 빌림"},
+      {id:"E",  x:570,y:240, r:false},
+    ],
+    edges:[
+      {f:"h",t:"A",r:true},{f:"h",t:"C",r:true},
+      {f:"C",t:"D",r:true},{f:"C",t:"E",r:false},
+    ],
+    annots:[
+      {x:490,y:120,text:"IsRed(D)=true ✓",color:"#E24B4A",size:11},
+    ]
+  },
+  {
+    title: "③ RotateRight(h->right = C) 실행",
+    desc:  "D가 C 위로 올라옴. C는 D의 오른쪽 자식. Zig-Zag를 직선으로 변환.",
+    badge: {l:"RotateRight(C)", bg:"#ede2f7", c:"#4a1a7a"},
+    code:  [3],
+    nodes: [
+      {id:"h",  x:340,y:60,  r:false, hi:true},
+      {id:"A",  x:190,y:155, r:true},
+      {id:"D",  x:490,y:155, r:true,  hi:true, sub:"올라옴"},
+      {id:"E",  x:400,y:240, r:false},
+      {id:"C",  x:580,y:240, r:true,  sub:"내려옴"},
+    ],
+    edges:[
+      {f:"h",t:"A",r:true},{f:"h",t:"D",r:true},
+      {f:"D",t:"E",r:false},{f:"D",t:"C",r:true},
+    ],
+    annots:[
+      {x:340,y:25,text:"h->right가 D로 교체됨",color:"#888",size:11},
+    ]
+  },
+  {
+    title: "④ RotateLeft(h) 실행",
+    desc:  "D가 h 위로 올라와 새 서브루트. h는 D의 왼쪽 자식. A는 h 아래 유지.",
+    badge: {l:"RotateLeft(h)", bg:"#ede2f7", c:"#4a1a7a"},
+    code:  [4],
+    nodes: [
+      {id:"D",  x:340,y:60,  r:true,  hi:true, sub:"새 서브루트"},
+      {id:"h",  x:190,y:155, r:false, hi:true, sub:"왼쪽으로 내려감"},
+      {id:"C",  x:490,y:155, r:true},
+      {id:"A",  x:110,y:240, r:true},
+      {id:"E",  x:390,y:240, r:false},
+    ],
+    edges:[
+      {f:"D",t:"h",r:true},{f:"D",t:"C",r:true},
+      {f:"h",t:"A",r:true},{f:"h",t:"E",r:false},
+    ],
+    annots:[
+      {x:340,y:25,text:"h가 D로 교체됨 (h = D)",color:"#888",size:11},
+    ]
+  },
+  {
+    title: "⑤ FlipColors(h=D) 실행 — 색 정리",
+    desc:  "D: R→B, h: B→R, C: R→B. h(원래노드)가 RED → DeleteMin(h) 안전하게 진행.",
+    badge: {l:"FlipColors 완료 → Case 2 종료 ✓", bg:"#e8f5e9", c:"#1a4a2a"},
+    code:  [5],
+    nodes: [
+      {id:"D",  x:340,y:60,  r:false, sub:"BLACK (새 서브루트)"},
+      {id:"h",  x:190,y:155, r:true,  hi:true, sub:"RED → 왼쪽 탐색 OK"},
+      {id:"C",  x:490,y:155, r:false, sub:"BLACK"},
+      {id:"A",  x:110,y:240, r:true},
+      {id:"E",  x:390,y:240, r:false},
+    ],
+    edges:[
+      {f:"D",t:"h",r:true},{f:"D",t:"C",r:false},
+      {f:"h",t:"A",r:true},{f:"h",t:"E",r:false},
+    ],
+    annots:[
+      {x:340,y:25,text:"핵심: RotateRight(C) + RotateLeft(h) + FlipColors = D를 빌려옴",color:"#1a4a2a",size:11},
+    ]
+  },
+];
+
+function sw(i) {
+  ci = i; cur = 0;
+  document.getElementById('t0').style.background = i===0 ? '#dde4f0' : 'transparent';
+  document.getElementById('t0').style.color      = i===0 ? '#1a3a6b' : '#666';
+  document.getElementById('t0').style.fontWeight = i===0 ? '500' : 'normal';
+  document.getElementById('t1').style.background = i===1 ? '#dde4f0' : 'transparent';
+  document.getElementById('t1').style.color      = i===1 ? '#1a3a6b' : '#666';
+  document.getElementById('t1').style.fontWeight = i===1 ? '500' : 'normal';
+  updateUI();
+}
+
+function updateUI() {
+  var steps = CASES[ci];
+  var s = steps[cur];
+  draw(s.nodes, s.edges, s.annots);
+
+  var b = document.getElementById('badge');
+  b.textContent = s.badge.l;
+  b.style.background = s.badge.bg;
+  b.style.color = s.badge.c;
+
+  document.getElementById('st').textContent = s.title;
+  document.getElementById('sd').textContent = s.desc;
+  document.getElementById('sl').textContent = (cur+1) + ' / ' + steps.length;
+  document.getElementById('pb').disabled = cur === 0;
+  document.getElementById('nb').disabled = cur === steps.length - 1;
+  document.getElementById('codebox').innerHTML = renderCode(s.code);
+
+  var html = '';
+  for (var i = 0; i < steps.length; i++) {
+    html += '<div style="width:7px;height:7px;border-radius:50%;background:'
+          + (i===cur?'#1a3a6b':'#ccc')
+          + ';display:inline-block;margin:0 2px;"></div>';
+  }
+  document.getElementById('dots').innerHTML = html;
+}
+
+function nav(d) {
+  var next = cur + d;
+  if (next < 0 || next >= CASES[ci].length) return;
+  cur = next;
+  updateUI();
+}
+
+sw(0);
+</script>
