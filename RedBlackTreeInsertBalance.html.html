@@ -1,0 +1,252 @@
+
+<style>
+  .panel { padding: 1rem 1.25rem; border-radius: var(--border-radius-lg); border: 0.5px solid var(--color-border-tertiary); background: var(--color-background-primary); }
+  .code-box { background: var(--color-background-secondary); border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-tertiary); padding: 0.75rem 1rem; font-family: var(--font-mono); font-size: 12px; color: var(--color-text-primary); line-height: 1.8; white-space: pre; overflow-x: auto; min-height: 90px; }
+  .hl  { color: #EF9F27; font-weight: 500; }
+  .dim { color: var(--color-text-secondary); }
+  .ok  { color: #639922; font-weight: 500; }
+  .btn { cursor:pointer; padding:6px 18px; border-radius:var(--border-radius-md); border:0.5px solid var(--color-border-secondary); background:transparent; color:var(--color-text-primary); font-size:13px; transition:background .15s; }
+  .btn:hover { background:var(--color-background-secondary); }
+  .btn:disabled { opacity:.35; cursor:default; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--color-border-secondary); display:inline-block; transition:background .2s; }
+  .dot.active { background:#EF9F27; }
+  .step-lbl { font-size:13px; font-weight:500; color:var(--color-text-secondary); margin-bottom:6px; }
+</style>
+
+<div style="display:flex;flex-direction:column;gap:14px;padding:1rem 0;">
+
+  <div class="panel" style="padding-bottom:0.5rem;">
+    <div class="step-lbl" id="step-title">-</div>
+    <svg width="100%" viewBox="0 0 680 310">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- ===== 레이어A: 단계1~5 ===== -->
+      <g id="layerA">
+        <line x1="322" y1="84" x2="188" y2="136" stroke="var(--color-border-secondary)" stroke-width="1.5"/>
+        <line id="eA46" x1="358" y1="84" x2="462" y2="136" stroke="var(--color-border-secondary)" stroke-width="1.5"/>
+        <line id="eA68" x1="498" y1="184" x2="542" y2="236" stroke="#E24B4A" stroke-width="2"/>
+        <line id="eA65" x1="462" y1="184" x2="418" y2="236" stroke="#E24B4A" stroke-width="2" opacity="0"/>
+
+        <!-- 노드 4 -->
+        <circle cx="340" cy="60" r="28" fill="#2C2C2A" stroke="#444441" stroke-width="1.5"/>
+        <text x="340" y="60" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="500" fill="#F1EFE8">4</text>
+        <!-- 노드 2 -->
+        <circle cx="170" cy="160" r="28" fill="#2C2C2A" stroke="#444441" stroke-width="1.5"/>
+        <text x="170" y="160" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="500" fill="#F1EFE8">2</text>
+        <!-- 노드 6 -->
+        <circle id="cA6" cx="480" cy="160" r="28" fill="#2C2C2A" stroke="#444441" stroke-width="1.5"/>
+        <text id="tA6" x="480" y="160" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="500" fill="#F1EFE8">6</text>
+        <!-- 노드 8 -->
+        <circle id="cA8" cx="560" cy="260" r="28" fill="#E24B4A" stroke="#A32D2D" stroke-width="1.5"/>
+        <text id="tA8" x="560" y="260" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="500" fill="#fff">8</text>
+        <!-- 노드 5 -->
+        <g id="nA5" style="opacity:0">
+          <circle id="cA5" cx="400" cy="260" r="28" fill="#E24B4A" stroke="#A32D2D" stroke-width="1.5"/>
+          <text id="tA5" x="400" y="260" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="500" fill="#fff">5</text>
+        </g>
+
+        <text id="flipTxt" x="480" y="205" text-anchor="middle" font-size="11" fill="#EF9F27" opacity="0">FlipColors!</text>
+        <circle id="ringA" cx="340" cy="60" r="35" fill="none" stroke="#EF9F27" stroke-width="2" stroke-dasharray="6 3" opacity="0"/>
+      </g>
+
+      <!-- ===== 레이어B: 단계6~7 (RotateLeft 후) ===== -->
+      <g id="layerB" style="opacity:0">
+        <line x1="318" y1="84" x2="245" y2="136" stroke="#E24B4A" stroke-width="2"/>
+        <line x1="362" y1="84" x2="455" y2="136" stroke="var(--color-border-secondary)" stroke-width="1.5"/>
+        <line x1="202" y1="184" x2="158" y2="236" stroke="var(--color-border-secondary)" stroke-width="1.5"/>
+        <line x1="238" y1="184" x2="282" y2="236" stroke="var(--color-border-secondary)" stroke-width="1.5"/>
+
+        <circle cx="340" cy="60" r="28" fill="#2C2C2A" stroke="#444441" stroke-width="1.5"/>
+        <text x="340" y="60" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="500" fill="#F1EFE8">6</text>
+        <circle cx="220" cy="160" r="28" fill="#E24B4A" stroke="#A32D2D" stroke-width="1.5"/>
+        <text x="220" y="160" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="500" fill="#fff">4</text>
+        <circle cx="480" cy="160" r="28" fill="#2C2C2A" stroke="#444441" stroke-width="1.5"/>
+        <text x="480" y="160" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="500" fill="#F1EFE8">8</text>
+        <circle cx="140" cy="260" r="28" fill="#2C2C2A" stroke="#444441" stroke-width="1.5"/>
+        <text x="140" y="260" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="500" fill="#F1EFE8">2</text>
+        <circle cx="300" cy="260" r="28" fill="#2C2C2A" stroke="#444441" stroke-width="1.5"/>
+        <text x="300" y="260" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="500" fill="#F1EFE8">5</text>
+
+        <text id="doneTxt" x="340" y="300" text-anchor="middle" font-size="12" fill="#639922" opacity="0">✓ 삽입 및 Balance 완료 — root→color = kBlack</text>
+        <circle id="ringB" cx="340" cy="60" r="35" fill="none" stroke="#EF9F27" stroke-width="2" stroke-dasharray="6 3" opacity="0"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="panel">
+    <div class="step-lbl">실행 중인 코드</div>
+    <div class="code-box" id="code-box"></div>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 0.25rem;">
+    <div id="dots" style="display:flex;gap:6px;align-items:center;"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" id="btn-prev" onclick="go(-1)" disabled>← 이전</button>
+      <button class="btn" id="btn-next" onclick="go(1)">다음 →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const BK = {fill:"#2C2C2A", stroke:"#444441", text:"#F1EFE8"};
+const RD = {fill:"#E24B4A", stroke:"#A32D2D", text:"#fff"};
+
+// 단계별 노드5,6,8 색 + 엣지 상태
+// 단계5: FlipColors → 6=레드, 5=블랙, 8=블랙
+const STEPS = [
+  {
+    layer:"A", ring:[340,60], show5:false, flipTxt:0,
+    n6:BK, n8:RD, n5:RD, e46red:false, e68red:true, e65red:true,
+    title:"단계 1 / 7 — Insert(5) 래퍼 호출",
+    code:`// 외부에서 Insert(5) — 래퍼
+<span class="hl">root = Insert(root, 5, val);</span>
+root->color = Color::kBlack;
+// h = root(4) 로 진입`
+  },
+  {
+    layer:"A", ring:[480,160], show5:false, flipTxt:0,
+    n6:BK, n8:RD, n5:RD, e46red:false, e68red:true, e65red:true,
+    title:"단계 2 / 7 — h=4, 5 > 4 → 오른쪽 재귀",
+    code:`// h = 노드(4)
+if (key < h->key)        // 5 < 4? NO
+<span class="hl">else if (key > h->key)   // 5 > 4? YES
+    h->right = Insert(h->right, 5, val);</span>
+// → Insert(노드6, 5, val) 재귀 호출`
+  },
+  {
+    layer:"A", ring:[400,260], show5:false, flipTxt:0,
+    n6:BK, n8:RD, n5:RD, e46red:false, e68red:true, e65red:true,
+    title:"단계 3 / 7 — h=6, 5 < 6 → 왼쪽 재귀",
+    code:`// h = 노드(6)
+<span class="hl">if (key < h->key)   // 5 < 6? YES
+    h->left = Insert(h->left, 5, val);</span>
+// h->left == nullptr
+// → Insert(nullptr, 5, val) 재귀 호출`
+  },
+  {
+    layer:"A", ring:[400,260], show5:true, flipTxt:0,
+    n6:BK, n8:RD, n5:RD, e46red:false, e68red:true, e65red:true,
+    title:"단계 4 / 7 — nullptr → 레드 노드(5) 생성",
+    code:`// h == nullptr
+<span class="hl">if (h == nullptr)
+    return new Node(5, val, 1, Color::kRed);</span>
+// 노드(5) 레드로 생성, 노드(6)->left 연결
+// 콜스택 반환 → Balance(노드6) 실행`
+  },
+  {
+    // FlipColors: 6=레드, 5=블랙, 8=블랙
+    layer:"A", ring:[480,160], show5:true, flipTxt:1,
+    n6:RD, n8:BK, n5:BK, e46red:true, e68red:false, e65red:false,
+    title:"단계 5 / 7 — Balance(노드6): FlipColors 발동",
+    code:`// Balance(노드6)
+<span class="dim">// 조건1: IsRed(right=8) && !IsRed(left=5) → false  스킵
+// 조건2: IsRed(left=5) && IsRed(left->left=null) → false  스킵</span>
+<span class="hl">// 조건3: IsRed(left=5) && IsRed(right=8) → true!
+//   FlipColors(h)
+//   → 노드(6)=레드, 노드(5)=블랙, 노드(8)=블랙</span>
+// 콜스택 반환 → Balance(노드4) 실행`
+  },
+  {
+    layer:"B", ringB:[340,60], doneTxt:0,
+    title:"단계 6 / 7 — Balance(노드4): 조건1 RotateLeft 발동",
+    code:`// Balance(노드4)
+// right=6(레드), left=2(블랙)
+<span class="hl">// 조건1: IsRed(right=6) && !IsRed(left=2) → true!
+//   h = RotateLeft(h)
+//   → 6이 새 루트(블랙), 4가 왼쪽 자식(레드)
+//   → 6->left(=5,블랙)이 4->right로 이동</span>
+<span class="dim">// 조건2,3 체크 → 모두 false, 스킵</span>`
+  },
+  {
+    layer:"B", ringB:null, doneTxt:1,
+    title:"단계 7 / 7 — 완료: root→color = kBlack",
+    code:`// 래퍼로 복귀
+root = Insert(root, 5, val);  // 완료
+<span class="hl">root->color = Color::kBlack;  // 루트 항상 블랙</span>
+<span class="ok">// 최종: 6(블랙) 루트
+//   left=4(레드) → left=2, right=5
+//   right=8(블랙)
+// 모든 LLRB 규칙 만족 ✓</span>`
+  }
+];
+
+let cur = 0;
+
+function applyColor(circleId, textId, color) {
+  const c = document.getElementById(circleId);
+  const t = document.getElementById(textId);
+  if (!c) return;
+  c.setAttribute('fill',   color.fill);
+  c.setAttribute('stroke', color.stroke);
+  if (t) t.setAttribute('fill', color.text);
+}
+
+function render() {
+  const s = STEPS[cur];
+  document.getElementById('step-title').textContent = s.title;
+  document.getElementById('code-box').innerHTML = s.code;
+
+  const isA = s.layer === "A";
+  document.getElementById('layerA').style.opacity = isA ? '1' : '0';
+  document.getElementById('layerB').style.opacity = isA ? '0' : '1';
+
+  if (isA) {
+    document.getElementById('nA5').style.opacity = s.show5 ? '1' : '0';
+
+    // 엣지 4->6
+    const e46 = document.getElementById('eA46');
+    e46.setAttribute('stroke', s.e46red ? '#E24B4A' : 'var(--color-border-secondary)');
+    e46.setAttribute('stroke-width', s.e46red ? '2' : '1.5');
+
+    // 엣지 6->8
+    const e68 = document.getElementById('eA68');
+    e68.setAttribute('stroke', s.e68red ? '#E24B4A' : 'var(--color-border-secondary)');
+    e68.setAttribute('stroke-width', s.e68red ? '2' : '1.5');
+
+    // 엣지 6->5
+    const e65 = document.getElementById('eA65');
+    e65.setAttribute('opacity', s.show5 ? '1' : '0');
+    e65.setAttribute('stroke', s.e65red ? '#E24B4A' : 'var(--color-border-secondary)');
+    e65.setAttribute('stroke-width', s.e65red ? '2' : '1.5');
+
+    // 노드 색
+    applyColor('cA6','tA6', s.n6);
+    applyColor('cA8','tA8', s.n8);
+    applyColor('cA5','tA5', s.n5);
+
+    document.getElementById('flipTxt').setAttribute('opacity', s.flipTxt);
+
+    const rA = document.getElementById('ringA');
+    if (s.ring) { rA.setAttribute('cx',s.ring[0]); rA.setAttribute('cy',s.ring[1]); rA.setAttribute('opacity','0.9'); }
+    else rA.setAttribute('opacity','0');
+
+  } else {
+    const rB = document.getElementById('ringB');
+    if (s.ringB) { rB.setAttribute('cx',s.ringB[0]); rB.setAttribute('cy',s.ringB[1]); rB.setAttribute('opacity','0.9'); }
+    else rB.setAttribute('opacity','0');
+    document.getElementById('doneTxt').setAttribute('opacity', s.doneTxt);
+  }
+
+  const dc = document.getElementById('dots');
+  dc.innerHTML = '';
+  STEPS.forEach((_,i) => {
+    const d = document.createElement('div');
+    d.className = 'dot'+(i===cur?' active':'');
+    dc.appendChild(d);
+  });
+
+  document.getElementById('btn-prev').disabled = cur === 0;
+  document.getElementById('btn-next').disabled = cur === STEPS.length-1;
+}
+
+function go(d) {
+  cur = Math.max(0, Math.min(STEPS.length-1, cur+d));
+  render();
+}
+
+render();
+</script>
