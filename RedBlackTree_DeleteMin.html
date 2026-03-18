@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLRB — DeleteMin 시각화</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #1a1a18;
+  color: #e8e6de;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem 3rem;
+}
+h1 { font-size: 16px; font-weight: 500; color: #a0a098; margin-bottom: 1rem; }
+
+.panel {
+  background: #242422; border: 0.5px solid #3a3a38;
+  border-radius: 12px; padding: 1rem 1.25rem;
+  width: 100%; max-width: 860px;
+  margin-bottom: 12px;
+}
+.step-lbl { font-size: 13px; font-weight: 500; color: #888780; margin-bottom: 6px; }
+.op-lbl {
+  font-size: 12px; color: #EF9F27; background: #2a2418;
+  border: 0.5px solid #5a4010; border-radius: 6px;
+  padding: 4px 10px; display: inline-block; margin-bottom: 10px;
+}
+.code-box {
+  background: #1a1a18; border: 0.5px solid #3a3a38; border-radius: 8px;
+  padding: 0.75rem 1rem; font-family: 'Courier New', monospace;
+  font-size: 12px; color: #c8c6be; line-height: 1.8;
+  white-space: pre; overflow-x: auto; min-height: 60px;
+}
+.hl  { color: #EF9F27; font-weight: 600; }
+.ok  { color: #7ab83a; font-weight: 500; }
+.dim { color: #555553; }
+.info { color: #5b9bd5; font-weight: 500; }
+
+.controls {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; max-width: 860px; padding: 0 0.25rem;
+}
+.dots { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; max-width: 560px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: #3a3a38; display: inline-block; transition: background .2s; cursor: pointer; }
+.dot.active { background: #EF9F27; }
+.btn-row { display: flex; gap: 8px; }
+.btn {
+  cursor: pointer; padding: 7px 20px; border-radius: 8px;
+  border: 0.5px solid #3a3a38; background: transparent;
+  color: #c8c6be; font-size: 13px; transition: background .15s;
+}
+.btn:hover { background: #2e2e2c; }
+.btn:disabled { opacity: .3; cursor: default; }
+
+.legend {
+  display: flex; gap: 16px; font-size: 12px; color: #888780;
+  align-items: center; margin-bottom: 12px;
+  width: 100%; max-width: 860px;
+}
+.leg-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<h1>LLRB — DeleteMin 단계별 시각화</h1>
+
+<div class="legend">
+  <span><span class="leg-dot" style="background:#E24B4A;"></span>레드 노드</span>
+  <span><span class="leg-dot" style="background:#2C2C2A;border:1.5px solid #555553;"></span>블랙 노드</span>
+  <span><span class="leg-dot" style="background:transparent;border:2px dashed #EF9F27;"></span>현재 포커스</span>
+  <span style="margin-left:8px;color:#5b9bd5;">← → 키로 이동 가능</span>
+</div>
+
+<div class="panel" style="padding-bottom:0.5rem;">
+  <div class="step-lbl" id="step-title">-</div>
+  <div id="op-lbl" class="op-lbl"></div>
+  <div style="overflow-x:auto;">
+    <svg id="tree-svg" width="100%" viewBox="0 0 820 400" style="display:block;min-width:640px;"></svg>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="step-lbl">실행 내용</div>
+  <div class="code-box" id="code-box"></div>
+</div>
+
+<div class="controls">
+  <div class="dots" id="dots"></div>
+  <div class="btn-row">
+    <button class="btn" id="btn-prev" onclick="go(-1)" disabled>← 이전</button>
+    <button class="btn" id="btn-next" onclick="go(1)">다음 →</button>
+  </div>
+</div>
+
+<script>
+// ── 렌더러 ──────────────────────────────────────
+const BK = {fill:"#2C2C2A", stroke:"#555553", text:"#F1EFE8"};
+const RD = {fill:"#E24B4A", stroke:"#A32D2D", text:"#ffffff"};
+const R  = 23;
+
+function drawTree(nodes, edges, highlight) {
+  const svg = document.getElementById('tree-svg');
+  svg.innerHTML = '';
+
+  const pos = {};
+  nodes.forEach(n => pos[n.id] = {x:n.x, y:n.y});
+
+  // edges
+  edges.forEach(e => {
+    const a = pos[e.from], b = pos[e.to];
+    if (!a || !b) return;
+    const dx = b.x-a.x, dy = b.y-a.y;
+    const len = Math.sqrt(dx*dx+dy*dy);
+    const x1 = a.x+dx/len*R, y1 = a.y+dy/len*R;
+    const x2 = b.x-dx/len*R, y2 = b.y-dy/len*R;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke', e.red ? '#E24B4A' : '#4a4a48');
+    line.setAttribute('stroke-width', e.red ? '2.5' : '1.5');
+    svg.appendChild(line);
+  });
+
+  // nodes
+  nodes.forEach(n => {
+    const c = n.red ? RD : BK;
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+
+    if (highlight && highlight.includes(n.id)) {
+      const ring = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      ring.setAttribute('cx',n.x); ring.setAttribute('cy',n.y); ring.setAttribute('r',R+7);
+      ring.setAttribute('fill','none'); ring.setAttribute('stroke','#EF9F27');
+      ring.setAttribute('stroke-width','2'); ring.setAttribute('stroke-dasharray','5 3');
+      g.appendChild(ring);
+    }
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx',n.x); circle.setAttribute('cy',n.y); circle.setAttribute('r',R);
+    circle.setAttribute('fill',c.fill); circle.setAttribute('stroke',c.stroke);
+    circle.setAttribute('stroke-width','1.5');
+    g.appendChild(circle);
+
+    const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+    txt.setAttribute('x',n.x); txt.setAttribute('y',n.y);
+    txt.setAttribute('text-anchor','middle'); txt.setAttribute('dominant-baseline','central');
+    txt.setAttribute('font-size','13'); txt.setAttribute('font-weight','500');
+    txt.setAttribute('fill',c.text); txt.textContent = n.label;
+    g.appendChild(txt);
+
+    svg.appendChild(g);
+  });
+}
+
+// ── 노드/엣지 헬퍼 ──────────────────────────────
+function n(id,label,x,y,red=false){ return {id,label,x,y,red}; }
+function e(from,to,red=false){ return {from,to,red}; }
+
+// ── 공통 레이아웃 좌표 ───────────────────────────
+// 초기 SEARCHXMPL (A삭제 후 버전 = C가 최솟값)
+//         M  (410,45)
+//        / \
+//       E    R  (230,125) (590,125)
+//      / \  / \
+//     C   L P   X  (140,205)(320,205)(500,205)(680,205)
+//         /       \
+//        *H        *S  (270,285)(630,285)
+
+const INIT_A = {
+  nodes:[
+    n('M','M',410,45),
+    n('E','E',230,125), n('R','R',590,125),
+    n('C','C',140,205), n('L','L',320,205),
+    n('P','P',500,205), n('X','X',680,205),
+    n('A','A',90,285,true), n('H','H',270,285,true),
+    n('S','S',630,285,true),
+  ],
+  edges:[
+    e('M','E'), e('M','R'),
+    e('E','C'), e('E','L'),
+    e('R','P'), e('R','X'),
+    e('C','A',true), e('L','H',true), e('X','S',true),
+  ]
+};
+
+// A 삭제 후
+const AFTER_A = {
+  nodes:[
+    n('M','M',410,45),
+    n('E','E',230,125), n('R','R',590,125),
+    n('C','C',140,205), n('L','L',320,205),
+    n('P','P',500,205), n('X','X',680,205),
+    n('H','H',270,285,true), n('S','S',630,285,true),
+  ],
+  edges:[
+    e('M','E'), e('M','R'),
+    e('E','C'), e('E','L'),
+    e('R','P'), e('R','X'),
+    e('L','H',true), e('X','S',true),
+  ]
+};
+
+// ── STEPS ───────────────────────────────────────
+const STEPS = [
+
+  // ═══════════════════════════════
+  // [A 삭제]
+  // ═══════════════════════════════
+  {
+    title:"[초기 상태] SEARCHXMPL — A가 최솟값",
+    op:"",
+    highlight:['A'],
+    tree: INIT_A,
+    code:`// 앞에 * = 레드 노드
+//              M
+//       /             \\
+//      E               R
+//   /     \\         /     \\
+//  C       L       P       X
+// /       /               /
+//*A     *H              *S
+//
+// DeleteMin 목표: 가장 왼쪽 노드(A)부터 순서대로 삭제`
+  },
+  {
+    title:"[DeleteMin: A] *A는 레드 → 바로 삭제 가능",
+    op:"Delete node A",
+    highlight:['A'],
+    tree: INIT_A,
+    code:`// *A는 레드 노드
+// 레드 노드 삭제 → 블랙 카운트에 영향 없음
+// MoveRedLeft 필요 없음
+<span class="hl">Delete node A</span>
+// Balance() 호출 후 완료`
+  },
+  {
+    title:"[DeleteMin: A] 삭제 완료",
+    op:"결과",
+    highlight:null,
+    tree: AFTER_A,
+    code:`//              M
+//       /             \\
+//      E               R
+//   /     \\         /     \\
+//  C       L       P       X
+//          /               /
+//        *H              *S
+<span class="ok">// A 삭제 완료 ✓</span>`
+  },
+
+  // ═══════════════════════════════
+  // [C 삭제] - 핵심
+  // ═══════════════════════════════
+  {
+    title:"[DeleteMin: C] C는 블랙 2-노드 → 바로 삭제 불가",
+    op:"DeleteMin: C 시작",
+    highlight:['C'],
+    tree: AFTER_A,
+    code:`// C는 블랙 노드, 자식 없음
+// 블랙 노드 삭제 → 블랙 카운트 깨짐 → 불가
+//
+// 전략: C를 레드로 만든 후 삭제
+// → MoveRedLeft 사용
+//
+// 먼저 DeleteMin(M) 진입 → MoveRedLeft(M) 호출`
+  },
+  {
+    title:"[DeleteMin: C] DeleteMin(M) → MoveRedLeft(M) → FlipColors(M)",
+    op:"FlipColors(M)",
+    highlight:['M'],
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('E','E',230,125,true), n('R','R',590,125,true),
+        n('C','C',140,205), n('L','L',320,205),
+        n('P','P',500,205), n('X','X',680,205),
+        n('H','H',270,285,true), n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','E',true), e('M','R',true),
+        e('E','C'), e('E','L'),
+        e('R','P'), e('R','X'),
+        e('L','H',true), e('X','S',true),
+      ]
+    },
+    code:`// MoveRedLeft(M) 내부:
+// 1단계: FlipColors(M)
+<span class="hl">FlipColors(M) → E=레드, R=레드, M=블랙</span>
+// M 기준으로 자식 색을 뒤집음
+// 임시로 (E M R) 4-노드 형성
+//
+// 다음: IsRed(R->left)? → R->left=P(블랙) → false
+// → 추가 회전 없음, MoveRedLeft(M) 완료
+// → DeleteMin(E) 재귀 호출로 내려감`
+  },
+  {
+    title:"[DeleteMin: C] DeleteMin(E) → MoveRedLeft(E) → FlipColors(E)",
+    op:"FlipColors(E)",
+    highlight:['E'],
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('E','E',230,125), n('R','R',590,125,true),
+        n('C','C',140,205,true), n('L','L',320,205,true),
+        n('P','P',500,205), n('X','X',680,205),
+        n('H','H',270,285,true), n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','E'), e('M','R',true),
+        e('E','C',true), e('E','L',true),
+        e('R','P'), e('R','X'),
+        e('L','H',true), e('X','S',true),
+      ]
+    },
+    code:`// E로 내려와서 MoveRedLeft(E) 호출
+// 1단계: FlipColors(E)
+<span class="hl">FlipColors(E): E=레드→블랙, C=블랙→레드, L=블랙→레드</span>
+// E 기준으로 E 자신과 두 자식(C,L) 색을 뒤집음
+//
+// 다음: IsRed(L->left=*H)? → true!
+// → 형제(L)에 레드 자식 있음 = 빌려올 수 있음
+// → 회전 시작`
+  },
+  {
+    title:"[DeleteMin: C] IsRed(L->left=*H) → true → RotateRight(L)",
+    op:"RotateRight(L)",
+    highlight:['H','L'],
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('E','E',230,125), n('R','R',590,125,true),
+        n('C','C',140,205,true), n('H','H',320,205,true),
+        n('P','P',500,205), n('X','X',680,205),
+        n('L','L',390,285,true),
+        n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','E'), e('M','R',true),
+        e('E','C',true), e('E','H',true),
+        e('R','P'), e('R','X'),
+        e('H','L',true), e('X','S',true),
+      ]
+    },
+    code:`// RotateRight(L): h=L(레드), x=H(레드)
+// x->color = h->color → H가 L의 색(레드) 받음 → H=레드
+// h->color = kRed     → L=레드
+<span class="hl">H가 올라오고, L은 H의 오른쪽 자식으로 내려감</span>
+// E=블랙, H=레드(E->right), L=레드(H->right)
+//
+// 다음: RotateLeft(E)`
+  },
+  {
+    title:"[DeleteMin: C] RotateLeft(E) → H가 E 자리로",
+    op:"RotateLeft(E)",
+    highlight:['H','E'],
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('H','H',230,125), n('R','R',590,125,true),
+        n('E','E',140,205,true), n('L','L',320,205,true),
+        n('P','P',500,205), n('X','X',680,205),
+        n('C','C',90,285,true),
+        n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','H'), e('M','R',true),
+        e('H','E',true), e('H','L',true),
+        e('R','P'), e('R','X'),
+        e('E','C',true), e('X','S',true),
+      ]
+    },
+    code:`// RotateLeft(E): h=E(블랙), x=H(레드)
+// x->color = h->color → H가 E의 색(블랙) 받음 → H=블랙
+// h->color = kRed     → E=레드
+<span class="hl">H=블랙(E자리), E=레드(H->left), L=레드(H->right) 아직 레드!</span>
+//
+//   H(블랙)
+//  /      \\
+// *E      *L  ← L 아직 레드
+//  \\
+//  *C
+//
+// 다음: FlipColors(H) 에서 E=블랙, L=블랙으로 바뀜`
+  },
+  {
+    title:"[DeleteMin: C] FlipColors(H) → 색 정리",
+    op:"FlipColors(H)",
+    highlight:['C'],
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('H','H',230,125,true), n('R','R',590,125,true),
+        n('E','E',140,205), n('L','L',320,205),
+        n('P','P',500,205), n('X','X',680,205),
+        n('C','C',90,285,true),
+        n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','H',true), e('M','R',true),
+        e('H','E'), e('H','L'),
+        e('R','P'), e('R','X'),
+        e('E','C',true), e('X','S',true),
+      ]
+    },
+    code:`// FlipColors(H): H와 두 자식(E,L) 색을 뒤집음
+// H: 블랙→레드
+// E: 레드→블랙
+// L: 레드→블랙
+<span class="hl">FlipColors(H): H=레드, E=블랙, L=블랙</span>
+//
+// MoveRedLeft(E) 완료!
+//   *H
+//  /   \\
+// E     L   ← E,L 블랙
+//  \\
+//  *C   ← C는 레드, 삭제 가능!`
+  },
+  {
+    title:"[DeleteMin: C] DeleteMin(E) → DeleteMin(C) → C 삭제!",
+    op:"Delete node C",
+    highlight:['C'],
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('H','H',230,125,true), n('R','R',590,125,true),
+        n('E','E',140,205), n('L','L',320,205),
+        n('P','P',500,205), n('X','X',680,205),
+        n('C','C',90,285,true),
+        n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','H',true), e('M','R',true),
+        e('H','E'), e('H','L'),
+        e('R','P'), e('R','X'),
+        e('E','C',true), e('X','S',true),
+      ]
+    },
+    code:`// *C는 레드 → 블랙 카운트 영향 없음
+<span class="hl">Delete node C</span>
+//
+// 이제 콜스택 따라 올라오면서
+// Balance() 실행 시작
+// Balance(E) → Balance(H) → Balance(M)`
+  },
+  {
+    title:"[DeleteMin: C] Balance(E) 실행",
+    op:"Balance(E)",
+    highlight:['E'],
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('H','H',230,125,true), n('R','R',590,125,true),
+        n('E','E',140,205), n('L','L',320,205),
+        n('P','P',500,205), n('X','X',680,205),
+        n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','H',true), e('M','R',true),
+        e('H','E'), e('H','L'),
+        e('R','P'), e('R','X'),
+        e('X','S',true),
+      ]
+    },
+    code:`// C 삭제 후 Balance(E):
+//   E의 left=null, right=null (C 삭제됨)
+<span class="dim">// 조건1: IsRed(right=null)? → false  스킵
+// 조건2: IsRed(left=null)? → false  스킵
+// 조건3: IsRed(left=null) && IsRed(right=null)? → false  스킵</span>
+// size 업데이트 후 반환`
+  },
+  {
+    title:"[DeleteMin: C] Balance(H) 실행",
+    op:"Balance(H)",
+    highlight:['H'],
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('H','H',230,125,true), n('R','R',590,125,true),
+        n('E','E',140,205), n('L','L',320,205),
+        n('P','P',500,205), n('X','X',680,205),
+        n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','H',true), e('M','R',true),
+        e('H','E'), e('H','L'),
+        e('R','P'), e('R','X'),
+        e('X','S',true),
+      ]
+    },
+    code:`// Balance(H):
+//   left=E(블랙), right=L(블랙)
+<span class="dim">// 조건1: IsRed(right=L)? → false  스킵
+// 조건2: IsRed(left=E)? → false  스킵
+// 조건3: IsRed(left=E) && IsRed(right=L)? → false  스킵</span>
+// size 업데이트 후 반환`
+  },
+  {
+    title:"[DeleteMin: C] Balance(M) → FlipColors(M) → 원복",
+    op:"Balance(M) → FlipColors(M)",
+    highlight:['M'],
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('H','H',230,125), n('R','R',590,125),
+        n('E','E',140,205), n('L','L',320,205),
+        n('P','P',500,205), n('X','X',680,205),
+        n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','H'), e('M','R'),
+        e('H','E'), e('H','L'),
+        e('R','P'), e('R','X'),
+        e('X','S',true),
+      ]
+    },
+    code:`// Balance(M):
+//   left=H(레드), right=R(레드)
+<span class="dim">// 조건1: IsRed(right=R) && !IsRed(left=H)? → true && false  스킵</span>
+<span class="hl">// 조건3: IsRed(left=H) && IsRed(right=R) → true!
+//   FlipColors(M): H=레드→블랙, R=레드→블랙, M=블랙→레드
+//   → 임시 4-노드 원복 (래퍼에서 root=블랙 고정)</span>`
+  },
+  {
+    title:"[DeleteMin: C] 삭제 완료",
+    op:"결과",
+    highlight:null,
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('H','H',230,125), n('R','R',590,125),
+        n('E','E',140,205), n('L','L',320,205),
+        n('P','P',500,205), n('X','X',680,205),
+        n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','H'), e('M','R'),
+        e('H','E'), e('H','L'),
+        e('R','P'), e('R','X'),
+        e('X','S',true),
+      ]
+    },
+    code:`//              M
+//       /             \\
+//      H               R
+//   /     \\         /     \\
+//  E       L       P       X
+//                          /
+//                        *S
+<span class="ok">// C 삭제 완료 ✓</span>`
+  },
+
+  // ═══════════════════════════════
+  // [E 삭제]
+  // ═══════════════════════════════
+  {
+    title:"[DeleteMin: E] E는 블랙 2-노드 → MoveRedLeft 필요",
+    op:"DeleteMin: E 시작",
+    highlight:['E'],
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('H','H',230,125), n('R','R',590,125),
+        n('E','E',140,205), n('L','L',320,205),
+        n('P','P',500,205), n('X','X',680,205),
+        n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','H'), e('M','R'),
+        e('H','E'), e('H','L'),
+        e('R','P'), e('R','X'),
+        e('X','S',true),
+      ]
+    },
+    code:`// E는 블랙 2-노드 → 바로 삭제 불가
+// DeleteMin(M) → MoveRedLeft(M) 호출
+// FlipColors(M) 먼저 실행`
+  },
+  {
+    title:"[DeleteMin: E] FlipColors(M) → H=레드, R=레드",
+    op:"FlipColors(M)",
+    highlight:['M'],
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('H','H',230,125,true), n('R','R',590,125,true),
+        n('E','E',140,205), n('L','L',320,205),
+        n('P','P',500,205), n('X','X',680,205),
+        n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','H',true), e('M','R',true),
+        e('H','E'), e('H','L'),
+        e('R','P'), e('R','X'),
+        e('X','S',true),
+      ]
+    },
+    code:`// MoveRedLeft(M):
+<span class="hl">FlipColors(M) → H=레드, R=레드, M=블랙</span>
+// IsRed(R->left=P)? → false
+// → 추가 회전 없음
+// → DeleteMin(H) 재귀 호출`
+  },
+  {
+    title:"[DeleteMin: E] DeleteMin(H) → MoveRedLeft(H) → FlipColors(H)",
+    op:"FlipColors(H)",
+    highlight:['H'],
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('H','H',230,125,true), n('R','R',590,125,true),
+        n('E','E',140,205,true), n('L','L',320,205,true),
+        n('P','P',500,205), n('X','X',680,205),
+        n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','H',true), e('M','R',true),
+        e('H','E',true), e('H','L',true),
+        e('R','P'), e('R','X'),
+        e('X','S',true),
+      ]
+    },
+    code:`// H로 내려와서 MoveRedLeft(H):
+<span class="hl">FlipColors(H) → E=레드, L=레드, H=블랙</span>
+// IsRed(L->left)? → L->left=null → false
+// → 추가 회전 없음
+// → DeleteMin(E) 재귀 호출`
+  },
+  {
+    title:"[DeleteMin: E] DeleteMin(E) → *E는 레드 → 바로 삭제",
+    op:"Delete node E",
+    highlight:['E'],
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('H','H',230,125,true), n('R','R',590,125,true),
+        n('E','E',140,205,true), n('L','L',320,205,true),
+        n('P','P',500,205), n('X','X',680,205),
+        n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','H',true), e('M','R',true),
+        e('H','E',true), e('H','L',true),
+        e('R','P'), e('R','X'),
+        e('X','S',true),
+      ]
+    },
+    code:`// *E는 레드 → 블랙 카운트 영향 없음
+<span class="hl">Delete node E</span>
+// 콜스택 올라오며 Balance 실행
+// Balance(H) → Balance(M)`
+  },
+  {
+    title:"[DeleteMin: E] Balance(H) → RotateLeft(H)",
+    op:"Balance(H) → RotateLeft(H)",
+    highlight:['H'],
+    tree:{
+      nodes:[
+        n('M','M',410,45),
+        n('L','L',230,125,true), n('R','R',590,125,true),
+        n('H','H',140,205), n('P','P',500,205),
+        n('X','X',680,205),
+        n('S','S',630,285,true),
+      ],
+      edges:[
+        e('M','L',true), e('M','R',true),
+        e('L','H'), e('R','P'),
+        e('R','X'), e('X','S',true),
+      ]
+    },
+    code:`// Balance(H):
+//   right=*L(레드), left=null
+<span class="hl">// 조건1: IsRed(right=*L) && !IsRed(left=null) → true!
+//   RotateLeft(H): L이 올라오고 H가 내려감</span>
+// 계속 Balance(M)`
+  },
+  {
+    title:"[DeleteMin: E] Balance(M) → FlipColors(M) 원복",
+    op:"Balance(M) → FlipColors(M)",
+    highlight:['M'],
+    tree:{
+      nodes:[
+        n('R','R',410,45),
+        n('M','M',230,125,true), n('X','X',590,125),
+        n('L','L',140,205), n('P','P',320,205),
+        n('S','S',490,205,true),
+        n('H','H',90,285,true),
+      ],
+      edges:[
+        e('R','M',true), e('R','X'),
+        e('M','L'), e('M','P'),
+        e('X','S',true),
+        e('L','H',true),
+      ]
+    },
+    code:`// Balance(M) 실행 중 여러 조건 처리
+// 최종적으로 R이 새 루트로 올라옴
+<span class="hl">FlipColors → 임시 4-노드 원복
+root->color = kBlack 으로 고정</span>
+//
+//        R
+//     /     \\
+//   *M       X
+//   / \\     /
+//  L   P  *S
+//  /
+// *H`
+  },
+  {
+    title:"[DeleteMin: E] 삭제 완료",
+    op:"결과",
+    highlight:null,
+    tree:{
+      nodes:[
+        n('R','R',410,45),
+        n('M','M',230,125,true), n('X','X',590,125),
+        n('L','L',140,205), n('P','P',320,205),
+        n('S','S',490,205,true),
+        n('H','H',90,285,true),
+      ],
+      edges:[
+        e('R','M',true), e('R','X'),
+        e('M','L'), e('M','P'),
+        e('X','S',true),
+        e('L','H',true),
+      ]
+    },
+    code:`//        R
+//     /     \\
+//   *M       X
+//   / \\     /
+//  L   P  *S
+//  /
+// *H
+<span class="ok">// E 삭제 완료 ✓</span>`
+  },
+
+  // ═══════════════════════════════
+  // [H, L, M, P, R, S, X 삭제 요약]
+  // ═══════════════════════════════
+  {
+    title:"[DeleteMin: H] *H는 레드 → 바로 삭제",
+    op:"Delete node H",
+    highlight:['H'],
+    tree:{
+      nodes:[
+        n('R','R',410,45),
+        n('M','M',230,125,true), n('X','X',590,125),
+        n('L','L',140,205), n('P','P',320,205),
+        n('S','S',490,205,true),
+        n('H','H',90,285,true),
+      ],
+      edges:[
+        e('R','M',true), e('R','X'),
+        e('M','L'), e('M','P'),
+        e('X','S',true), e('L','H',true),
+      ]
+    },
+    code:`// *H는 레드 → 바로 삭제
+<span class="hl">Delete node H</span>
+// Balance 후 완료`
+  },
+  {
+    title:"[DeleteMin: H] 삭제 완료",
+    op:"결과",
+    highlight:null,
+    tree:{
+      nodes:[
+        n('R','R',410,45),
+        n('M','M',230,125,true), n('X','X',590,125),
+        n('L','L',140,205), n('P','P',320,205),
+        n('S','S',490,205,true),
+      ],
+      edges:[
+        e('R','M',true), e('R','X'),
+        e('M','L'), e('M','P'),
+        e('X','S',true),
+      ]
+    },
+    code:`//    R
+// /     \\
+//*M       X
+/// \\     /
+//L   P  *S
+<span class="ok">// H 삭제 완료 ✓</span>`
+  },
+  {
+    title:"[DeleteMin: L] Balance 후 P가 루트로",
+    op:"Delete node L → Balance",
+    highlight:['L'],
+    tree:{
+      nodes:[
+        n('R','R',410,45),
+        n('P','P',230,125), n('X','X',590,125),
+        n('M','M',140,205,true), n('S','S',490,205,true),
+      ],
+      edges:[
+        e('R','P'), e('R','X'),
+        e('P','M',true), e('X','S',true),
+      ]
+    },
+    code:`// L 삭제 후 Balance
+//    R
+// /     \\
+//P       X
+///       /
+//*M    *S
+<span class="ok">// L 삭제 완료 ✓</span>`
+  },
+  {
+    title:"[DeleteMin: M] *M은 레드 → 바로 삭제",
+    op:"Delete node M",
+    highlight:['M'],
+    tree:{
+      nodes:[
+        n('R','R',410,45),
+        n('P','P',230,125), n('X','X',590,125),
+        n('M','M',140,205,true), n('S','S',490,205,true),
+      ],
+      edges:[
+        e('R','P'), e('R','X'),
+        e('P','M',true), e('X','S',true),
+      ]
+    },
+    code:`// *M은 레드 → 바로 삭제
+<span class="hl">Delete node M</span>
+// Balance 후 완료`
+  },
+  {
+    title:"[DeleteMin: M] 삭제 완료",
+    op:"결과",
+    highlight:null,
+    tree:{
+      nodes:[
+        n('R','R',410,45),
+        n('P','P',230,125), n('X','X',590,125),
+        n('S','S',490,205,true),
+      ],
+      edges:[
+        e('R','P'), e('R','X'),
+        e('X','S',true),
+      ]
+    },
+    code:`//    R
+// /     \\
+//P       X
+//        /
+//      *S
+<span class="ok">// M 삭제 완료 ✓</span>`
+  },
+  {
+    title:"[DeleteMin: P] Balance 후 S가 루트로",
+    op:"Delete node P → Balance",
+    highlight:['P'],
+    tree:{
+      nodes:[
+        n('S','S',410,45),
+        n('R','R',230,125), n('X','X',590,125),
+      ],
+      edges:[ e('S','R'), e('S','X') ]
+    },
+    code:`// P 삭제 후 Balance → *S가 올라와 루트
+//   S
+//  / \\
+// R   X
+<span class="ok">// P 삭제 완료 ✓</span>`
+  },
+  {
+    title:"[DeleteMin: R] Balance 후 X만 남음",
+    op:"Delete node R → Balance",
+    highlight:['R'],
+    tree:{
+      nodes:[
+        n('X','X',410,45),
+        n('S','S',230,125,true),
+      ],
+      edges:[ e('X','S',true) ]
+    },
+    code:`// R 삭제 후
+//   X
+//  /
+// *S
+<span class="ok">// R 삭제 완료 ✓</span>`
+  },
+  {
+    title:"[DeleteMin: S] *S는 레드 → 바로 삭제",
+    op:"Delete node S",
+    highlight:['S'],
+    tree:{
+      nodes:[
+        n('X','X',410,45),
+        n('S','S',230,125,true),
+      ],
+      edges:[ e('X','S',true) ]
+    },
+    code:`// *S는 레드 → 바로 삭제
+<span class="hl">Delete node S</span>`
+  },
+  {
+    title:"[DeleteMin: S] 삭제 완료 → X만",
+    op:"결과",
+    highlight:null,
+    tree:{ nodes:[ n('X','X',410,45) ], edges:[] },
+    code:`// X
+<span class="ok">// S 삭제 완료 ✓</span>`
+  },
+  {
+    title:"[DeleteMin: X] 마지막 노드 삭제",
+    op:"Delete node X",
+    highlight:['X'],
+    tree:{ nodes:[ n('X','X',410,45) ], edges:[] },
+    code:`// X는 루트이자 유일한 노드
+// h == nullptr 반환 → root = null
+<span class="hl">Delete node X</span>`
+  },
+  {
+    title:"[DeleteMin: X] 트리 비어있음",
+    op:"Empty",
+    highlight:null,
+    tree:{ nodes:[], edges:[] },
+    code:`<span class="ok">// Empty ✓
+// 모든 노드 삭제 완료</span>`
+  },
+];
+
+// ── 상태 & 렌더 ─────────────────────────────────
+let cur = 0;
+
+function render() {
+  const s = STEPS[cur];
+  document.getElementById('step-title').textContent =
+    `단계 ${cur+1} / ${STEPS.length} — ${s.title}`;
+
+  const opEl = document.getElementById('op-lbl');
+  if (s.op) { opEl.style.display='inline-block'; opEl.textContent=s.op; }
+  else       { opEl.style.display='none'; }
+
+  document.getElementById('code-box').innerHTML = s.code;
+  drawTree(s.tree.nodes, s.tree.edges, s.highlight);
+
+  // dots
+  const dc = document.getElementById('dots');
+  dc.innerHTML = '';
+  STEPS.forEach((_,i) => {
+    const d = document.createElement('span');
+    d.className = 'dot'+(i===cur?' active':'');
+    d.onclick = ()=>{ cur=i; render(); };
+    dc.appendChild(d);
+  });
+
+  document.getElementById('btn-prev').disabled = cur===0;
+  document.getElementById('btn-next').disabled = cur===STEPS.length-1;
+}
+
+function go(d) {
+  cur = Math.max(0, Math.min(STEPS.length-1, cur+d));
+  render();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowRight'||e.key==='ArrowDown') go(1);
+  if (e.key==='ArrowLeft' ||e.key==='ArrowUp')   go(-1);
+});
+
+render();
+</script>
+</body>
+</html>

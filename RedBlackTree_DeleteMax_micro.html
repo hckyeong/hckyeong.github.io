@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLRB — DeleteMax X 삭제 초세분화</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #1a1a18; color: #e8e6de;
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; padding: 1.5rem 1rem 3rem;
+}
+h1 { font-size: 15px; font-weight: 500; color: #a0a098; margin-bottom: 0.75rem; }
+.panel {
+  background: #242422; border: 0.5px solid #3a3a38;
+  border-radius: 12px; padding: 0.9rem 1.1rem;
+  width: 100%; max-width: 920px; margin-bottom: 10px;
+}
+.step-lbl { font-size: 13px; font-weight: 500; color: #888780; margin-bottom: 4px; }
+.call-stack {
+  font-family: 'Courier New', monospace; font-size: 11px;
+  color: #5b9bd5; margin-bottom: 8px; line-height: 1.6;
+}
+.op-lbl {
+  font-size: 12px; color: #EF9F27; background: #2a2418;
+  border: 0.5px solid #5a4010; border-radius: 6px;
+  padding: 3px 10px; display: inline-block; margin-bottom: 8px;
+}
+.code-box {
+  background: #1a1a18; border: 0.5px solid #3a3a38; border-radius: 8px;
+  padding: 0.65rem 1rem; font-family: 'Courier New', monospace;
+  font-size: 12px; color: #c8c6be; line-height: 1.8;
+  white-space: pre; overflow-x: auto; min-height: 55px;
+}
+.hl  { color: #EF9F27; font-weight: 600; }
+.ok  { color: #7ab83a; font-weight: 500; }
+.dim { color: #555553; }
+.controls {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; max-width: 920px; padding: 0 0.25rem;
+}
+.dots { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; max-width: 660px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: #3a3a38;
+       display: inline-block; transition: background .15s; cursor: pointer; }
+.dot.active { background: #EF9F27; }
+.btn-row { display: flex; gap: 8px; }
+.btn {
+  cursor: pointer; padding: 6px 18px; border-radius: 8px;
+  border: 0.5px solid #3a3a38; background: transparent;
+  color: #c8c6be; font-size: 13px; transition: background .15s;
+}
+.btn:hover { background: #2e2e2c; }
+.btn:disabled { opacity: .3; cursor: default; }
+.legend {
+  display: flex; gap: 14px; font-size: 11px; color: #888780;
+  align-items: center; margin-bottom: 10px;
+  width: 100%; max-width: 920px;
+}
+.ld { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 3px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<h1>LLRB — DeleteMax: X 삭제 전 과정 (콜스택 + h 포인터 포함)</h1>
+<div class="legend">
+  <span><span class="ld" style="background:#E24B4A;"></span>레드</span>
+  <span><span class="ld" style="background:#2C2C2A;border:1.5px solid #555553;"></span>블랙</span>
+  <span><span class="ld" style="background:transparent;border:2px dashed #EF9F27;"></span>현재 포커스</span>
+  <span style="color:#7ab83a;font-weight:600;">h →</span><span style="color:#7ab83a;"> h 포인터</span>
+  <span style="color:#5b9bd5;">← → 키 또는 점 클릭</span>
+</div>
+
+<div class="panel" style="padding-bottom:0.4rem;">
+  <div class="step-lbl" id="step-title">-</div>
+  <div id="call-stack" class="call-stack"></div>
+  <div id="op-lbl" class="op-lbl" style="display:none"></div>
+  <div style="overflow-x:auto;">
+    <svg id="svg" width="100%" viewBox="0 0 820 390" style="display:block;min-width:680px;"></svg>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="step-lbl">실행 중인 코드</div>
+  <div class="code-box" id="code-box"></div>
+</div>
+
+<div class="controls">
+  <div class="dots" id="dots"></div>
+  <div class="btn-row">
+    <button class="btn" id="btn-prev" onclick="go(-1)" disabled>← 이전</button>
+    <button class="btn" id="btn-next" onclick="go(1)">다음 →</button>
+  </div>
+</div>
+
+<script>
+const BK={fill:"#2C2C2A",stroke:"#555553",text:"#F1EFE8"};
+const RD={fill:"#E24B4A",stroke:"#A32D2D",text:"#ffffff"};
+const NR=22;
+
+function draw(nodes,edges,hl,hNode){
+  const svg=document.getElementById('svg');
+  svg.innerHTML='';
+  const pos={};
+  nodes.forEach(n=>pos[n.id]={x:n.x,y:n.y});
+
+  // edges
+  edges.forEach(e=>{
+    const a=pos[e.from],b=pos[e.to];
+    if(!a||!b)return;
+    const dx=b.x-a.x,dy=b.y-a.y,len=Math.sqrt(dx*dx+dy*dy);
+    const el=document.createElementNS('http://www.w3.org/2000/svg','line');
+    el.setAttribute('x1',a.x+dx/len*NR); el.setAttribute('y1',a.y+dy/len*NR);
+    el.setAttribute('x2',b.x-dx/len*NR); el.setAttribute('y2',b.y-dy/len*NR);
+    el.setAttribute('stroke',e.red?'#E24B4A':'#4a4a48');
+    el.setAttribute('stroke-width',e.red?'2.5':'1.5');
+    svg.appendChild(el);
+  });
+
+  // nodes
+  nodes.forEach(n=>{
+    const c=n.red?RD:BK;
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    if(hl&&hl.includes(n.id)){
+      const ring=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      ring.setAttribute('cx',n.x);ring.setAttribute('cy',n.y);ring.setAttribute('r',NR+7);
+      ring.setAttribute('fill','none');ring.setAttribute('stroke','#EF9F27');
+      ring.setAttribute('stroke-width','2');ring.setAttribute('stroke-dasharray','5 3');
+      g.appendChild(ring);
+    }
+    const ci=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    ci.setAttribute('cx',n.x);ci.setAttribute('cy',n.y);ci.setAttribute('r',NR);
+    ci.setAttribute('fill',c.fill);ci.setAttribute('stroke',c.stroke);ci.setAttribute('stroke-width','1.5');
+    g.appendChild(ci);
+    const tx=document.createElementNS('http://www.w3.org/2000/svg','text');
+    tx.setAttribute('x',n.x);tx.setAttribute('y',n.y);
+    tx.setAttribute('text-anchor','middle');tx.setAttribute('dominant-baseline','central');
+    tx.setAttribute('font-size','13');tx.setAttribute('font-weight','500');
+    tx.setAttribute('fill',c.text);tx.textContent=n.label;
+    g.appendChild(tx);
+    svg.appendChild(g);
+  });
+
+  // h 포인터
+  if(hNode&&pos[hNode]){
+    const p=pos[hNode];
+    const alen=36;
+    const x1=p.x-NR-8-alen, y1=p.y;
+    const x2=p.x-NR-5,      y2=p.y;
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1',x1);ln.setAttribute('y1',y1);
+    ln.setAttribute('x2',x2);ln.setAttribute('y2',y2);
+    ln.setAttribute('stroke','#7ab83a');ln.setAttribute('stroke-width','2');
+    svg.appendChild(ln);
+    const tip=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    tip.setAttribute('points',`${x2},${y2-4} ${x2+8},${y2} ${x2},${y2+4}`);
+    tip.setAttribute('fill','#7ab83a');
+    svg.appendChild(tip);
+    const lbl=document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x',x1-4);lbl.setAttribute('y',y1);
+    lbl.setAttribute('text-anchor','end');lbl.setAttribute('dominant-baseline','central');
+    lbl.setAttribute('font-size','13');lbl.setAttribute('font-weight','700');
+    lbl.setAttribute('fill','#7ab83a');
+    lbl.setAttribute('font-family','Courier New, monospace');
+    lbl.textContent='h';
+    svg.appendChild(lbl);
+  }
+}
+
+function nd(id,lb,x,y,red=false){return{id,label:lb,x,y,red};}
+function eg(f,t,red=false){return{from:f,to:t,red};}
+
+// ── 트리 상태 정의 ─────────────────────────────
+// 레이아웃:
+//        M (410,45)
+//       / \
+//      E    R  (220,130) / (600,130)
+//     / \  / \
+//    C   L P   X  (130,215)/(310,215)/(510,215)/(690,215)
+//   /   /       \(left child)
+//  A   H         S  (80,300)/(260,300)/(640,300)
+
+// T0: 초기 SEARCHXMPL 전체
+const T0={
+  nodes:[
+    nd('M','M',410,45),
+    nd('E','E',220,130),nd('R','R',600,130),
+    nd('C','C',130,215),nd('L','L',310,215),nd('P','P',510,215),nd('X','X',690,215),
+    nd('A','A',80,300,true),nd('H','H',260,300,true),nd('S','S',640,300,true),
+  ],
+  edges:[
+    eg('M','E'),eg('M','R'),
+    eg('E','C'),eg('E','L'),
+    eg('R','P'),eg('R','X'),
+    eg('C','A',true),eg('L','H',true),eg('X','S',true),
+  ]
+};
+
+// T1: 래퍼 M=레드
+const T1={
+  nodes:[
+    nd('M','M',410,45,true),
+    nd('E','E',220,130),nd('R','R',600,130),
+    nd('C','C',130,215),nd('L','L',310,215),nd('P','P',510,215),nd('X','X',690,215),
+    nd('A','A',80,300,true),nd('H','H',260,300,true),nd('S','S',640,300,true),
+  ],
+  edges:[
+    eg('M','E'),eg('M','R'),
+    eg('E','C'),eg('E','L'),
+    eg('R','P'),eg('R','X'),
+    eg('C','A',true),eg('L','H',true),eg('X','S',true),
+  ]
+};
+
+// T2: FlipColors(M) → M=BK, E=RD, R=RD
+const T2={
+  nodes:[
+    nd('M','M',410,45),
+    nd('E','E',220,130,true),nd('R','R',600,130,true),
+    nd('C','C',130,215),nd('L','L',310,215),nd('P','P',510,215),nd('X','X',690,215),
+    nd('A','A',80,300,true),nd('H','H',260,300,true),nd('S','S',640,300,true),
+  ],
+  edges:[
+    eg('M','E',true),eg('M','R',true),
+    eg('E','C'),eg('E','L'),
+    eg('R','P'),eg('R','X'),
+    eg('C','A',true),eg('L','H',true),eg('X','S',true),
+  ]
+};
+
+// T3: RotateRight(X) 후 → S=BK(X자리), X=RD(S->right)
+// R->right 는 이제 S, S->right = X
+const T3={
+  nodes:[
+    nd('M','M',410,45),
+    nd('E','E',220,130,true),nd('R','R',600,130,true),
+    nd('C','C',130,215),nd('L','L',310,215),nd('P','P',510,215),nd('S','S',690,215),
+    nd('A','A',80,300,true),nd('H','H',260,300,true),nd('X','X',760,300,true),
+  ],
+  edges:[
+    eg('M','E',true),eg('M','R',true),
+    eg('E','C'),eg('E','L'),
+    eg('R','P'),eg('R','S'),
+    eg('C','A',true),eg('L','H',true),eg('S','X',true),
+  ]
+};
+
+// T4: X 삭제 후 (S에 자식 없음)
+const T4={
+  nodes:[
+    nd('M','M',410,45),
+    nd('E','E',220,130,true),nd('R','R',600,130,true),
+    nd('C','C',130,215),nd('L','L',310,215),nd('P','P',510,215),nd('S','S',690,215),
+    nd('A','A',80,300,true),nd('H','H',260,300,true),
+  ],
+  edges:[
+    eg('M','E',true),eg('M','R',true),
+    eg('E','C'),eg('E','L'),
+    eg('R','P'),eg('R','S'),
+    eg('C','A',true),eg('L','H',true),
+  ]
+};
+
+// T5: Balance(M) FlipColors(M) 후 → E=BK, R=BK
+const T5={
+  nodes:[
+    nd('M','M',410,45),
+    nd('E','E',220,130),nd('R','R',600,130),
+    nd('C','C',130,215),nd('L','L',310,215),nd('P','P',510,215),nd('S','S',690,215),
+    nd('A','A',80,300,true),nd('H','H',260,300,true),
+  ],
+  edges:[
+    eg('M','E'),eg('M','R'),
+    eg('E','C'),eg('E','L'),
+    eg('R','P'),eg('R','S'),
+    eg('C','A',true),eg('L','H',true),
+  ]
+};
+
+// ── STEPS ─────────────────────────────────────
+const STEPS=[
+  {
+    title:"[초기] SEARCHXMPL — X가 최댓값",
+    stack:"",op:"",hl:['X'],hNode:null,tree:T0,
+    code:`//              M (블랙)
+//       /             \\
+//      E (블랙)        R (블랙)
+//   /     \\         /     \\
+//  C       L       P       X (블랙)  ← 최댓값
+// /       /               /
+//*A     *H              *S (레드)
+//
+// X = 블랙 2-노드 (right==null) → 바로 삭제 불가
+// *S가 X의 왼쪽에 있음 → RotateRight로 끌어올릴 예정`
+  },
+  {
+    title:"[래퍼 DeleteMax()] !IsRed(E)&&!IsRed(R) → root=레드",
+    stack:"DeleteMax() ← 래퍼",op:"root->color = kRed",hl:['M'],hNode:'M',tree:T1,
+    code:`void DeleteMax() {
+    // !IsRed(root->left = E = 블랙) → true
+    // !IsRed(root->right = R = 블랙) → true
+<span class="hl">    if (!IsRed(root->left) && !IsRed(root->right))
+        root->color = Color::kRed;  // M = 레드로 임시 변경</span>
+    root = DeleteMax(root);  // ← 구현함수 호출
+}`
+  },
+  {
+    title:"[DeleteMax(M)] 조건 체크 → MoveRedRight(M) 호출",
+    stack:"DeleteMax(M) ← 구현함수\nDeleteMax() ← 래퍼",op:"",hl:['M'],hNode:'M',tree:T1,
+    code:`Node* DeleteMax(Node* h) {  // h = M(레드)
+    // IsRed(h->left = E = 블랙)? → false
+<span class="dim">    if (IsRed(h->left)) → false, 스킵</span>
+    // h->right = R → nullptr 아님
+<span class="dim">    if (h->right == nullptr) → false, 스킵</span>
+    // !IsRed(h->right = R = 블랙) → true
+    // !IsRed(h->right->left = R->left = P = 블랙) → true
+<span class="hl">    if (!IsRed(h->right) && !IsRed(h->right->left))
+        → true && true → MoveRedRight(M) 호출!</span>`
+  },
+  {
+    title:"[MoveRedRight(M)] FlipColors(M) → M=블랙, E=레드, R=레드",
+    stack:"MoveRedRight(M)\nDeleteMax(M)\nDeleteMax() ← 래퍼",op:"FlipColors(M)",hl:['M'],hNode:'M',tree:T2,
+    code:`Node* MoveRedRight(Node* h) {  // h = M(레드)
+<span class="hl">    FlipColors(h);
+    // M: 레드→블랙
+    // E: 블랙→레드
+    // R: 블랙→레드</span>
+    
+    // IsRed(h->left->left = E->left = C)?
+    // C = 블랙 → false → 추가 회전 없음
+<span class="dim">    if (IsRed(h->left->left)) → false, 스킵</span>
+    return h;  // M 반환`
+  },
+  {
+    title:"[MoveRedRight(M)] IsRed(E->left=C)? → false → 반환",
+    stack:"MoveRedRight(M) 완료\nDeleteMax(M)\nDeleteMax() ← 래퍼",op:"MoveRedRight(M) 완료",hl:['C'],hNode:'M',tree:T2,
+    code:`    // IsRed(E->left = C = 블랙) → false
+<span class="dim">    // RotateRight 없음, FlipColors 없음</span>
+    return h;  // h = M 반환
+    
+// MoveRedRight(M) 완료
+// 결과: M=블랙, E=레드, R=레드
+// → 다음: h->right = DeleteMax(h->right)
+<span class="hl">→ DeleteMax(R) 재귀 호출</span>`
+  },
+  {
+    title:"[DeleteMax(R)] 조건 체크 → MoveRedRight 불필요!",
+    stack:"DeleteMax(R)\nDeleteMax(M)\nDeleteMax() ← 래퍼",op:"",hl:['R'],hNode:'R',tree:T2,
+    code:`Node* DeleteMax(Node* h) {  // h = R(레드)
+    // IsRed(h->left = P = 블랙)? → false
+<span class="dim">    if (IsRed(h->left)) → false, 스킵</span>
+    // h->right = X → nullptr 아님
+<span class="dim">    if (h->right == nullptr) → false, 스킵</span>
+    // !IsRed(h->right = X = 블랙) → true
+    // !IsRed(h->right->left = X->left = S = 레드) → false!
+<span class="hl">    if (!IsRed(h->right) && !IsRed(h->right->left))
+        → true && false → 조건 불만족! MoveRedRight 안 함</span>
+    // *S가 있으므로 MoveRedRight 없이 진행
+<span class="hl">→ DeleteMax(X) 재귀 호출</span>`
+  },
+  {
+    title:"[DeleteMax(X)] IsRed(h->left=*S=레드) → RotateRight(X)!",
+    stack:"DeleteMax(X)\nDeleteMax(R)\nDeleteMax(M)\nDeleteMax() ← 래퍼",op:"RotateRight(X) 직전",hl:['X','S'],hNode:'X',tree:T2,
+    code:`Node* DeleteMax(Node* h) {  // h = X(블랙)
+    // IsRed(h->left = S = 레드) → true!
+<span class="hl">    if (IsRed(h->left))     // true!
+        h = RotateRight(h); // RotateRight(X) 실행!</span>
+    
+// *S를 위로 올려서 X가 *S의 오른쪽이 되도록 함
+// 그 후 X를 오른쪽에서 삭제하기 위함`
+  },
+  {
+    title:"[RotateRight(X)] S=블랙, X=레드 — S가 X 자리로",
+    stack:"DeleteMax(X) [h=S로 갱신]\nDeleteMax(R)\nDeleteMax(M)\nDeleteMax() ← 래퍼",op:"RotateRight(X)",hl:['S','X'],hNode:'S',tree:T3,
+    code:`// RotateRight(h): h=X(블랙), x=S(레드)
+// x->color = h->color → S: 레드→블랙 (X의 색 받음)
+// h->color = kRed     → X: 블랙→레드
+// x->right = h        → S->right = X
+// h->left = x->right  → X->left = null (S->right 없었음)
+<span class="hl">// S(블랙)가 올라오고, X(레드)가 S의 오른쪽으로 내려감</span>
+// h = S (RotateRight 반환값)
+//
+//  R(레드)
+//   / \\
+//  P   S(블랙)  ← h
+//        \\
+//        X(레드)  ← right에 존재`
+  },
+  {
+    title:"[DeleteMax(S)] h->right=X(레드) → MoveRedRight 조건 체크",
+    stack:"DeleteMax(X→S) [h=S]\nDeleteMax(R)\nDeleteMax(M)\nDeleteMax() ← 래퍼",op:"",hl:['X'],hNode:'S',tree:T3,
+    code:`// h = S(블랙) — RotateRight 후 같은 스택 프레임
+    // h->right = X → nullptr 아님
+<span class="dim">    if (h->right == nullptr) → false, 스킵</span>
+    // !IsRed(h->right = X = 레드) → false!
+<span class="hl">    if (!IsRed(h->right) && !IsRed(h->right->left))
+        → false → MoveRedRight 안 함!</span>
+    // X가 레드이므로 바로 삭제 가능
+    h->right = DeleteMax(h->right)
+<span class="hl">→ DeleteMax(X) 재귀 호출</span>`
+  },
+  {
+    title:"[DeleteMax(X)] h->right==nullptr → X 삭제!",
+    stack:"DeleteMax(X)\nDeleteMax(X→S)\nDeleteMax(R)\nDeleteMax(M)\nDeleteMax() ← 래퍼",op:"Delete node X",hl:['X'],hNode:'X',tree:T3,
+    code:`Node* DeleteMax(Node* h) {  // h = X(레드)
+    // IsRed(h->left = null)? → false
+<span class="dim">    if (IsRed(h->left)) → false, 스킵</span>
+<span class="hl">    if (h->right == nullptr) {  // X->right = null → true!
+        delete h;
+        return nullptr;
+    }</span>
+// X는 레드 → 블랙 카운트 영향 없음
+// 삭제 완료`
+  },
+  {
+    title:"[Balance(S)] X 삭제 후 올라오며 Balance",
+    stack:"Balance(S)\nDeleteMax(R)\nDeleteMax(M)\nDeleteMax() ← 래퍼",op:"Balance(S)",hl:['S'],hNode:'S',tree:T4,
+    code:`// DeleteMax(X→S)로 복귀: S->right = null (X 삭제됨)
+// return Balance(S)
+// S(블랙): left=null, right=null
+<span class="dim">// 조건1: IsRed(right=null)? → false  스킵
+// 조건2: IsRed(left=null)? → false  스킵
+// 조건3: IsRed(left=null)&&IsRed(right=null)? → false  스킵</span>
+// return S (변화 없음)`
+  },
+  {
+    title:"[Balance(R)] 올라오며 Balance",
+    stack:"Balance(R)\nDeleteMax(M)\nDeleteMax() ← 래퍼",op:"Balance(R)",hl:['R'],hNode:'R',tree:T4,
+    code:`// DeleteMax(R)로 복귀: R->right = S(블랙)
+// return Balance(R)
+// R(레드): left=P(블랙), right=S(블랙)
+<span class="dim">// 조건1: IsRed(right=S=블랙)? → false  스킵
+// 조건2: IsRed(left=P=블랙)? → false  스킵
+// 조건3: IsRed(left=P=블랙)&&IsRed(right=S=블랙)? → false  스킵</span>
+// return R (변화 없음)`
+  },
+  {
+    title:"[Balance(M)] 조건3 발동 → FlipColors(M)",
+    stack:"Balance(M)\nDeleteMax() ← 래퍼",op:"Balance(M) → FlipColors(M)",hl:['M'],hNode:'M',tree:T4,
+    code:`// DeleteMax(M)로 복귀: M->right = R(레드)
+// return Balance(M)
+// M(블랙): left=E(레드), right=R(레드)
+<span class="dim">// 조건1: IsRed(R=레드) && !IsRed(E=레드) → true && false  스킵</span>
+<span class="dim">// 조건2: IsRed(E=레드) && IsRed(E->left=C=블랙) → false  스킵</span>
+<span class="hl">// 조건3: IsRed(left=E=레드) && IsRed(right=R=레드) → true!
+//   FlipColors(M): M=레드, E=블랙, R=블랙</span>`
+  },
+  {
+    title:"[래퍼 복귀] root->color = kBlack → 완료",
+    stack:"DeleteMax() ← 래퍼",op:"root->color = kBlack",hl:null,hNode:'M',tree:T5,
+    code:`// 래퍼 DeleteMax()으로 복귀
+    root = DeleteMax(root);  // 완료
+<span class="hl">    if (!IsEmpty())
+        root->color = Color::kBlack;  // M = 블랙 고정</span>
+//
+//              M (블랙)
+//       /             \\
+//      E (블랙)        R (블랙)
+//   /     \\         /     \\
+//  C       L       P       S
+// /       /
+//*A     *H
+<span class="ok">// X 삭제 완료 ✓</span>`
+  },
+];
+
+// ── 렌더 ──────────────────────────────────────
+let cur=0;
+
+function render(){
+  const s=STEPS[cur];
+  document.getElementById('step-title').textContent=
+    `단계 ${cur+1} / ${STEPS.length} — ${s.title}`;
+
+  const cs=document.getElementById('call-stack');
+  if(s.stack){
+    cs.style.display='block';
+    cs.innerHTML='<span style="color:#888780;font-size:11px;">콜스택 (위=현재):</span>\n'+
+      s.stack.split('\n').map((l,i)=>
+        i===0?`<span style="color:#EF9F27;">> ${l}</span>`:
+              `<span style="color:#3a6a8a;">  ${l}</span>`
+      ).join('\n');
+  } else {
+    cs.style.display='none';
+  }
+
+  const op=document.getElementById('op-lbl');
+  if(s.op){op.style.display='inline-block';op.textContent=s.op;}
+  else op.style.display='none';
+
+  document.getElementById('code-box').innerHTML=s.code;
+  draw(s.tree.nodes,s.tree.edges,s.hl,s.hNode);
+
+  const dc=document.getElementById('dots');
+  dc.innerHTML='';
+  STEPS.forEach((_,i)=>{
+    const d=document.createElement('span');
+    d.className='dot'+(i===cur?' active':'');
+    d.onclick=()=>{cur=i;render();};
+    dc.appendChild(d);
+  });
+
+  document.getElementById('btn-prev').disabled=cur===0;
+  document.getElementById('btn-next').disabled=cur===STEPS.length-1;
+}
+
+function go(d){
+  cur=Math.max(0,Math.min(STEPS.length-1,cur+d));
+  render();
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(-1);
+});
+
+render();
+</script>
+</body>
+</html>
