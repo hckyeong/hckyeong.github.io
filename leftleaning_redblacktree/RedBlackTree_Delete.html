@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLRB — Delete 전체 루프 시각화</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body {
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#1a1a18; color:#e8e6de;
+  min-height:100vh; display:flex; flex-direction:column;
+  align-items:center; padding:1.5rem 1rem 3rem;
+}
+h1 { font-size:15px; font-weight:500; color:#a0a098; margin-bottom:0.6rem; }
+.panel {
+  background:#242422; border:0.5px solid #3a3a38;
+  border-radius:12px; padding:0.85rem 1.1rem;
+  width:100%; max-width:940px; margin-bottom:10px;
+}
+.step-lbl { font-size:13px; font-weight:500; color:#888780; margin-bottom:3px; }
+.del-lbl {
+  font-size:12px; color:#EF9F27; background:#2a2418;
+  border:0.5px solid #5a4010; border-radius:6px;
+  padding:3px 10px; display:inline-block; margin-bottom:6px;
+}
+.op-lbl {
+  font-size:11px; color:#5b9bd5; background:#18202a;
+  border:0.5px solid #2a3a4a; border-radius:6px;
+  padding:2px 8px; display:inline-block; margin-left:6px; margin-bottom:6px;
+}
+.code-box {
+  background:#1a1a18; border:0.5px solid #3a3a38; border-radius:8px;
+  padding:0.6rem 1rem; font-family:'Courier New',monospace;
+  font-size:12px; color:#c8c6be; line-height:1.8;
+  white-space:pre; overflow-x:auto; min-height:50px;
+}
+.hl  { color:#EF9F27; font-weight:600; }
+.ok  { color:#7ab83a; font-weight:500; }
+.dim { color:#555553; }
+.info { color:#5b9bd5; }
+.controls {
+  display:flex; align-items:center; justify-content:space-between;
+  width:100%; max-width:940px; padding:0 0.25rem;
+}
+.dots { display:flex; gap:3px; align-items:center; flex-wrap:wrap; max-width:700px; }
+.dot { width:6px; height:6px; border-radius:50%; background:#3a3a38;
+       display:inline-block; transition:background .15s; cursor:pointer; }
+.dot.active { background:#EF9F27; }
+.btn-row { display:flex; gap:8px; }
+.btn {
+  cursor:pointer; padding:6px 18px; border-radius:8px;
+  border:0.5px solid #3a3a38; background:transparent;
+  color:#c8c6be; font-size:13px; transition:background .15s;
+}
+.btn:hover { background:#2e2e2c; }
+.btn:disabled { opacity:.3; cursor:default; }
+.legend {
+  display:flex; gap:14px; font-size:11px; color:#888780;
+  align-items:center; margin-bottom:10px; width:100%; max-width:940px;
+}
+.ld { width:10px; height:10px; border-radius:50%; display:inline-block;
+      margin-right:3px; vertical-align:middle; }
+</style>
+</head>
+<body>
+<h1>LLRB — Delete() 전체 루프 (SEARCHXMPL → Empty)</h1>
+<div class="legend">
+  <span><span class="ld" style="background:#E24B4A;"></span>레드</span>
+  <span><span class="ld" style="background:#2C2C2A;border:1.5px solid #555553;"></span>블랙</span>
+  <span><span class="ld" style="background:transparent;border:2px dashed #EF9F27;"></span>타겟</span>
+  <span style="color:#7ab83a;font-weight:600;">h→</span><span style="color:#7ab83a;"> h포인터</span>
+  <span style="color:#5b9bd5;">← → 키 이동</span>
+</div>
+
+<div class="panel" style="padding-bottom:0.4rem;">
+  <div class="step-lbl" id="step-title">-</div>
+  <div id="dlbl-row" style="margin-bottom:4px;"></div>
+  <div style="overflow-x:auto;">
+    <svg id="svg" width="100%" viewBox="0 0 820 360"
+         style="display:block;min-width:680px;"></svg>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="step-lbl">실행 내용</div>
+  <div class="code-box" id="code-box"></div>
+</div>
+
+<div class="controls">
+  <div class="dots" id="dots"></div>
+  <div class="btn-row">
+    <button class="btn" id="btn-prev" onclick="go(-1)" disabled>← 이전</button>
+    <button class="btn" id="btn-next" onclick="go(1)">다음 →</button>
+  </div>
+</div>
+
+<script>
+const BK={fill:"#2C2C2A",stroke:"#555553",text:"#F1EFE8"};
+const RD={fill:"#E24B4A",stroke:"#A32D2D",text:"#fff"};
+const NR=20;
+
+function draw(nodes,edges,hl,hNode){
+  const svg=document.getElementById('svg');
+  svg.innerHTML='';
+  const pos={};
+  nodes.forEach(n=>pos[n.id]={x:n.x,y:n.y});
+  edges.forEach(e=>{
+    const a=pos[e.from],b=pos[e.to];
+    if(!a||!b)return;
+    const dx=b.x-a.x,dy=b.y-a.y,len=Math.sqrt(dx*dx+dy*dy);
+    const el=document.createElementNS('http://www.w3.org/2000/svg','line');
+    el.setAttribute('x1',a.x+dx/len*NR); el.setAttribute('y1',a.y+dy/len*NR);
+    el.setAttribute('x2',b.x-dx/len*NR); el.setAttribute('y2',b.y-dy/len*NR);
+    el.setAttribute('stroke',e.red?'#E24B4A':'#4a4a48');
+    el.setAttribute('stroke-width',e.red?'2.5':'1.5');
+    svg.appendChild(el);
+  });
+  nodes.forEach(n=>{
+    const c=n.red?RD:BK;
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    if(hl&&hl.includes(n.id)){
+      const ring=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      ring.setAttribute('cx',n.x);ring.setAttribute('cy',n.y);ring.setAttribute('r',NR+7);
+      ring.setAttribute('fill','none');ring.setAttribute('stroke','#EF9F27');
+      ring.setAttribute('stroke-width','2');ring.setAttribute('stroke-dasharray','5 3');
+      g.appendChild(ring);
+    }
+    const ci=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    ci.setAttribute('cx',n.x);ci.setAttribute('cy',n.y);ci.setAttribute('r',NR);
+    ci.setAttribute('fill',c.fill);ci.setAttribute('stroke',c.stroke);ci.setAttribute('stroke-width','1.5');
+    g.appendChild(ci);
+    const tx=document.createElementNS('http://www.w3.org/2000/svg','text');
+    tx.setAttribute('x',n.x);tx.setAttribute('y',n.y);
+    tx.setAttribute('text-anchor','middle');tx.setAttribute('dominant-baseline','central');
+    tx.setAttribute('font-size','12');tx.setAttribute('font-weight','500');
+    tx.setAttribute('fill',c.text);tx.textContent=n.label;
+    g.appendChild(tx);
+    svg.appendChild(g);
+  });
+  if(hNode&&pos[hNode]){
+    const p=pos[hNode];
+    const al=32,x1=p.x-NR-7-al,y1=p.y,x2=p.x-NR-4,y2=p.y;
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1',x1);ln.setAttribute('y1',y1);
+    ln.setAttribute('x2',x2);ln.setAttribute('y2',y2);
+    ln.setAttribute('stroke','#7ab83a');ln.setAttribute('stroke-width','2');
+    svg.appendChild(ln);
+    const tip=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    tip.setAttribute('points',`${x2},${y2-4} ${x2+7},${y2} ${x2},${y2+4}`);
+    tip.setAttribute('fill','#7ab83a');svg.appendChild(tip);
+    const lbl=document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x',x1-3);lbl.setAttribute('y',y1);
+    lbl.setAttribute('text-anchor','end');lbl.setAttribute('dominant-baseline','central');
+    lbl.setAttribute('font-size','12');lbl.setAttribute('font-weight','700');
+    lbl.setAttribute('fill','#7ab83a');
+    lbl.setAttribute('font-family','Courier New,monospace');
+    lbl.textContent='h';svg.appendChild(lbl);
+  }
+}
+
+function nd(id,lb,x,y,red=false){return{id,label:lb,x,y,red};}
+function eg(f,t,red=false){return{from:f,to:t,red};}
+
+// ── 트리 상태 정의 ──────────────────────────────────
+// 좌표계: 4레벨 y=55/145/235/320, 3레벨 y=75/175/275, 2레벨 y=90/210
+
+// 초기 SEARCHXMPL
+const T_INIT={
+  nodes:[
+    nd('M','M',410,55),
+    nd('E','E',210,145),nd('R','R',610,145),
+    nd('C','C',115,235),nd('L','L',305,235),nd('P','P',510,235),nd('X','X',705,235),
+    nd('A','A',65,320,true),nd('H','H',255,320,true),nd('S','S',655,320,true),
+  ],
+  edges:[
+    eg('M','E'),eg('M','R'),
+    eg('E','C'),eg('E','L'),
+    eg('R','P'),eg('R','X'),
+    eg('C','A',true),eg('L','H',true),eg('X','S',true),
+  ]
+};
+
+// ── Delete S ──────────────────────────────────
+// MoveRedRight(M): FlipColors(M) → E=RD, R=RD
+const T_DS_FLIP={
+  nodes:[
+    nd('M','M',410,55),
+    nd('E','E',210,145,true),nd('R','R',610,145,true),
+    nd('C','C',115,235),nd('L','L',305,235),nd('P','P',510,235),nd('X','X',705,235),
+    nd('A','A',65,320,true),nd('H','H',255,320,true),nd('S','S',655,320,true),
+  ],
+  edges:[
+    eg('M','E',true),eg('M','R',true),
+    eg('E','C'),eg('E','L'),
+    eg('R','P'),eg('R','X'),
+    eg('C','A',true),eg('L','H',true),eg('X','S',true),
+  ]
+};
+// After S deleted + Balance + FlipColors원복
+const T_AFT_S={
+  nodes:[
+    nd('M','M',410,55),
+    nd('E','E',210,145),nd('R','R',610,145),
+    nd('C','C',115,235),nd('L','L',305,235),nd('P','P',510,235),nd('X','X',705,235),
+    nd('A','A',65,320,true),nd('H','H',255,320,true),
+  ],
+  edges:[
+    eg('M','E'),eg('M','R'),
+    eg('E','C'),eg('E','L'),
+    eg('R','P'),eg('R','X'),
+    eg('C','A',true),eg('L','H',true),
+  ]
+};
+
+// ── Delete E ──────────────────────────────────
+// FlipColors(M) [MoveRedLeft]: same structure as T_DS_FLIP but no S
+const T_DE_FLIP={
+  nodes:[
+    nd('M','M',410,55),
+    nd('E','E',210,145,true),nd('R','R',610,145,true),
+    nd('C','C',115,235),nd('L','L',305,235),nd('P','P',510,235),nd('X','X',705,235),
+    nd('A','A',65,320,true),nd('H','H',255,320,true),
+  ],
+  edges:[
+    eg('M','E',true),eg('M','R',true),
+    eg('E','C'),eg('E','L'),
+    eg('R','P'),eg('R','X'),
+    eg('C','A',true),eg('L','H',true),
+  ]
+};
+// E replaced by H (successor), H deleted from L
+// M=BK,H=BK,R=BK,C=BK,L=BK,P=BK,X=BK,A=RD
+const T_AFT_E={
+  nodes:[
+    nd('M','M',410,55),
+    nd('H','H',210,145),nd('R','R',610,145),
+    nd('C','C',115,235),nd('L','L',305,235),nd('P','P',510,235),nd('X','X',705,235),
+    nd('A','A',65,320,true),
+  ],
+  edges:[
+    eg('M','H'),eg('M','R'),
+    eg('H','C'),eg('H','L'),
+    eg('R','P'),eg('R','X'),
+    eg('C','A',true),
+  ]
+};
+
+// ── Delete A ──────────────────────────────────
+// FlipColors(M): H=RD, R=RD
+const T_DA_FLIP={
+  nodes:[
+    nd('M','M',410,55),
+    nd('H','H',210,145,true),nd('R','R',610,145,true),
+    nd('C','C',115,235),nd('L','L',305,235),nd('P','P',510,235),nd('X','X',705,235),
+    nd('A','A',65,320,true),
+  ],
+  edges:[
+    eg('M','H',true),eg('M','R',true),
+    eg('H','C'),eg('H','L'),
+    eg('R','P'),eg('R','X'),
+    eg('C','A',true),
+  ]
+};
+// After A deleted: M=BK,H=BK,R=BK,C=BK,L=BK,P=BK,X=BK
+const T_AFT_A={
+  nodes:[
+    nd('M','M',410,55),
+    nd('H','H',210,145),nd('R','R',610,145),
+    nd('C','C',115,235),nd('L','L',305,235),nd('P','P',510,235),nd('X','X',705,235),
+  ],
+  edges:[
+    eg('M','H'),eg('M','R'),
+    eg('H','C'),eg('H','L'),
+    eg('R','P'),eg('R','X'),
+  ]
+};
+
+// ── Delete R ──────────────────────────────────
+// MoveRedRight(M): FlipColors(M) → H=RD, R=RD
+const T_DR_FLIPM={
+  nodes:[
+    nd('M','M',410,55),
+    nd('H','H',210,145,true),nd('R','R',610,145,true),
+    nd('C','C',115,235),nd('L','L',305,235),nd('P','P',510,235),nd('X','X',705,235),
+  ],
+  edges:[
+    eg('M','H',true),eg('M','R',true),
+    eg('H','C'),eg('H','L'),
+    eg('R','P'),eg('R','X'),
+  ]
+};
+// MoveRedRight(R): FlipColors(R) → R=BK, P=RD, X=RD
+const T_DR_FLIPR={
+  nodes:[
+    nd('M','M',410,55),
+    nd('H','H',210,145,true),nd('R','R',610,145),
+    nd('C','C',115,235),nd('L','L',305,235),nd('P','P',510,235,true),nd('X','X',705,235,true),
+  ],
+  edges:[
+    eg('M','H',true),eg('M','R'),
+    eg('H','C'),eg('H','L'),
+    eg('R','P',true),eg('R','X',true),
+  ]
+};
+// successor X found, copy to R node, delete X
+// R node → key=X, P=RD left, no right
+// After Balance: M=BK, *H=RD, X_node=BK, *P=RD
+const T_AFT_R={
+  nodes:[
+    nd('M','M',410,55),
+    nd('H','H',210,145,true),nd('X','X',610,145),
+    nd('C','C',115,235),nd('L','L',305,235),nd('P','P',510,235,true),
+  ],
+  edges:[
+    eg('M','H',true),eg('M','X'),
+    eg('H','C'),eg('H','L'),
+    eg('X','P',true),
+  ]
+};
+
+// ── Delete C ──────────────────────────────────
+// Navigate to H (no MoveRedLeft at M since *H=RD)
+// MoveRedLeft(H): FlipColors(H) → H=BK, C=RD, L=RD
+const T_DC_FLIPH={
+  nodes:[
+    nd('M','M',410,55),
+    nd('H','H',210,145),nd('X','X',610,145),
+    nd('C','C',115,235,true),nd('L','L',305,235,true),nd('P','P',510,235,true),
+  ],
+  edges:[
+    eg('M','H'),eg('M','X'),
+    eg('H','C',true),eg('H','L',true),
+    eg('X','P',true),
+  ]
+};
+// C deleted, Balance(H): RotateLeft(H) → L=BK up, *H=RD
+// L->left=H(RD), L is now H's parent
+const T_DC_BAL={
+  nodes:[
+    nd('M','M',410,55),
+    nd('L','L',210,145),nd('X','X',610,145),
+    nd('H','H',115,235,true),nd('P','P',510,235,true),
+  ],
+  edges:[
+    eg('M','L'),eg('M','X'),
+    eg('L','H',true),
+    eg('X','P',true),
+  ]
+};
+// T_AFT_C = T_DC_BAL
+
+// ── Delete H ──────────────────────────────────
+// *H is RD, no MoveRedLeft at M (L=BK but L->left=H=RD → false condition)
+// also no MoveRedLeft at L (H=RD → false)
+// Delete(H,H): right==null → delete H
+// After: M=BK, L=BK, *P=RD under X
+const T_AFT_H={
+  nodes:[
+    nd('M','M',410,55),
+    nd('L','L',210,145),nd('X','X',610,145),
+    nd('P','P',510,235,true),
+  ],
+  edges:[
+    eg('M','L'),eg('M','X'),
+    eg('X','P',true),
+  ]
+};
+
+// ── Delete X ──────────────────────────────────
+// Delete(X,X): IsRed(*P)→ RotateRight(X): P=BK up, X=RD right
+// h=P, P->right=X(RD)
+const T_DX_ROT={
+  nodes:[
+    nd('M','M',410,55),
+    nd('L','L',210,145),nd('P','P',610,145),
+    nd('X','X',680,235,true),
+  ],
+  edges:[
+    eg('M','L'),eg('M','P'),
+    eg('P','X',true),
+  ]
+};
+// X deleted, Balance: M=BK,L=BK,P=BK
+const T_AFT_X={
+  nodes:[
+    nd('M','M',410,100),
+    nd('L','L',230,210),nd('P','P',590,210),
+  ],
+  edges:[
+    eg('M','L'),eg('M','P'),
+  ]
+};
+
+// ── Delete M ──────────────────────────────────
+// Wrapper: M=RD. MoveRedRight(M): FlipColors(M) → M=BK, L=RD, P=RD
+const T_DM_FLIP={
+  nodes:[
+    nd('M','M',410,100),
+    nd('L','L',230,210,true),nd('P','P',590,210,true),
+  ],
+  edges:[
+    eg('M','L',true),eg('M','P',true),
+  ]
+};
+// Min(P)=P, copy P→M node, DeleteMin(P): delete P
+// M node now: key=P, left=L(RD)
+const T_DM_SUCC={
+  nodes:[
+    nd('M','M',410,100),  // about to become P
+    nd('L','L',230,210,true),nd('P','P',590,210,true),
+  ],
+  edges:[
+    eg('M','L',true),eg('M','P',true),
+  ]
+};
+// root=P (was M node, key=P), *L=RD
+const T_AFT_M={
+  nodes:[
+    nd('P','P',410,120),
+    nd('L','L',270,230,true),
+  ],
+  edges:[
+    eg('P','L',true),
+  ]
+};
+
+// ── Delete P ──────────────────────────────────
+// Delete(P,P): IsRed(*L)→ RotateRight(P): L=BK up, P=RD right
+const T_DP_ROT={
+  nodes:[
+    nd('L','L',410,120),
+    nd('P','P',510,240,true),
+  ],
+  edges:[
+    eg('L','P',true),
+  ]
+};
+// P deleted → just L
+const T_AFT_P={
+  nodes:[ nd('L','L',410,150) ],
+  edges:[]
+};
+
+// ── Delete L ──────────────────────────────────
+// Wrapper: L=RD (no children)
+const T_DL_RED={
+  nodes:[ nd('L','L',410,150,true) ],
+  edges:[]
+};
+const T_EMPTY={ nodes:[], edges:[] };
+
+// ── STEPS ────────────────────────────────────────
+const STEPS=[
+  // 1
+  {
+    title:"[초기] SEARCHXMPL — S, E, A, R, C, H, X, M, P, L 순서로 삭제",
+    del:"",op:"",hl:null,hNode:null,tree:T_INIT,
+    code:`// for (char c : "SEARCHXMPL") { bst.Delete(c); }
+//
+//              M (BK)
+//       /             \\
+//      E               R
+//   /     \\         /     \\
+//  C       L       P       X
+// /       /               /
+//*A     *H              *S`
+  },
+
+  // ── Delete S ──
+  // 2
+  {
+    title:"[Del S] Delete(M,S): S>M → else. MoveRedRight(M) → FlipColors(M)",
+    del:"Delete: S",op:"FlipColors(M)",hl:['M'],hNode:'M',tree:T_DS_FLIP,
+    code:`// Delete(M, S): S > M → else 분기
+// IsRed(E=BK)? No. S≠M. !IsRed(R)&&!IsRed(P) → MoveRedRight(M)
+<span class="hl">FlipColors(M): M=BK, E=RD, R=RD</span>
+// IsRed(E->left=C=BK)? No → 회전 없음
+// → Delete(R, S) 재귀 호출`
+  },
+  // 3
+  {
+    title:"[Del S] Delete(R,S): MoveRedRight 불필요. Delete(X,S): S<X → Delete(S,S) → 삭제",
+    del:"Delete: S",op:"delete S",hl:['S'],hNode:'S',tree:T_DS_FLIP,
+    code:`// Delete(R,S): !IsRed(X)&&!IsRed(X->left=S=RD)? false → MoveRedRight 안 함
+// Delete(X,S): S < X → 왼쪽
+//   !IsRed(S=RD)? false → MoveRedLeft 안 함
+// Delete(S,S): S==S
+<span class="hl">  IsRed(null)? No. right==null → delete S ✓</span>
+// Balance(X)→Balance(R)→Balance(M): FlipColors(M) 원복`
+  },
+  // 4
+  {
+    title:"[Del S] 결과",
+    del:"Delete: S 완료",op:"결과",hl:null,hNode:null,tree:T_AFT_S,
+    code:`//              M
+//       /             \\
+//      E               R
+//   /     \\         /     \\
+//  C       L       P       X
+// /       /
+//*A     *H
+<span class="ok">// S 삭제 완료 ✓</span>`
+  },
+
+  // ── Delete E ──
+  // 5
+  {
+    title:"[Del E] Delete(M,E): E<M → left. MoveRedLeft(M) → FlipColors(M)",
+    del:"Delete: E",op:"FlipColors(M)",hl:['M'],hNode:'M',tree:T_DE_FLIP,
+    code:`// 래퍼: !IsRed(E=BK)&&!IsRed(R=BK) → root(M)=RD
+// Delete(M,E): E < M → 왼쪽
+// !IsRed(E=BK) && !IsRed(C=BK) → MoveRedLeft(M)
+<span class="hl">FlipColors(M): M=BK, E=RD, R=RD</span>
+// IsRed(R->left=P=BK)? No → 회전 없음
+// → Delete(E, E) 재귀 호출`
+  },
+  // 6
+  {
+    title:"[Del E] Delete(E,E): key==E. right≠null. 후임자 Min(L)=H 찾음",
+    del:"Delete: E",op:"successor = H",hl:['H'],hNode:'E',tree:T_DE_FLIP,
+    code:`// Delete(E, E): key==E → else 분기
+// IsRed(C=BK)? No. E==E && right==null? No (L있음).
+// !IsRed(L=BK)&&!IsRed(H=RD)? false → MoveRedRight 안 함
+<span class="hl">// E==E → x = Min(E->right) = Min(L) = H
+// h->key = H->key,  h->val = H->val  (E 노드가 H로 교체)</span>
+// h->right = DeleteMin(L) → L->left=*H 삭제`
+  },
+  // 7
+  {
+    title:"[Del E] DeleteMin(L): *H는 레드 → 바로 삭제. Balance 복귀",
+    del:"Delete: E",op:"DeleteMin(L) → delete H",hl:['H'],hNode:'L',tree:T_DE_FLIP,
+    code:`// DeleteMin(L): h=L
+//   !IsRed(H=RD)? false → MoveRedLeft 없음
+//   h->left = DeleteMin(H)
+//     H->left == null → delete H, return null
+//   Balance(L): no change
+<span class="hl">// L->left = null (H 삭제됨)</span>
+// Balance(E_now_H)→Balance(M): FlipColors 원복`
+  },
+  // 8
+  {
+    title:"[Del E] 결과 — H가 E 자리로",
+    del:"Delete: E 완료",op:"결과",hl:null,hNode:null,tree:T_AFT_E,
+    code:`//              M
+//       /             \\
+//      H               R
+//   /     \\         /     \\
+//  C       L       P       X
+// /
+//*A
+<span class="ok">// E 삭제 완료 (H가 E 자리를 대체) ✓</span>`
+  },
+
+  // ── Delete A ──
+  // 9
+  {
+    title:"[Del A] Delete(M,A): A<M. MoveRedLeft(M) → FlipColors(M)",
+    del:"Delete: A",op:"FlipColors(M)",hl:['M'],hNode:'M',tree:T_DA_FLIP,
+    code:`// 래퍼: !IsRed(H=BK)&&!IsRed(R=BK) → M=RD
+// Delete(M,A): A < M → 왼쪽
+// !IsRed(H=BK) && !IsRed(C=BK) → MoveRedLeft(M)
+<span class="hl">FlipColors(M): M=BK, H=RD, R=RD</span>
+// IsRed(R->left=P=BK)? No → 회전 없음
+// → Delete(H, A)`
+  },
+  // 10
+  {
+    title:"[Del A] Delete(H,A)→Delete(C,A)→Delete(A,A): *A는 레드 → 바로 삭제",
+    del:"Delete: A",op:"delete A",hl:['A'],hNode:'A',tree:T_DA_FLIP,
+    code:`// Delete(H,A): A<H → 왼쪽. !IsRed(C=BK)&&!IsRed(A=RD)? false
+// Delete(C,A): A<C → 왼쪽. !IsRed(A=RD)? false → MoveRedLeft 안 함
+// Delete(A,A): A==A → else
+<span class="hl">  IsRed(null)? No. right==null → delete A ✓</span>
+// Balance(C)→Balance(H)→Balance(M): FlipColors 원복`
+  },
+  // 11
+  {
+    title:"[Del A] 결과",
+    del:"Delete: A 완료",op:"결과",hl:null,hNode:null,tree:T_AFT_A,
+    code:`//              M
+//       /             \\
+//      H               R
+//   /     \\         /     \\
+//  C       L       P       X
+<span class="ok">// A 삭제 완료 ✓</span>`
+  },
+
+  // ── Delete R ──
+  // 12
+  {
+    title:"[Del R] Delete(M,R): R>M. MoveRedRight(M) → FlipColors(M)",
+    del:"Delete: R",op:"FlipColors(M)",hl:['M'],hNode:'M',tree:T_DR_FLIPM,
+    code:`// 래퍼: !IsRed(H=BK)&&!IsRed(R=BK) → M=RD
+// Delete(M,R): R > M → else 분기
+// IsRed(H=BK)? No. R≠M. !IsRed(R=BK)&&!IsRed(P=BK) → MoveRedRight(M)
+<span class="hl">FlipColors(M): M=BK, H=RD, R=RD</span>
+// IsRed(H->left=C=BK)? No → 회전 없음
+// → Delete(R, R) 재귀 호출`
+  },
+  // 13
+  {
+    title:"[Del R] Delete(R,R): key==R. MoveRedRight(R) → FlipColors(R)",
+    del:"Delete: R",op:"FlipColors(R)",hl:['R'],hNode:'R',tree:T_DR_FLIPR,
+    code:`// Delete(R,R): R==R → else 분기
+// IsRed(P=BK)? No. R==R&&right==null? No (X있음).
+// !IsRed(X=BK)&&!IsRed(X->left=null)? true → MoveRedRight(R)
+<span class="hl">FlipColors(R): R=BK, P=RD, X=RD</span>
+// IsRed(P->left=null)? No → 회전 없음
+<span class="info">// 이제 R==R → 후임자 찾기</span>`
+  },
+  // 14
+  {
+    title:"[Del R] 후임자 Min(X)=X → R 노드에 X 복사 → DeleteMin(X)",
+    del:"Delete: R",op:"successor = X, delete X",hl:['X'],hNode:'R',tree:T_DR_FLIPR,
+    code:`// R==R → x = Min(R->right) = Min(X) = X (X->left==null)
+<span class="hl">// h->key = X->key, h->val = X->val  (R 노드가 X로 교체)</span>
+// h->right = DeleteMin(X)
+//   X->left == null → delete X, return null
+// R_node(key=X): left=P(RD), right=null
+// Balance(X_node)→Balance(M): FlipColors 원복`
+  },
+  // 15
+  {
+    title:"[Del R] 결과 — *H, X(was R), *P",
+    del:"Delete: R 완료",op:"결과",hl:null,hNode:null,tree:T_AFT_R,
+    code:`//              M
+//       /             \\
+//     *H               X  ← (R 노드, key=X로 교체됨)
+//   /     \\         /
+//  C       L      *P
+<span class="ok">// R 삭제 완료 (X가 R 자리 대체) ✓</span>`
+  },
+
+  // ── Delete C ──
+  // 16
+  {
+    title:"[Del C] Delete(M,C): C<M. IsRed(*H)? YES → MoveRedLeft 안 탐. Delete(H,C): MoveRedLeft(H)",
+    del:"Delete: C",op:"FlipColors(H)",hl:['H'],hNode:'H',tree:T_DC_FLIPH,
+    code:`// Delete(M,C): C<M. !IsRed(H=RD)? false → MoveRedLeft 안 탐
+// Delete(H,C): C<H → 왼쪽
+//   !IsRed(C=BK)&&!IsRed(C->left=null) → MoveRedLeft(H)
+<span class="hl">FlipColors(H): H=BK, C=RD, L=RD</span>
+// IsRed(L->left=null)? No → 회전 없음
+// → Delete(C, C): delete C`
+  },
+  // 17
+  {
+    title:"[Del C] Delete(C,C): delete C. Balance(H): IsRed(L=RD) → RotateLeft(H)",
+    del:"Delete: C",op:"delete C → RotateLeft(H)",hl:['L','H'],hNode:'L',tree:T_DC_BAL,
+    code:`// Delete(C,C): C==C, IsRed(null)?No, right==null → delete C
+// Balance(H): h=H(BK), left=null, right=L(RD)
+<span class="hl">// 조건1: IsRed(L=RD)&&!IsRed(null) → RotateLeft(H)!
+// L=BK(H의 BK받음), H=RD, L->left=H(RD), H->right=null</span>
+// Balance(M): left=L(BK), right=X(BK) → no change`
+  },
+  // 18
+  {
+    title:"[Del C] 결과",
+    del:"Delete: C 완료",op:"결과",hl:null,hNode:null,tree:T_DC_BAL,
+    code:`//              M
+//       /             \\
+//      L               X
+//     /               /
+//   *H              *P
+<span class="ok">// C 삭제 완료 ✓</span>`
+  },
+
+  // ── Delete H ──
+  // 19
+  {
+    title:"[Del H] Delete(M,H): H<M. Delete(L,H): H<L. Delete(H,H): *H는 레드 → 바로 삭제",
+    del:"Delete: H",op:"delete H",hl:['H'],hNode:'H',tree:T_DC_BAL,
+    code:`// Delete(M,H): H<M.
+//   !IsRed(L=BK)&&!IsRed(L->left=H=RD)? false → MoveRedLeft 안 탐
+// Delete(L,H): H<L.
+//   !IsRed(H=RD)? false → MoveRedLeft 안 탐
+// Delete(H,H): H==H → else
+<span class="hl">  IsRed(null)? No. right==null → delete H ✓</span>
+// Balance(L)→Balance(M): no change`
+  },
+  // 20
+  {
+    title:"[Del H] 결과",
+    del:"Delete: H 완료",op:"결과",hl:null,hNode:null,tree:T_AFT_H,
+    code:`//              M
+//       /             \\
+//      L               X
+//                     /
+//                   *P
+<span class="ok">// H 삭제 완료 ✓</span>`
+  },
+
+  // ── Delete X ──
+  // 21
+  {
+    title:"[Del X] Delete(M,X): X>M. Delete(X,X): IsRed(*P=RD) → RotateRight(X)",
+    del:"Delete: X",op:"RotateRight(X)",hl:['X','P'],hNode:'P',tree:T_DX_ROT,
+    code:`// Delete(M,X): X>M. IsRed(L=BK)?No. !IsRed(X=BK)&&!IsRed(P=RD)? false → MoveRedRight 안 탐
+// Delete(X,X): X==X → else
+<span class="hl">  IsRed(X->left=*P=RD)? YES → RotateRight(X)
+  P=BK(X의 BK받음), X=RD, P->right=X(RD)</span>
+// X==X && right==null? X->right=null → 이제 Delete(P->right=X, X)
+// Delete(X,X): right==null → delete X`
+  },
+  // 22
+  {
+    title:"[Del X] 결과",
+    del:"Delete: X 완료",op:"결과",hl:null,hNode:null,tree:T_AFT_X,
+    code:`//    M
+//   / \\
+//  L   P
+<span class="ok">// X 삭제 완료 ✓</span>`
+  },
+
+  // ── Delete M ──
+  // 23
+  {
+    title:"[Del M] 래퍼: M=RD. Delete(M,M): M==M. MoveRedRight(M) → FlipColors(M)",
+    del:"Delete: M",op:"FlipColors(M)",hl:['M'],hNode:'M',tree:T_DM_FLIP,
+    code:`// 래퍼: !IsRed(L=BK)&&!IsRed(P=BK) → M=RD
+// Delete(M,M): M==M → else 분기
+// IsRed(L=BK)?No. M==M&&right==null?No. !IsRed(P=BK)&&!IsRed(null) → MoveRedRight(M)
+<span class="hl">FlipColors(M): M=BK, L=RD, P=RD</span>
+// IsRed(L->left=null)? No → 회전 없음`
+  },
+  // 24
+  {
+    title:"[Del M] M==M → 후임자 Min(P)=P 복사 → DeleteMin(P): delete P",
+    del:"Delete: M",op:"successor=P, delete P",hl:['P'],hNode:'M',tree:T_DM_SUCC,
+    code:`// M==M → x = Min(M->right=P) = P (P->left==null)
+<span class="hl">// h->key = P->key, h->val = P->val  (M 노드가 P로 교체)</span>
+// h->right = DeleteMin(P)
+//   P->left==null → delete P, return null
+// M_node(key=P): left=L(RD), right=null
+// Balance → 래퍼에서 root=BK 고정`
+  },
+  // 25
+  {
+    title:"[Del M] 결과",
+    del:"Delete: M 완료",op:"결과",hl:null,hNode:null,tree:T_AFT_M,
+    code:`//   P  ← (M 노드, key=P로 교체됨)
+//  /
+// *L
+<span class="ok">// M 삭제 완료 (P가 M 자리 대체) ✓</span>`
+  },
+
+  // ── Delete P ──
+  // 26
+  {
+    title:"[Del P] Delete(P,P): P==P. IsRed(*L=RD) → RotateRight(P) → h=L",
+    del:"Delete: P",op:"RotateRight(P)",hl:['P','L'],hNode:'L',tree:T_DP_ROT,
+    code:`// Delete(P,P): P==P → else 분기
+<span class="hl">  IsRed(P->left=*L=RD)? YES → RotateRight(P)
+  L=BK(P의 BK받음), P=RD, L->right=P(RD), P->left=null</span>
+// h=L(BK). key=P, h->key=L → 불일치
+// !IsRed(P=RD)? false → MoveRedRight 안 탐
+// key==L? No → else: Delete(L->right=P, P)
+// Delete(P,P): right==null → delete P`
+  },
+  // 27
+  {
+    title:"[Del P] 결과 — L만 남음",
+    del:"Delete: P 완료",op:"결과",hl:null,hNode:null,tree:T_AFT_P,
+    code:`// L
+<span class="ok">// P 삭제 완료 ✓</span>`
+  },
+
+  // ── Delete L ──
+  // 28
+  {
+    title:"[Del L] 래퍼: !IsRed(null)&&!IsRed(null) → L=RD. Delete(L,L): right==null → delete L",
+    del:"Delete: L",op:"delete L",hl:['L'],hNode:'L',tree:T_DL_RED,
+    code:`// 래퍼: !IsRed(null)&&!IsRed(null) → L=RD
+// Delete(L,L): L==L → else 분기
+//   IsRed(null)?No.
+<span class="hl">   (L==L) && (right==null) → delete L ✓</span>
+// root = null → IsEmpty() = true`
+  },
+  // 29
+  {
+    title:"트리 비어있음 — 모든 Delete 완료",
+    del:"완료",op:"Empty",hl:null,hNode:null,tree:T_EMPTY,
+    code:`<span class="ok">// Empty ✓
+// S→E→A→R→C→H→X→M→P→L 모두 삭제 완료
+//
+// 후임자 교체 발생: E→H, R→X, M→P</span>`
+  },
+];
+
+// ── 렌더 ──────────────────────────────────────
+let cur=0;
+function render(){
+  const s=STEPS[cur];
+  document.getElementById('step-title').textContent=
+    `단계 ${cur+1} / ${STEPS.length} — ${s.title}`;
+
+  const row=document.getElementById('dlbl-row');
+  row.innerHTML='';
+  if(s.del){
+    const d=document.createElement('span');
+    d.className='del-lbl'; d.textContent=s.del;
+    row.appendChild(d);
+  }
+  if(s.op){
+    const o=document.createElement('span');
+    o.className='op-lbl'; o.textContent=s.op;
+    row.appendChild(o);
+  }
+
+  document.getElementById('code-box').innerHTML=s.code;
+  draw(s.tree.nodes,s.tree.edges,s.hl,s.hNode);
+
+  const dc=document.getElementById('dots');
+  dc.innerHTML='';
+  STEPS.forEach((_,i)=>{
+    const d=document.createElement('span');
+    d.className='dot'+(i===cur?' active':'');
+    d.onclick=()=>{cur=i;render();};
+    dc.appendChild(d);
+  });
+  document.getElementById('btn-prev').disabled=cur===0;
+  document.getElementById('btn-next').disabled=cur===STEPS.length-1;
+}
+function go(d){
+  cur=Math.max(0,Math.min(STEPS.length-1,cur+d));
+  render();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(-1);
+});
+render();
+</script>
+</body>
+</html>
