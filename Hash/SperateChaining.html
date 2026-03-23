@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SeparateChaining — 단일 테스트 시각화</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#f5f4ef;
+  color:#1a1a18;
+  min-height:100vh;
+  padding:1.5rem 1rem;
+}
+.layout{
+  display:grid;
+  grid-template-columns:340px 1fr;
+  gap:14px;
+  max-width:1060px;
+  margin:0 auto;
+}
+h1{font-size:16px;font-weight:500;margin-bottom:4px;}
+.sub{font-size:12px;color:#73726c;margin-bottom:14px;}
+
+/* panel */
+.panel{background:#fff;border:0.5px solid #c8c6bc;border-radius:12px;padding:1rem;}
+.panel-title{font-size:11px;color:#888780;margin-bottom:10px;font-family:'SF Mono','Fira Mono',monospace;}
+
+/* code */
+pre{
+  font-family:'SF Mono','Fira Mono','Consolas',monospace;
+  font-size:11.5px;
+  line-height:2;
+  color:#888780;
+  overflow-x:auto;
+}
+pre .line{
+  display:block;
+  padding:1px 10px;
+  border-radius:4px;
+  transition:background .2s;
+  white-space:pre;
+  cursor:default;
+}
+pre .line.active{
+  background:#faeeda;
+  color:#1a1a18;
+  font-weight:500;
+  border-left:3px solid #EF9F27;
+  padding-left:7px;
+}
+pre .line.done{background:#f0f8e8;color:#5f5e5a;}
+.kw{color:#185fa5;}
+.cm{color:#c8c6bc;font-style:italic;}
+
+/* call stack */
+.stack-wrap{display:flex;flex-direction:column-reverse;gap:5px;min-height:80px;}
+.frame{
+  padding:6px 12px;
+  border:0.5px solid #c8c6bc;
+  border-radius:6px;
+  font-family:'SF Mono','Fira Mono',monospace;
+  font-size:11px;
+  background:#fff;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  transition:all .25s;
+}
+.frame.top{background:#e6f1fb;border-color:#85b7eb;color:#0c447c;font-weight:500;}
+.frame .fvars{color:#888780;font-size:10px;}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.stat{background:#f5f4ef;border-radius:8px;padding:8px 10px;text-align:center;}
+.stat-val{font-size:22px;font-weight:500;line-height:1;}
+.stat-lbl{font-size:10px;color:#888780;margin-top:3px;}
+.blue{color:#185fa5;}
+.red{color:#a32d2d;}
+.green{color:#3b6d11;}
+
+/* hash table */
+.ht-grid{display:flex;flex-direction:column;gap:4px;}
+.bucket-row{display:flex;align-items:center;gap:6px;}
+.b-idx{
+  font-family:'SF Mono','Fira Mono',monospace;
+  font-size:11px;
+  color:#b4b2a9;
+  min-width:38px;
+  text-align:right;
+}
+.b-idx.hl{color:#185fa5;font-weight:500;}
+.b-sep{font-size:10px;color:#c8c6bc;}
+.chain{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+.nd{
+  font-family:'SF Mono','Fira Mono',monospace;
+  font-size:11px;
+  padding:3px 9px;
+  border:0.5px solid #d3d1c7;
+  border-radius:4px;
+  background:#fff;
+  color:#5f5e5a;
+  transition:all .25s;
+}
+.nd.inserting{background:#eaf3de;border-color:#97c459;color:#27500a;}
+.nd.found    {background:#e6f1fb;border-color:#85b7eb;color:#0c447c;}
+.nd.collision{background:#fcebeb;border-color:#f09595;color:#791f1f;}
+.nd.null     {opacity:.35;font-size:10px;}
+.ptr{font-size:10px;color:#c8c6bc;}
+
+/* log */
+.log-list{list-style:none;display:flex;flex-direction:column;gap:3px;max-height:160px;overflow-y:auto;}
+.log-list li{
+  font-size:11px;padding:4px 10px;border-radius:4px;
+  border-left:2px solid #d3d1c7;color:#5f5e5a;
+  background:#f5f4ef;
+  font-family:'SF Mono','Fira Mono',monospace;
+  line-height:1.5;
+}
+.log-list li.insert   {border-left-color:#97c459;background:#f0f8e8;color:#27500a;}
+.log-list li.collision{border-left-color:#f09595;background:#fcebeb;color:#791f1f;}
+.log-list li.find     {border-left-color:#85b7eb;background:#e6f1fb;color:#0c447c;}
+.log-list li.done     {border-left-color:#7F77DD;background:#EEEDFE;color:#3C3489;font-weight:500;}
+
+/* controls */
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.btn{
+  padding:6px 18px;border:0.5px solid #c8c6bc;border-radius:8px;
+  background:#fff;color:#1a1a18;cursor:pointer;font-size:12px;
+  transition:background .15s;white-space:nowrap;
+}
+.btn:hover   {background:#f5f4ef;}
+.btn:disabled{opacity:.35;cursor:default;}
+.btn.primary {background:#e6f1fb;color:#185fa5;border-color:#85b7eb;}
+.btn.primary:hover{background:#b5d4f4;}
+.btn.danger  {background:#fcebeb;color:#a32d2d;border-color:#f09595;}
+.speed-row{display:flex;align-items:center;gap:6px;font-size:11px;color:#888780;margin-left:auto;}
+input[type=range]{width:80px;accent-color:#185fa5;}
+
+/* legend */
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
+.leg{display:flex;align-items:center;gap:4px;font-size:10px;color:#73726c;}
+.leg-dot{width:10px;height:10px;border-radius:2px;border:0.5px solid #c8c6bc;}
+.leg-dot.inserting{background:#eaf3de;border-color:#97c459;}
+.leg-dot.found    {background:#e6f1fb;border-color:#85b7eb;}
+.leg-dot.collision{background:#fcebeb;border-color:#f09595;}
+.leg-dot.norm     {background:#fff;}
+
+@media(max-width:720px){.layout{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div style="max-width:1060px;margin:0 auto 12px;">
+  <h1>SeparateChaining&lt;int,int&gt; map(23) — 단일 테스트 실행 시각화</h1>
+  <div class="sub">Step 버튼으로 한 줄씩 · Auto로 자동 실행 · 스페이스바 = Step · R = Reset</div>
+</div>
+
+<div class="layout">
+
+  <!-- LEFT -->
+  <div style="display:flex;flex-direction:column;gap:12px;">
+
+    <div class="panel">
+      <div class="panel-title">// main() — 단일 테스트</div>
+      <pre id="code-display"></pre>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">// Call Stack</div>
+      <div class="stack-wrap" id="call-stack"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT -->
+  <div style="display:flex;flex-direction:column;gap:12px;">
+
+    <!-- controls -->
+    <div class="panel" style="padding:.8rem 1rem;">
+      <div class="controls">
+        <button class="btn primary" id="btn-step" onclick="step()">Step ▶</button>
+        <button class="btn"         id="btn-auto" onclick="toggleAuto()">Auto 실행</button>
+        <button class="btn danger"  onclick="resetAll()">Reset</button>
+        <div class="speed-row">
+          <span>속도</span>
+          <input type="range" id="speed" min="100" max="900" value="500" step="50"
+                 oninput="onSpeedChange(this.value)">
+          <span id="speed-lbl">500ms</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- stats -->
+    <div class="panel">
+      <div class="panel-title">// 실행 통계</div>
+      <div class="stats">
+        <div class="stat"><div class="stat-val blue" id="s-person">0</div><div class="stat-lbl">처리 인원</div></div>
+        <div class="stat"><div class="stat-val red"  id="s-coll">0</div><div class="stat-lbl">충돌 횟수</div></div>
+        <div class="stat"><div class="stat-val green" id="s-unique">0</div><div class="stat-lbl">사용된 버킷</div></div>
+      </div>
+    </div>
+
+    <!-- hash table -->
+    <div class="panel" style="flex:1;">
+      <div class="panel-title">// vector&lt;SequentialSearch&gt; st[23] — 버킷 상태</div>
+      <div class="ht-grid" id="ht-grid"></div>
+      <div class="legend">
+        <div class="leg"><div class="leg-dot inserting"></div>방금 삽입</div>
+        <div class="leg"><div class="leg-dot found"></div>탐색 발견</div>
+        <div class="leg"><div class="leg-dot collision"></div>충돌(value++)</div>
+        <div class="leg"><div class="leg-dot norm"></div>기존 노드</div>
+      </div>
+    </div>
+
+    <!-- log -->
+    <div class="panel">
+      <div class="panel-title">// 실행 로그</div>
+      <ul class="log-list" id="log-list"></ul>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const BUCKET_COUNT = 23;
+const NUM_PEOPLE   = 23;
+const BDAY_MAX     = 365;
+
+let buckets   = Array.from({length:BUCKET_COUNT}, ()=>[]);
+let collCount = 0;
+let personIdx = 0;
+let autoTimer = null;
+
+let hlBucket = -1;
+let hlKey    = -1;
+let hlState  = '';
+
+/* deterministic random */
+let seed = 42;
+function rand(){
+  seed = (seed * 1664525 + 1013904223) >>> 0;
+  return (seed % BDAY_MAX) + 1;
+}
+
+/* ── code lines ── */
+const LINES = [
+  { id:'L01', t:'random_device rd;  mt19937 g(rd());' },
+  { id:'L02', t:'uniform_int_distribution<int> dist(1, 365);' },
+  { id:'L03', t:'int num_people = 23;' },
+  { id:'L04', t:'SeparateChaining<int,int> map(23);' },
+  { id:'L05', t:'' },
+  { id:'L06', t:'int samebirthday_count = 0;' },
+  { id:'L07', t:'for (int i = 0; i < num_people; i++) {' },
+  { id:'L08', t:'    int birthday = dist(g);' },
+  { id:'L09', t:'    auto* n = map.Find(birthday);' },
+  { id:'L10', t:'    if (n) {                  // 이미 있는 생일' },
+  { id:'L11', t:'        samebirthday_count += 1;' },
+  { id:'L12', t:'        n->value += 1;' },
+  { id:'L13', t:'    } else {                  // 새 생일' },
+  { id:'L14', t:'        map.Insert({birthday, 1});' },
+  { id:'L15', t:'    }' },
+  { id:'L16', t:'}  // end for' },
+  { id:'L17', t:'' },
+  { id:'L18', t:'map.Print();' },
+  { id:'L19', t:'cout << samebirthday_count << endl;' },
+];
+
+let activeLine = '';
+let doneLines  = new Set();
+
+function renderCode(){
+  const el = document.getElementById('code-display');
+  el.innerHTML = LINES.map(l => {
+    const safe = l.t
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\b(int|auto|for|if|else|cout|return|void|endl|typename|class|struct|template)\b/g,
+               '<span class="kw">$1</span>')
+      .replace(/(\/\/.*)/g,'<span class="cm">$1</span>');
+    const cls = l.id===activeLine ? 'active' : doneLines.has(l.id) ? 'done' : '';
+    return `<span class="line ${cls}" id="ln-${l.id}">${safe||'&nbsp;'}</span>`;
+  }).join('');
+  const el2 = document.getElementById('ln-'+activeLine);
+  if(el2) el2.scrollIntoView({block:'nearest', behavior:'smooth'});
+}
+
+/* ── call stack ── */
+let callStack = [];
+function renderStack(){
+  const el = document.getElementById('call-stack');
+  if(!callStack.length){
+    el.innerHTML = '<div style="font-size:11px;color:#b4b2a9;padding:4px 8px">스택 비어있음</div>';
+    return;
+  }
+  el.innerHTML = callStack.map((f,i) =>
+    `<div class="frame ${i===callStack.length-1?'top':''}">
+       <span>${f.name}</span>
+       <span class="fvars">${f.vars||''}</span>
+     </div>`
+  ).join('');
+}
+
+/* ── hash table ── */
+function renderHT(){
+  const grid = document.getElementById('ht-grid');
+  const visible = new Set();
+  for(let i=0;i<8;i++) visible.add(i);
+  if(hlBucket>=0) visible.add(hlBucket);
+  buckets.forEach((b,i)=>{ if(b.length) visible.add(i); });
+
+  const idxs = [...visible].sort((a,b)=>a-b);
+  let html = '';
+  idxs.forEach(i=>{
+    const isHL = i===hlBucket;
+    const nodes = buckets[i];
+    let chain='';
+    if(!nodes.length){
+      chain='<span class="nd null">null</span>';
+    } else {
+      nodes.forEach((n,j)=>{
+        if(j) chain+='<span class="ptr">→</span>';
+        const cls=(isHL && n.key===hlKey) ? hlState : '';
+        chain+=`<span class="nd ${cls}">${n.key} : ${n.value}</span>`;
+      });
+      chain+='<span class="ptr">→</span><span class="nd null">null</span>';
+    }
+    html+=`<div class="bucket-row">
+      <span class="b-idx${isHL?' hl':''}">[${String(i).padStart(2,' ')}]</span>
+      <span class="b-sep">→</span>
+      <div class="chain">${chain}</div>
+    </div>`;
+  });
+  const maxShown = idxs[idxs.length-1]??-1;
+  if(maxShown < BUCKET_COUNT-1)
+    html+=`<div style="font-size:10px;color:#b4b2a9;padding-left:46px;margin-top:3px">… st[${maxShown+1}] ~ st[22] (비어있음)</div>`;
+  grid.innerHTML=html;
+}
+
+/* ── stats ── */
+function renderStats(){
+  document.getElementById('s-person').textContent = personIdx;
+  document.getElementById('s-coll').textContent   = collCount;
+  document.getElementById('s-unique').textContent = buckets.filter(b=>b.length).length;
+}
+
+/* ── log ── */
+function log(msg, cls){
+  const ul = document.getElementById('log-list');
+  const li = document.createElement('li');
+  li.className = cls||'';
+  li.textContent = msg;
+  ul.insertBefore(li, ul.firstChild);
+  while(ul.children.length>50) ul.removeChild(ul.lastChild);
+}
+
+/* ── sequence builder ── */
+function buildSeq(){
+  const s=[];
+  const set=(line,fn)=>s.push({line,fn});
+
+  set('L01',()=>{ callStack=[{name:'main()'}]; renderStack(); log('프로그램 시작',''); });
+  set('L02',()=>{});
+  set('L03',()=>{});
+  set('L04',()=>{
+    buckets=Array.from({length:BUCKET_COUNT},()=>[]);
+    log('SeparateChaining(23) → st.resize(23) → 버킷 23개 초기화','');
+    hlBucket=-1; renderHT();
+  });
+  set('L06',()=>{ collCount=0; personIdx=0; renderStats(); });
+
+  for(let i=0;i<NUM_PEOPLE;i++){
+    const bday = rand();
+    const idx  = bday % BUCKET_COUNT;
+
+    set('L07',()=>{ personIdx=i+1; renderStats(); });
+    set('L08',()=>{
+      hlBucket=idx; hlKey=bday; hlState='';
+      callStack=[{name:'main()'},{name:'dist(g)',vars:`birthday = ${bday}`}];
+      renderStack(); renderHT();
+      log(`Person ${i+1}:  birthday = ${bday}   hash: ${bday} % 23 = ${idx}`,'');
+    });
+    set('L09',()=>{
+      const found=buckets[idx].find(n=>n.key===bday);
+      callStack=[{name:'main()'},{name:`SC::Find(${bday})`,vars:`idx=${idx}`},{name:`SS::Find(${bday})`,vars:found?'→ &node':'→ nullptr'}];
+      hlState=found?'found':'';
+      renderStack(); renderHT();
+      log(found
+        ? `Find(${bday}) → st[${idx}] 에서 발견 (value=${found.value})`
+        : `Find(${bday}) → st[${idx}] nullptr`, 'find');
+    });
+    set(buckets[idx].find(n=>n.key===bday)?'L10':'L13',()=>{
+      callStack=[{name:'main()'}]; renderStack();
+    });
+    set('L11',()=>{
+      const found=buckets[idx].find(n=>n.key===bday);
+      if(found){ collCount++; renderStats(); }
+    });
+    set('L12',()=>{
+      const found=buckets[idx].find(n=>n.key===bday);
+      if(found){
+        found.value++;
+        hlState='collision';
+        callStack=[{name:'main()'}];
+        renderStack(); renderHT();
+        log(`충돌! birthday=${bday} → n->value++ → value=${found.value}`,'collision');
+        renderStats();
+      }
+    });
+    set('L14',()=>{
+      if(!buckets[idx].find(n=>n.key===bday)){
+        buckets[idx].push({key:bday,value:1});
+        hlState='inserting';
+        callStack=[{name:'main()'},{name:`SC::Insert({${bday},1})`,vars:`idx=${idx}`},{name:'SS::Insert',vars:'push_back'}];
+        renderStack(); renderHT();
+        log(`Insert({${bday}, 1}) → st[${idx}] 에 추가`,'insert');
+      }
+    });
+    set('L15',()=>{ callStack=[{name:'main()'}]; hlBucket=-1; hlKey=-1; hlState=''; renderStack(); renderHT(); });
+  }
+
+  set('L16',()=>{ personIdx=NUM_PEOPLE; renderStats(); });
+  set('L18',()=>{ log(`map.Print() — 23명 생일 분포 출력`,''); });
+  set('L19',()=>{
+    callStack=[{name:'main()',vars:'return 0'}]; renderStack();
+    log(`결과: samebirthday_count = ${collCount}  (충돌 ${collCount>0?'발생':'없음'})`, 'done');
+    log(`이론적 확률 ≈ 50.7% — 여러 번 실행하면 절반 정도 충돌 발생`, 'done');
+  });
+
+  return s;
+}
+
+let seq=[], seqIdx=0;
+
+function step(){
+  if(seqIdx>=seq.length){ log('실행 완료','done'); return; }
+  const s=seq[seqIdx++];
+  doneLines.add(activeLine);
+  activeLine=s.line;
+  s.fn();
+  renderCode(); renderStats();
+}
+
+function toggleAuto(){
+  if(autoTimer){
+    clearInterval(autoTimer); autoTimer=null;
+    document.getElementById('btn-auto').textContent='Auto 실행';
+  } else {
+    document.getElementById('btn-auto').textContent='정지 ■';
+    const ms = 1000 - parseInt(document.getElementById('speed').value);
+    autoTimer=setInterval(()=>{
+      if(seqIdx>=seq.length){
+        clearInterval(autoTimer); autoTimer=null;
+        document.getElementById('btn-auto').textContent='Auto 실행';
+        return;
+      }
+      step();
+    }, ms);
+  }
+}
+
+function onSpeedChange(v){
+  document.getElementById('speed-lbl').textContent=(1000-parseInt(v))+'ms';
+  if(autoTimer){ toggleAuto(); toggleAuto(); }
+}
+
+function resetAll(){
+  if(autoTimer){ clearInterval(autoTimer); autoTimer=null; document.getElementById('btn-auto').textContent='Auto 실행'; }
+  seed=42;
+  buckets=Array.from({length:BUCKET_COUNT},()=>[]);
+  collCount=0; personIdx=0;
+  activeLine=''; doneLines=new Set();
+  callStack=[]; hlBucket=-1; hlKey=-1; hlState='';
+  document.getElementById('log-list').innerHTML='';
+  seq=buildSeq(); seqIdx=0;
+  renderCode(); renderStack(); renderHT(); renderStats();
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key===' '){ e.preventDefault(); step(); }
+  if(e.key==='r'||e.key==='R') resetAll();
+});
+
+/* boot */
+seq=buildSeq();
+renderCode(); renderStack(); renderHT(); renderStats();
+</script>
+</body>
+</html>
