@@ -1,0 +1,218 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-sans);}
+.wrap{padding:1.5rem 1rem;max-width:820px;}
+h1{font-size:18px;font-weight:500;color:var(--color-text-primary);margin-bottom:0.25rem;}
+.sub{font-size:13px;color:var(--color-text-secondary);margin-bottom:1.5rem;}
+
+.top-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;}
+
+.code-box{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem;font-family:var(--font-mono);font-size:12px;line-height:1.9;color:var(--color-text-secondary);}
+.code-line{padding:0 6px;border-radius:4px;transition:background 0.2s;}
+.code-line.active{background:#E6F1FB;color:#042C53;}
+.kw{color:#185FA5;} .cm{color:#888780;} .str{color:#3B6D11;} .num{color:#BA7517;}
+
+.state-box{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem;}
+.state-title{font-size:11px;color:var(--color-text-secondary);margin-bottom:10px;font-weight:500;}
+
+.chars-row{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;}
+.char-cell{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.char-idx{font-size:10px;color:var(--color-text-secondary);}
+.char-box{width:36px;height:36px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500;border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);transition:all 0.25s;}
+.char-box.current{background:#E6F1FB;border-color:#378ADD;color:#042C53;}
+.char-box.next{background:#FAEEDA;border-color:#EF9F27;color:#412402;}
+.char-box.done{background:var(--color-background-secondary);color:var(--color-text-secondary);}
+.char-val{font-size:10px;color:var(--color-text-secondary);}
+
+.vars{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;}
+.var-card{background:var(--color-background-secondary);border-radius:6px;padding:8px 10px;}
+.var-label{font-size:11px;color:var(--color-text-secondary);margin-bottom:2px;}
+.var-value{font-size:18px;font-weight:500;color:var(--color-text-primary);}
+
+.decision{border-radius:6px;padding:8px 12px;font-size:12px;line-height:1.6;margin-bottom:8px;}
+.decision.sub-d{background:#E6F1FB;color:#042C53;}
+.decision.add-d{background:#E1F5EE;color:#04342C;}
+.decision.last-d{background:#F1EFE8;color:#2C2C2A;}
+
+.ans-bar-wrap{margin-top:8px;}
+.ans-bar-label{font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;}
+.ans-bar-track{background:var(--color-background-secondary);border-radius:99px;height:8px;overflow:hidden;}
+.ans-bar-fill{height:8px;border-radius:99px;background:#185FA5;transition:width 0.4s;}
+
+.step-controls{display:flex;align-items:center;gap:10px;margin-bottom:1rem;}
+button{background:transparent;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:6px 16px;font-size:13px;color:var(--color-text-primary);cursor:pointer;}
+button:hover{background:var(--color-background-secondary);}
+button:disabled{opacity:0.35;cursor:default;}
+.step-info{font-size:13px;color:var(--color-text-secondary);}
+
+.log{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;}
+.log-header{background:var(--color-background-secondary);padding:8px 12px;font-size:11px;font-weight:500;color:var(--color-text-secondary);}
+.log-table{width:100%;border-collapse:collapse;font-size:12px;}
+.log-table th{padding:6px 10px;text-align:left;font-size:11px;color:var(--color-text-secondary);font-weight:500;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);}
+.log-table td{padding:7px 10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary);}
+.log-table tr:last-child td{border-bottom:none;}
+.log-table tr.current-log td{background:#E6F1FB;color:#042C53;}
+.op-sub{color:#993C1D;font-weight:500;}
+.op-add{color:#0F6E56;font-weight:500;}
+</style>
+
+<div class="wrap">
+<h1>RomanToInt("MCMXCIV") 단계별 실행</h1>
+<p class="sub">결과: MCMXCIV = 1994 &nbsp;|&nbsp; 총 7단계 (i = 0 ~ 6)</p>
+
+<div class="step-controls">
+  <button id="btn-prev" disabled>← 이전</button>
+  <button id="btn-next">다음 →</button>
+  <button id="btn-reset">처음</button>
+  <span class="step-info" id="step-info">Step 1 / 7</span>
+</div>
+
+<div class="top-grid">
+  <div class="code-box" id="code-box">
+    <div class="code-line" id="cl-for"><span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; s.length(); i++)</div>
+    <div class="code-line" id="cl-open">{</div>
+    <div class="code-line" id="cl-if">&nbsp;&nbsp;<span class="kw">if</span> (i &lt; s.length()-<span class="num">1</span> &amp;&amp; m[s[i]] &lt; m[s[i+<span class="num">1</span>]])</div>
+    <div class="code-line" id="cl-sub">&nbsp;&nbsp;&nbsp;&nbsp;ans -= m[s[i]]; <span class="cm">// 빼기</span></div>
+    <div class="code-line" id="cl-else">&nbsp;&nbsp;<span class="kw">else</span></div>
+    <div class="code-line" id="cl-add">&nbsp;&nbsp;&nbsp;&nbsp;ans += m[s[i]]; <span class="cm">// 더하기</span></div>
+    <div class="code-line" id="cl-close">}</div>
+    <div class="code-line" id="cl-cout"><span class="kw">cout</span> &lt;&lt; s &lt;&lt; <span class="str">" = "</span> &lt;&lt; ans;</div>
+  </div>
+
+  <div class="state-box">
+    <div class="state-title">실행 상태</div>
+    <div class="chars-row" id="chars-row"></div>
+    <div class="vars">
+      <div class="var-card">
+        <div class="var-label">i (현재 인덱스)</div>
+        <div class="var-value" id="var-i">0</div>
+      </div>
+      <div class="var-card">
+        <div class="var-label">ans (누적값)</div>
+        <div class="var-value" id="var-ans">0</div>
+      </div>
+      <div class="var-card">
+        <div class="var-label">m[s[i]] 현재값</div>
+        <div class="var-value" id="var-cur">-</div>
+      </div>
+      <div class="var-card">
+        <div class="var-label">m[s[i+1]] 다음값</div>
+        <div class="var-value" id="var-nxt">-</div>
+      </div>
+    </div>
+    <div class="decision" id="decision-box">-</div>
+    <div class="ans-bar-wrap">
+      <div class="ans-bar-label">ans 진행률 (0 → 1994)</div>
+      <div class="ans-bar-track"><div class="ans-bar-fill" id="ans-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="log">
+  <div class="log-header">실행 로그</div>
+  <table class="log-table">
+    <thead><tr><th>단계</th><th>i</th><th>s[i]</th><th>현재값</th><th>다음값</th><th>연산</th><th>ans</th></tr></thead>
+    <tbody id="log-body"></tbody>
+  </table>
+</div>
+</div>
+
+<script>
+const s = "MCMXCIV";
+const map = {M:1000,C:100,X:10,L:50,I:1,V:5,D:500};
+const steps = [];
+
+let ans = 0;
+for(let i=0;i<s.length;i++){
+  const cur = map[s[i]];
+  const nxt = i < s.length-1 ? map[s[i+1]] : null;
+  const isSub = nxt !== null && cur < nxt;
+  const prevAns = ans;
+  if(isSub) ans -= cur; else ans += cur;
+  steps.push({i, ch:s[i], cur, nxt, isSub, isLast: i===s.length-1, prevAns, ans});
+}
+
+let current = 0;
+
+function buildChars(stepIdx){
+  const row = document.getElementById('chars-row');
+  row.innerHTML = '';
+  const st = steps[stepIdx];
+  for(let j=0;j<s.length;j++){
+    const cell = document.createElement('div');
+    cell.className = 'char-cell';
+    let boxClass = 'char-box';
+    if(j===st.i) boxClass += ' current';
+    else if(j===st.i+1 && !st.isLast) boxClass += ' next';
+    else if(j<st.i) boxClass += ' done';
+    cell.innerHTML = `<span class="char-idx">[${j}]</span><div class="${boxClass}">${s[j]}</div><span class="char-val">${map[s[j]]}</span>`;
+    row.appendChild(cell);
+  }
+}
+
+function buildLog(stepIdx){
+  const tbody = document.getElementById('log-body');
+  tbody.innerHTML = '';
+  for(let k=0;k<=stepIdx;k++){
+    const st = steps[k];
+    const tr = document.createElement('tr');
+    if(k===stepIdx) tr.className = 'current-log';
+    const op = st.isLast ? `<span class="op-add">+${st.cur}</span>` : st.isSub ? `<span class="op-sub">-${st.cur}</span>` : `<span class="op-add">+${st.cur}</span>`;
+    tr.innerHTML = `<td>${k+1}</td><td>${st.i}</td><td>${st.ch}</td><td>${st.cur}</td><td>${st.nxt ?? '-'}</td><td>${op}</td><td>${st.ans}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function highlight(ids){
+  ['cl-for','cl-if','cl-sub','cl-else','cl-add','cl-cout'].forEach(id=>{
+    document.getElementById(id).classList.remove('active');
+  });
+  ids.forEach(id=>document.getElementById(id).classList.add('active'));
+}
+
+function render(){
+  const st = steps[current];
+  buildChars(current);
+  buildLog(current);
+
+  document.getElementById('var-i').textContent = st.i;
+  document.getElementById('var-ans').textContent = st.ans;
+  document.getElementById('var-cur').textContent = st.cur;
+  document.getElementById('var-nxt').textContent = st.nxt ?? '없음 (마지막)';
+
+  const bar = Math.max(0, Math.min(100, (st.ans / 1994) * 100));
+  document.getElementById('ans-bar').style.width = bar + '%';
+
+  const db = document.getElementById('decision-box');
+  if(st.isLast){
+    db.className='decision last-d';
+    db.textContent = `i=${st.i} → 마지막 인덱스 → else → ans += ${st.cur} = ${st.ans}`;
+    highlight(['cl-for','cl-else','cl-add']);
+  } else if(st.isSub){
+    db.className='decision sub-d';
+    db.textContent = `${st.cur} < ${st.nxt} ✅ → ans -= ${st.cur} → ${st.prevAns} - ${st.cur} = ${st.ans}`;
+    highlight(['cl-for','cl-if','cl-sub']);
+  } else {
+    db.className='decision add-d';
+    db.textContent = `${st.cur} < ${st.nxt} ❌ → ans += ${st.cur} → ${st.prevAns} + ${st.cur} = ${st.ans}`;
+    highlight(['cl-for','cl-if','cl-else','cl-add']);
+  }
+
+  if(current===steps.length-1){
+    highlight(['cl-cout']);
+    db.className='decision add-d';
+    db.textContent = `완료! MCMXCIV = ${st.ans}`;
+  }
+
+  document.getElementById('step-info').textContent = `Step ${current+1} / ${steps.length}`;
+  document.getElementById('btn-prev').disabled = current===0;
+  document.getElementById('btn-next').disabled = current===steps.length-1;
+}
+
+document.getElementById('btn-next').onclick = ()=>{ if(current<steps.length-1){current++;render();} };
+document.getElementById('btn-prev').onclick = ()=>{ if(current>0){current--;render();} };
+document.getElementById('btn-reset').onclick = ()=>{ current=0;render(); };
+
+render();
+</script>
