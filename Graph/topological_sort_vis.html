@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>QueueBasedTopologicalSort 시각화</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:'Consolas','Courier New',monospace;font-size:13px;padding:16px}
+h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacing:.5px}
+#step-counter{font-size:11px;color:#858585}
+#step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:38px;line-height:1.6;padding:7px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
+#main-content{display:flex;gap:14px;margin:12px 0}
+#graph-panel{flex:0 0 460px;background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:6px}
+#graph-panel svg{width:100%;display:block}
+#right-panel{flex:1;display:flex;flex-direction:column;gap:8px}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+#indegree-grid{display:flex;gap:5px;flex-wrap:wrap}
+.icell{display:flex;flex-direction:column;align-items:center;gap:2px}
+.inlabel{font-size:10px;color:#555}
+.inval{width:30px;height:28px;border:1px solid #3e3e42;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:#2d2d2d;color:#d4d4d4;transition:all .25s}
+.inval.zero{border-color:#4ec9b0;color:#4ec9b0;background:rgba(78,201,176,.1)}
+.inval.changed{border-color:#9b9bea;color:#9b9bea;background:rgba(155,155,234,.1)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;min-height:26px;align-items:center}
+.chip{padding:2px 8px;border-radius:3px;font-size:12px;font-weight:700;transition:all .2s}
+.chip-q{background:rgba(206,145,120,.12);border:1px solid #ce9178;color:#ce9178}
+.chip-r{background:rgba(78,201,176,.1);border:1px solid #4ec9b0;color:#4ec9b0}
+.chip-s{background:rgba(86,156,214,.1);border:1px solid #569cd6;color:#569cd6}
+.empty{color:#444;font-size:11px}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin-bottom:12px}
+#code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:5px 0}
+.cline{display:flex;align-items:center;padding:1px 0;border-left:2px solid transparent;transition:background .2s}
+.cline.hl{background:rgba(255,255,120,.07);border-left:2px solid #dcdcaa}
+.lnum{width:36px;text-align:right;padding-right:12px;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{font-size:12px;white-space:pre;color:#d4d4d4}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.cm{color:#6a9955;font-style:italic}.op{color:#d4d4d4}
+#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#3e3e42}
+.nbtn:disabled{opacity:.3;cursor:default}
+#dots{display:flex;gap:5px;align-items:center}
+.dot{width:6px;height:6px;border-radius:50%;background:#3e3e42;transition:background .2s}
+.dot.active{background:#858585}
+</style>
+</head>
+<body>
+<h1>QueueBasedTopologicalSort — 단계별 실행 시각화</h1>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+
+<div id="legend">
+  <div class="leg"><div class="leg-c" style="background:rgba(60,60,60,.4);border-color:#555"></div>미처리</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(206,145,120,.2);border-color:#ce9178"></div>큐 대기</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(240,90,40,.2);border-color:#f06030"></div>처리 중</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(155,155,234,.2);border-color:#9b9bea"></div>indegree 감소</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(78,201,176,.2);border-color:#4ec9b0"></div>완료</div>
+</div>
+
+<div id="main-content">
+  <div id="graph-panel">
+    <svg id="gsvg" viewBox="0 0 460 370">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <g id="eg"></g>
+      <g id="ng"></g>
+    </svg>
+  </div>
+  <div id="right-panel">
+    <div class="sbox">
+      <div class="slabel">Indegree (인덱스: 노드번호)</div>
+      <div id="indegree-grid"></div>
+    </div>
+    <div class="sbox">
+      <div class="slabel">Queue ▶ 앞 → 뒤</div>
+      <div class="chips" id="qdisp"></div>
+    </div>
+    <div class="sbox">
+      <div class="slabel">Result</div>
+      <div class="chips" id="rdisp"></div>
+    </div>
+    <div class="sbox" id="sbox" style="display:none">
+      <div class="slabel">Stack (top → bottom) — 최종 출력 순서</div>
+      <div class="chips" id="sdisp"></div>
+    </div>
+  </div>
+</div>
+
+<div id="code-panel">
+  <div id="code-title">stack&lt;Vertex*&gt; QueueBasedTopologicalSort()</div>
+  <div id="code-body"></div>
+</div>
+
+<div id="nav">
+  <button class="nbtn" id="bp" onclick="go(-1)">← 이전</button>
+  <div id="dots"></div>
+  <button class="nbtn" id="bn" onclick="go(1)">다음 →</button>
+</div>
+
+<script>
+const NP = {
+  0:{x:240,y:175},1:{x:385,y:325},2:{x:90,y:255},
+  3:{x:215,y:325},4:{x:375,y:65},5:{x:105,y:65}
+};
+const R = 22;
+const EDGES = [[5,2],[5,0],[0,2],[4,0],[4,1],[2,3],[3,1]];
+
+const LINES = [
+  {h:'<span class="kw">vector</span>&lt;<span class="kw">int</span>&gt; indegree(vertices.<span class="fn">size</span>());'},
+  {h:'<span class="kw">for</span> (<span class="kw">auto</span>* v : vertices) {'},
+  {h:'&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">for</span> (<span class="kw">auto</span>* w : v-&gt;out_neighbors) {'},
+  {h:'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;indegree[w-&gt;value]++;'},
+  {h:'&nbsp;&nbsp;&nbsp;&nbsp;}'},
+  {h:'}'},
+  {h:'<span class="kw">for</span> (<span class="kw">int</span> i = 0; i &lt; indegree.<span class="fn">size</span>(); i++) {'},
+  {h:'&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> (indegree[i] == 0) q.<span class="fn">push</span>(vertices[i]);'},
+  {h:'}'},
+  {h:'<span class="kw">while</span> (!q.<span class="fn">empty</span>()) {'},
+  {h:'&nbsp;&nbsp;&nbsp;&nbsp;<span class="tp">Vertex</span>* v = q.<span class="fn">front</span>(); q.<span class="fn">pop</span>();'},
+  {h:'&nbsp;&nbsp;&nbsp;&nbsp;result.<span class="fn">push_back</span>(v);'},
+  {h:'&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">for</span> (<span class="kw">auto</span>* n : v-&gt;out_neighbors) {'},
+  {h:'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;indegree[n-&gt;value]--;'},
+  {h:'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> (indegree[n-&gt;value] == 0) q.<span class="fn">push</span>(n);'},
+  {h:'&nbsp;&nbsp;&nbsp;&nbsp;}'},
+  {h:'}'},
+  {h:'<span class="cm">// result를 역순으로 stack에 저장</span>'},
+  {h:'<span class="kw">for</span> (<span class="kw">auto</span> i = result.<span class="fn">rbegin</span>(); i != result.<span class="fn">rend</span>(); i++)'},
+  {h:'&nbsp;&nbsp;&nbsp;&nbsp;s.<span class="fn">push</span>(*i);'},
+  {h:'<span class="kw">return</span> s;'},
+];
+
+// ns: nodeState, id: indegree, q: queue, r: result, s: stack, hl: highlight lines, ae: active edge indices
+const STEPS = [
+  {
+    desc:'초기 상태 — indegree 벡터를 vertices 크기(6)만큼 0으로 초기화합니다.',
+    ns:{0:'idle',1:'idle',2:'idle',3:'idle',4:'idle',5:'idle'},
+    id:['?','?','?','?','?','?'],q:[],r:[],s:null,
+    hl:[1],ae:[]
+  },
+  {
+    desc:'모든 노드와 out_neighbors를 순회하며 진입차수(indegree) 계산 완료. → [2, 2, 2, 1, 0, 0]',
+    ns:{0:'idle',1:'idle',2:'idle',3:'idle',4:'idle',5:'idle'},
+    id:[2,2,2,1,0,0],q:[],r:[],s:null,
+    hl:[2,3,4,5,6],ae:[0,1,2,3,4,5,6]
+  },
+  {
+    desc:'indegree=0인 노드 4, 5를 큐에 추가합니다.',
+    ns:{0:'idle',1:'idle',2:'idle',3:'idle',4:'queued',5:'queued'},
+    id:[2,2,2,1,0,0],q:[4,5],r:[],s:null,
+    hl:[7,8,9],ae:[]
+  },
+  {
+    desc:'4 꺼냄 → result 추가. 4→0: indegree[0]=1, 4→1: indegree[1]=1 (아직 0이 아님, 큐 미추가)',
+    ns:{0:'modified',1:'modified',2:'idle',3:'idle',4:'current',5:'queued'},
+    id:[1,1,2,1,0,0],q:[5],r:[4],s:null,
+    hl:[10,11,12,13,14,15,16],ae:[3,4]
+  },
+  {
+    desc:'5 꺼냄 → result 추가. 5→2: indegree[2]=1, 5→0: indegree[0]=0 ✅ → 0 큐 추가',
+    ns:{0:'queued',1:'idle',2:'modified',3:'idle',4:'visited',5:'current'},
+    id:[0,1,1,1,0,0],q:[0],r:[4,5],s:null,
+    hl:[10,11,12,13,14,15,16],ae:[0,1]
+  },
+  {
+    desc:'0 꺼냄 → result 추가. 0→2: indegree[2]=0 ✅ → 2 큐 추가',
+    ns:{0:'current',1:'idle',2:'queued',3:'idle',4:'visited',5:'visited'},
+    id:[0,1,0,1,0,0],q:[2],r:[4,5,0],s:null,
+    hl:[10,11,12,13,14,15,16],ae:[2]
+  },
+  {
+    desc:'2 꺼냄 → result 추가. 2→3: indegree[3]=0 ✅ → 3 큐 추가',
+    ns:{0:'visited',1:'idle',2:'current',3:'queued',4:'visited',5:'visited'},
+    id:[0,1,0,0,0,0],q:[3],r:[4,5,0,2],s:null,
+    hl:[10,11,12,13,14,15,16],ae:[5]
+  },
+  {
+    desc:'3 꺼냄 → result 추가. 3→1: indegree[1]=0 ✅ → 1 큐 추가',
+    ns:{0:'visited',1:'queued',2:'visited',3:'current',4:'visited',5:'visited'},
+    id:[0,0,0,0,0,0],q:[1],r:[4,5,0,2,3],s:null,
+    hl:[10,11,12,13,14,15,16],ae:[6]
+  },
+  {
+    desc:'1 꺼냄 → result 추가. 나가는 이웃 없음. 큐가 비었으므로 while 종료.',
+    ns:{0:'visited',1:'current',2:'visited',3:'visited',4:'visited',5:'visited'},
+    id:[0,0,0,0,0,0],q:[],r:[4,5,0,2,3,1],s:null,
+    hl:[10,11,12,17],ae:[]
+  },
+  {
+    desc:'위상정렬 완료! ✅  result를 역순으로 stack에 저장. 출력: 4 → 5 → 0 → 2 → 3 → 1',
+    ns:{0:'visited',1:'visited',2:'visited',3:'visited',4:'visited',5:'visited'},
+    id:[0,0,0,0,0,0],q:[],r:[4,5,0,2,3,1],s:[4,5,0,2,3,1],
+    hl:[18,19,20,21],ae:[]
+  }
+];
+
+const SC = {
+  idle:    {f:'rgba(55,55,55,.5)',   s:'#555',    t:'#777'},
+  queued:  {f:'rgba(206,145,120,.15)',s:'#ce9178',t:'#ce9178'},
+  current: {f:'rgba(240,90,40,.22)', s:'#f06030', t:'#f07848'},
+  modified:{f:'rgba(155,155,234,.15)',s:'#9b9bea',t:'#9b9bea'},
+  visited: {f:'rgba(78,201,176,.15)',s:'#4ec9b0', t:'#4ec9b0'}
+};
+
+let cur = 0;
+
+function buildSVG() {
+  const eg = document.getElementById('eg');
+  const ng = document.getElementById('ng');
+  const SVG = 'http://www.w3.org/2000/svg';
+
+  EDGES.forEach(([from,to],idx) => {
+    const f=NP[from],t=NP[to];
+    const dx=t.x-f.x,dy=t.y-f.y,len=Math.sqrt(dx*dx+dy*dy);
+    const ux=dx/len,uy=dy/len;
+    const x1=f.x+ux*R,y1=f.y+uy*R,x2=t.x-ux*(R+1),y2=t.y-uy*(R+1);
+    const ln=document.createElementNS(SVG,'line');
+    ln.setAttribute('x1',x1);ln.setAttribute('y1',y1);
+    ln.setAttribute('x2',x2);ln.setAttribute('y2',y2);
+    ln.setAttribute('stroke-width','1.5');
+    ln.setAttribute('marker-end','url(#arr)');
+    ln.id='e'+idx;
+    eg.appendChild(ln);
+    // edge label at midpoint
+    const mx=(f.x+t.x)/2,my=(f.y+t.y)/2;
+    const nx=-uy*11,ny=ux*11;
+    const lbl=document.createElementNS(SVG,'text');
+    lbl.setAttribute('x',mx+nx);lbl.setAttribute('y',my+ny);
+    lbl.setAttribute('text-anchor','middle');lbl.setAttribute('dominant-baseline','central');
+    lbl.setAttribute('font-size','10');lbl.setAttribute('font-family','Consolas,monospace');
+    lbl.id='el'+idx;lbl.textContent=from+'→'+to;
+    eg.appendChild(lbl);
+  });
+
+  Object.entries(NP).forEach(([id,pos]) => {
+    const g=document.createElementNS(SVG,'g');
+    const c=document.createElementNS(SVG,'circle');
+    c.setAttribute('cx',pos.x);c.setAttribute('cy',pos.y);c.setAttribute('r',R);
+    c.setAttribute('stroke-width','1.5');c.id='c'+id;g.appendChild(c);
+    const t=document.createElementNS(SVG,'text');
+    t.setAttribute('x',pos.x);t.setAttribute('y',pos.y-1);
+    t.setAttribute('text-anchor','middle');t.setAttribute('dominant-baseline','central');
+    t.setAttribute('font-size','14');t.setAttribute('font-weight','600');
+    t.setAttribute('font-family','Consolas,monospace');t.id='t'+id;t.textContent=id;
+    g.appendChild(t);
+    const b=document.createElementNS(SVG,'text');
+    b.setAttribute('x',pos.x+17);b.setAttribute('y',pos.y-15);
+    b.setAttribute('text-anchor','middle');b.setAttribute('dominant-baseline','central');
+    b.setAttribute('font-size','10');b.setAttribute('font-family','Consolas,monospace');
+    b.id='b'+id;ng.appendChild(g);ng.appendChild(b);
+  });
+}
+
+function buildCode() {
+  const body=document.getElementById('code-body');
+  LINES.forEach((ln,i) => {
+    const d=document.createElement('div');
+    d.className='cline';d.id='cl'+(i+1);
+    const n=document.createElement('span');n.className='lnum';n.textContent=i+1;
+    const c=document.createElement('span');c.className='lcode';c.innerHTML=ln.h;
+    d.appendChild(n);d.appendChild(c);body.appendChild(d);
+  });
+}
+
+function buildDots() {
+  const el=document.getElementById('dots');
+  STEPS.forEach((_,i) => {
+    const d=document.createElement('div');d.className='dot';d.id='d'+i;el.appendChild(d);
+  });
+}
+
+function render() {
+  const s=STEPS[cur];
+  document.getElementById('step-counter').textContent=`Step ${cur+1} / ${STEPS.length}`;
+  document.getElementById('step-desc').textContent=s.desc;
+
+  Object.entries(s.ns).forEach(([id,state]) => {
+    const c=SC[state];
+    const ci=document.getElementById('c'+id);
+    const ti=document.getElementById('t'+id);
+    const bi=document.getElementById('b'+id);
+    if(ci){ci.setAttribute('fill',c.f);ci.setAttribute('stroke',c.s);}
+    if(ti){ti.setAttribute('fill',c.t);}
+    if(bi){
+      const v=s.id[parseInt(id)];
+      bi.textContent=v!=='?'?'in:'+v:'';
+      bi.setAttribute('fill','#555');
+    }
+  });
+
+  EDGES.forEach((_,i) => {
+    const active=s.ae.includes(i);
+    const el=document.getElementById('e'+i);
+    const ll=document.getElementById('el'+i);
+    if(el){
+      el.setAttribute('stroke',active?'#858585':'#585860');
+      el.setAttribute('stroke-width',active?'2':'1.5');
+      el.setAttribute('opacity',active?'1':'0.4');
+    }
+    if(ll){ll.setAttribute('fill',active?'#858585':'#585860');}
+  });
+
+  // indegree grid
+  const grid=document.getElementById('indegree-grid');
+  grid.innerHTML='';
+  s.id.forEach((v,i) => {
+    const cell=document.createElement('div');cell.className='icell';
+    const lbl=document.createElement('div');lbl.className='inlabel';lbl.textContent='['+i+']';
+    const val=document.createElement('div');val.className='inval';
+    if(v===0)val.classList.add('zero');
+    if(s.ns[i]==='modified')val.classList.add('changed');
+    val.textContent=v;
+    cell.appendChild(lbl);cell.appendChild(val);grid.appendChild(cell);
+  });
+
+  // queue
+  const qd=document.getElementById('qdisp');qd.innerHTML='';
+  if(!s.q.length){qd.innerHTML='<span class="empty">[ 비어있음 ]</span>';}
+  else{s.q.forEach((v,i)=>{const c=document.createElement('span');c.className='chip chip-q';c.textContent=i===0?'▶ '+v:String(v);qd.appendChild(c);});}
+
+  // result
+  const rd=document.getElementById('rdisp');rd.innerHTML='';
+  if(!s.r.length){rd.innerHTML='<span class="empty">[ 비어있음 ]</span>';}
+  else{s.r.forEach((v,i)=>{
+    const c=document.createElement('span');c.className='chip chip-r';c.textContent=String(v);rd.appendChild(c);
+    if(i<s.r.length-1){const a=document.createElement('span');a.style.cssText='color:#444;font-size:11px';a.textContent='→';rd.appendChild(a);}
+  });}
+
+  // stack
+  const sb=document.getElementById('sbox');
+  if(s.s){
+    sb.style.display='';
+    const sd=document.getElementById('sdisp');sd.innerHTML='';
+    s.s.forEach((v,i)=>{
+      const c=document.createElement('span');c.className='chip chip-s';
+      c.textContent=i===0?'TOP: '+v:String(v);sd.appendChild(c);
+      if(i<s.s.length-1){const a=document.createElement('span');a.style.cssText='color:#444;font-size:11px';a.textContent='→';sd.appendChild(a);}
+    });
+  }else{sb.style.display='none';}
+
+  // code highlight
+  LINES.forEach((_,i)=>{
+    const el=document.getElementById('cl'+(i+1));
+    if(el)el.className='cline'+(s.hl.includes(i+1)?' hl':'');
+  });
+
+  // dots
+  STEPS.forEach((_,i)=>{
+    const d=document.getElementById('d'+i);
+    if(d)d.className='dot'+(i===cur?' active':'');
+  });
+
+  document.getElementById('bp').disabled=cur===0;
+  document.getElementById('bn').disabled=cur===STEPS.length-1;
+}
+
+function go(dir){
+  cur=Math.max(0,Math.min(STEPS.length-1,cur+dir));
+  render();
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft')go(-1);
+  if(e.key==='ArrowRight')go(1);
+});
+
+buildSVG();buildCode();buildDots();render();
+</script>
+</body>
+</html>
