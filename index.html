@@ -3,19 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Algorithm Visualizations</title>
+  <title>알고리즘 시각화 목차</title>
   <style>
     :root {
       --bg: #f3f2ee;
       --panel: #ebe9e1;
+      --panel-strong: #e3decf;
       --border: #c8c5bb;
       --text: #121212;
-      --muted: #8a887f;
-      --badge-bg: #ece3ff;
-      --badge-text: #6c3ab8;
-      --button-bg: #cfe4fb;
-      --button-text: #0f4f8d;
-      --card-accent: #fff7de;
+      --muted: #6f6c64;
+      --link-bg: #dbeaf7;
+      --link-text: #114d84;
+      --chip-bg: #fff7de;
+      --chip-text: #8a5a00;
+      --shadow: rgba(20, 20, 20, 0.05);
     }
 
     * { box-sizing: border-box; }
@@ -34,18 +35,29 @@
     }
 
     .page {
-      max-width: 920px;
+      max-width: 1120px;
       margin: 0 auto;
-      padding: 20px 14px 28px;
+      padding: 24px 14px 40px;
     }
 
     .hero {
       margin-bottom: 18px;
     }
 
+    .badge {
+      display: inline-block;
+      margin-bottom: 12px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #ece3ff;
+      color: #6c3ab8;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
     h1 {
-      margin: 0 0 8px;
-      font-size: 24px;
+      margin: 0 0 10px;
+      font-size: 26px;
       line-height: 1.2;
       letter-spacing: -0.02em;
     }
@@ -54,101 +66,176 @@
       margin: 0;
       color: #353535;
       font-size: 14px;
-      line-height: 1.55;
+      line-height: 1.7;
     }
 
-    .badge {
-      display: inline-block;
-      margin-bottom: 12px;
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: var(--badge-bg);
-      color: var(--badge-text);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .grid {
+    .accordion {
       display: grid;
-      gap: 12px;
+      gap: 14px;
     }
 
-    .card {
-      display: block;
-      text-decoration: none;
-      color: inherit;
+    details {
       border: 1px solid var(--border);
-      border-radius: 16px;
-      background: linear-gradient(180deg, var(--panel), var(--card-accent));
-      padding: 14px;
-      transition: transform 0.15s ease, border-color 0.15s ease;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #f0eee7, #e7e3d8);
+      box-shadow: 0 4px 18px var(--shadow);
+      overflow: hidden;
     }
 
-    .card:active {
-      transform: scale(0.99);
+    details[open] {
+      background: linear-gradient(180deg, #f1efe7, #e4dfd3);
     }
 
-    .card-top {
+    summary {
+      list-style: none;
+      cursor: pointer;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .chapter-summary,
+    .folder-summary {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 8px;
+      gap: 12px;
+      padding: 16px;
     }
 
-    .card-tag {
-      display: inline-block;
-      padding: 5px 9px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.75);
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      font-size: 11px;
-      font-weight: 700;
+    .summary-left {
+      min-width: 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .summary-icon {
+      flex: 0 0 auto;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(0, 0, 0, 0.08);
       color: var(--muted);
-    }
-
-    .card-arrow {
-      color: var(--button-text);
       font-size: 16px;
       font-weight: 700;
+      transition: transform 0.18s ease;
     }
 
-    .card-title {
-      margin: 0 0 6px;
-      font-size: 18px;
+    details[open] > summary .summary-icon {
+      transform: rotate(90deg);
+    }
+
+    .chapter-no,
+    .folder-chip {
+      display: inline-block;
+      margin-bottom: 5px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(0,0,0,0.06);
+      color: var(--muted);
+      font-size: 11px;
       font-weight: 800;
-      letter-spacing: -0.02em;
     }
 
-    .card-desc {
-      margin: 0 0 12px;
-      color: #3f3f3f;
+    .folder-chip {
+      background: var(--chip-bg);
+      color: var(--chip-text);
+    }
+
+    .summary-title {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.3;
+      letter-spacing: -0.02em;
+      font-weight: 800;
+    }
+
+    .summary-meta {
+      margin: 4px 0 0;
+      color: #47433d;
       font-size: 13px;
       line-height: 1.6;
     }
 
-    .card-footer {
+    .count {
+      flex: 0 0 auto;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .chapter-body,
+    .folder-body {
+      padding: 0 16px 16px;
+    }
+
+    .chapter-body > p,
+    .folder-body > p {
+      margin: 0 0 12px;
+      color: #3d3a35;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .links a {
       display: inline-flex;
       align-items: center;
       min-height: 38px;
       padding: 0 12px;
       border-radius: 12px;
-      background: var(--button-bg);
-      color: var(--button-text);
+      background: var(--link-bg);
+      color: var(--link-text);
+      text-decoration: none;
       font-size: 13px;
       font-weight: 700;
     }
 
-    .footnote {
-      margin-top: 16px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.6;
+    .links a.subtle {
+      background: var(--chip-bg);
+      color: var(--chip-text);
     }
 
-    @media (min-width: 760px) {
+    .nested {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .nested details {
+      background: linear-gradient(180deg, #ece8dd, #e1dbc9);
+      border-radius: 14px;
+      box-shadow: none;
+    }
+
+    .footnote {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    @media (min-width: 860px) {
       .page {
-        padding: 28px 18px 40px;
+        padding: 30px 18px 46px;
+      }
+
+      .badge {
+        font-size: 20px;
+        padding: 8px 18px;
       }
 
       h1 {
@@ -156,50 +243,40 @@
       }
 
       .sub {
-        font-size: 18px;
+        font-size: 17px;
       }
 
-      .badge {
-        font-size: 22px;
-        padding: 8px 18px;
-      }
-
-      .grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+      .accordion {
         gap: 16px;
       }
 
-      .card {
+      .chapter-summary,
+      .folder-summary {
         padding: 18px;
-        border-radius: 20px;
       }
 
-      .card-tag {
-        font-size: 14px;
-        padding: 6px 10px;
+      .chapter-body,
+      .folder-body {
+        padding: 0 18px 18px;
       }
 
-      .card-arrow {
-        font-size: 24px;
-      }
-
-      .card-title {
+      .summary-title {
         font-size: 28px;
       }
 
-      .card-desc {
-        font-size: 16px;
+      .summary-meta,
+      .chapter-body > p,
+      .folder-body > p {
+        font-size: 15px;
       }
 
-      .card-footer {
-        min-height: 48px;
-        padding: 0 16px;
-        font-size: 16px;
-        border-radius: 14px;
+      .links a {
+        min-height: 44px;
+        padding: 0 14px;
+        font-size: 14px;
       }
 
       .footnote {
-        margin-top: 18px;
         font-size: 14px;
       }
     }
@@ -208,61 +285,173 @@
 <body>
   <main class="page">
     <header class="hero">
-      <div class="badge">알고리즘 시각화</div>
-      <h1>HTML 알고리즘 모음</h1>
-      <p class="sub">현재 폴더에 있는 알고리즘 시각화 페이지들로 바로 이동할 수 있는 시작 화면입니다. 모바일에서도 한눈에 보이도록 최대한 단순하게 정리했습니다.</p>
+      <div class="badge">강의 목차별 정리</div>
+      <h1>Algorithm Visualization Index / 알고리즘 시각화 목차</h1>
+      <p class="sub">
+        각 강의 목차를 접히는 카드 형태로 정리했습니다. 기본 상태에서는 내용이 보이지 않고, 챕터를 열면 해당 HTML 시각화 파일로 바로 이동할 수 있습니다.
+        하위 폴더도 별도 카드로 분리해 구조를 유지했습니다.
+      </p>
     </header>
 
-    <section class="grid">
-      <a class="card" href="./bucket_sort.html">
-        <div class="card-top">
-          <span class="card-tag">Sorting</span>
-          <span class="card-arrow">→</span>
+    <section class="accordion">
+      <details>
+        <summary class="chapter-summary">
+          <div class="summary-left">
+            <span class="summary-icon">›</span>
+            <div>
+              <span class="chapter-no">2. 점근 분석</span>
+              <h2 class="summary-title">Asymptotic Analysis / 점근 분석</h2>
+              <p class="summary-meta">기초 정렬 예제를 통해 분석 관점에서 볼 수 있는 시각화</p>
+            </div>
+          </div>
+          <span class="count">1 file</span>
+        </summary>
+        <div class="chapter-body">
+          <p>정렬의 단계별 진행을 보면서 연산 흐름과 반복 구조를 분석하기 좋은 자료입니다.</p>
+          <div class="links">
+            <a href="./02_asymptotic_analysis/insertion_sort_visualizer.html">Insertion Sort / 삽입 정렬</a>
+          </div>
         </div>
-        <h2 class="card-title">Bucket Sort</h2>
-        <p class="card-desc">버킷 분배, 버킷 내부 정렬, 최종 병합 과정을 단계별로 따라가는 시각화 페이지입니다.</p>
-        <span class="card-footer">열기</span>
-      </a>
+      </details>
 
-      <a class="card" href="./median_of_medians.html">
-        <div class="card-top">
-          <span class="card-tag">Selection</span>
-          <span class="card-arrow">→</span>
+      <details>
+        <summary class="chapter-summary">
+          <div class="summary-left">
+            <span class="summary-icon">›</span>
+            <div>
+              <span class="chapter-no">4. 중간값과 선택</span>
+              <h2 class="summary-title">Median and Selection / 중간값과 선택</h2>
+              <p class="summary-meta">중간값 선택과 재귀적 선택 과정을 다루는 시각화</p>
+            </div>
+          </div>
+          <span class="count">1 file</span>
+        </summary>
+        <div class="chapter-body">
+          <p>Median of Medians 알고리즘의 그룹 분할, 피벗 선택, 재귀 흐름을 단계별로 확인할 수 있습니다.</p>
+          <div class="links">
+            <a href="./04_median_and_selection/median_of_medians.html">Median of Medians / 중간값들의 중간값</a>
+          </div>
         </div>
-        <h2 class="card-title">Median of Medians</h2>
-        <p class="card-desc">그룹 분할, 중앙값 계산, 피벗 선택, 재귀 선택 흐름을 살펴볼 수 있는 시각화 페이지입니다.</p>
-        <span class="card-footer">열기</span>
-      </a>
-      <a class="card" href="./2-3_Tree_node.html">
-        <div class="card-top">
-          <span class="card-tag">Tree</span>
-          <span class="card-arrow">→</span>
+      </details>
+
+      <details>
+        <summary class="chapter-summary">
+          <div class="summary-left">
+            <span class="summary-icon">›</span>
+            <div>
+              <span class="chapter-no">6. 버킷정렬</span>
+              <h2 class="summary-title">Bucket Sort / 버킷 정렬</h2>
+              <p class="summary-meta">버킷 분배, 내부 정렬, 병합 과정을 보여주는 시각화</p>
+            </div>
+          </div>
+          <span class="count">1 file</span>
+        </summary>
+        <div class="chapter-body">
+          <p>데이터가 버킷으로 분산되고 다시 정렬되어 결합되는 전체 흐름을 한 번에 볼 수 있습니다.</p>
+          <div class="links">
+            <a href="./06_bucket_sort/bucket_sort.html">Bucket Sort / 버킷 정렬</a>
+          </div>
         </div>
-        <h2 class="card-title">2-3 Tree Node</h2>
-        <p class="card-desc">2-3 트리의 삽입, split, 탐색 경로를 단계별로 따라가며 볼 수 있는 시각화 페이지입니다.</p>
-        <span class="card-footer">열기</span>
-      </a>
-      <a class="card" href="./insertion_sort_visualizer.html">
-        <div class="card-top">
-          <span class="card-tag">Sorting</span>
-          <span class="card-arrow">→</span>
+      </details>
+
+      <details>
+        <summary class="chapter-summary">
+          <div class="summary-left">
+            <span class="summary-icon">›</span>
+            <div>
+              <span class="chapter-no">7. 레드-블랙 트리</span>
+              <h2 class="summary-title">Red-Black Tree / 레드-블랙 트리</h2>
+              <p class="summary-meta">균형 트리 시각화와 LLRB 세부 동작을 함께 정리한 챕터</p>
+            </div>
+          </div>
+          <span class="count">11 files</span>
+        </summary>
+        <div class="chapter-body">
+          <p>2-3 트리와 AVL 트리 같은 보조 개념을 포함하고, 하위 폴더에서는 Left-Leaning Red-Black Tree 동작을 세부 단계로 나눠 제공합니다.</p>
+          <div class="links">
+            <a href="./07_red_black_tree/2-3_Tree_node.html">2-3 Tree / 2-3 트리</a>
+            <a href="./07_red_black_tree/avl_tree_visualization.html">AVL Tree / AVL 트리</a>
+          </div>
+
+          <div class="nested">
+            <details>
+              <summary class="folder-summary">
+                <div class="summary-left">
+                  <span class="summary-icon">›</span>
+                  <div>
+                    <span class="folder-chip">Subfolder / 하위 폴더</span>
+                    <h3 class="summary-title">Left-Leaning Red-Black Tree / 좌편향 레드-블랙 트리</h3>
+                    <p class="summary-meta">회전, 색상 뒤집기, 삭제 보정 과정을 개별 시각화로 분리</p>
+                  </div>
+                </div>
+                <span class="count">9 files</span>
+              </summary>
+              <div class="folder-body">
+                <p>삽입 균형 조정, `moveRedLeft`, `moveRedRight`, 최소/최대 삭제 보정을 각각 독립적으로 확인할 수 있습니다.</p>
+                <div class="links">
+                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/RedBlackTreeRotationFlip.html">Rotation Flip / 회전과 색 뒤집기</a>
+                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/RedBlackTreeInsertBalance.html">Insert Balance / 삽입 균형 조정</a>
+                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/MoveRedLeft.html">MoveRedLeft / 왼쪽으로 빨강 이동</a>
+                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/MoveRedRight.html">MoveRedRight / 오른쪽으로 빨강 이동</a>
+                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/RedBlackTree_Delete.html">Delete / 삭제</a>
+                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/RedBlackTree_DeleteMin.html">DeleteMin / 최소 삭제</a>
+                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/RedBlackTree_DeleteMin_micro.html">DeleteMin Micro / 최소 삭제 세부</a>
+                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/RedBlackTree_DeleteMax.html">DeleteMax / 최대 삭제</a>
+                  <a class="subtle" href="./07_red_black_tree/leftleaning_redblacktree/RedBlackTree_DeleteMax_micro.html">DeleteMax Micro / 최대 삭제 세부</a>
+                </div>
+              </div>
+            </details>
+          </div>
         </div>
-        <h2 class="card-title">Insertion Sort</h2>
-        <p class="card-desc">삽입 정렬의 비교와 이동 과정을 단계별로 확인할 수 있는 시각화 페이지입니다.</p>
-        <span class="card-footer">열기</span>
-      </a>
-      <a class="card" href="./avl_tree_visualization.html">
-        <div class="card-top">
-          <span class="card-tag">Tree</span>
-          <span class="card-arrow">→</span>
+      </details>
+
+      <details>
+        <summary class="chapter-summary">
+          <div class="summary-left">
+            <span class="summary-icon">›</span>
+            <div>
+              <span class="chapter-no">8. 해싱</span>
+              <h2 class="summary-title">Hashing / 해싱</h2>
+              <p class="summary-meta">충돌 처리와 해시 응용 예제를 함께 묶은 챕터</p>
+            </div>
+          </div>
+          <span class="count">2 files</span>
+        </summary>
+        <div class="chapter-body">
+          <p>Separate Chaining 구조와 문자열 기반 예제를 함께 모아 해싱 개념을 빠르게 비교할 수 있습니다.</p>
+          <div class="links">
+            <a href="./08_hashing/SperateChaining.html">Separate Chaining / 분리 연결법</a>
+            <a href="./08_hashing/RomanNumeral.html">Roman Numeral / 로마 숫자</a>
+          </div>
         </div>
-        <h2 class="card-title">AVL Tree</h2>
-        <p class="card-desc">AVL 삽입, 삭제, 불균형 발생, 회전 과정을 단계별로 따라가는 시각화 페이지입니다.</p>
-        <span class="card-footer">열기</span>
-      </a>
+      </details>
+
+      <details>
+        <summary class="chapter-summary">
+          <div class="summary-left">
+            <span class="summary-icon">›</span>
+            <div>
+              <span class="chapter-no">9. 그래프</span>
+              <h2 class="summary-title">Graph / 그래프</h2>
+              <p class="summary-meta">위상 정렬과 DFS 탐색을 다루는 그래프 시각화</p>
+            </div>
+          </div>
+          <span class="count">3 files</span>
+        </summary>
+        <div class="chapter-body">
+          <p>큐 기반 위상 정렬, DFS 기반 위상 정렬, DFS 경로 탐색을 같은 챕터 아래에서 비교할 수 있습니다.</p>
+          <div class="links">
+            <a href="./09_graph/topological_sort_vis.html">Queue Topological Sort / 큐 기반 위상 정렬</a>
+            <a href="./09_graph/DFS_topological_sort.html">DFS Topological Sort / DFS 기반 위상 정렬</a>
+            <a href="./09_graph/dfs_pathfinder_viz.html">DFS Path Finder / DFS 경로 탐색</a>
+          </div>
+        </div>
+      </details>
     </section>
 
-    <p class="footnote">새 알고리즘 HTML을 추가하면 같은 스타일로 항목을 더 붙여 확장할 수 있습니다.</p>
+    <p class="footnote">
+      모든 카드와 하위 카드는 기본적으로 접혀 있습니다. 카드 제목은 영어와 한국어를 함께 표기했고, 실제 파일 경로는 URL 안정성을 위해 영문 폴더명을 유지했습니다.
+    </p>
   </main>
 </body>
 </html>
