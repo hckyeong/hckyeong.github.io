@@ -1,0 +1,511 @@
+/* Shared dark theme based on 09_graph/topological_sort_vis.html */
+
+:root {
+  --bg: #1e1e1e;
+  --panel: #252526;
+  --panel-2: #2d2d2d;
+  --border: #3e3e42;
+  --text: #d4d4d4;
+  --muted: #858585;
+  --badge-bg: #2d2d2d;
+  --badge-text: #569cd6;
+  --button-bg: #2d2d2d;
+  --button-text: #d4d4d4;
+  --btn-bg: #2d2d2d;
+  --btn-text: #d4d4d4;
+  --link-bg: rgba(86, 156, 214, 0.1);
+  --link-text: #569cd6;
+  --chip-bg: rgba(206, 145, 120, 0.12);
+  --chip-text: #ce9178;
+  --card-shadow: none;
+  --shadow: none;
+
+  --color-background-primary: #1e1e1e;
+  --color-background-secondary: #252526;
+  --color-border-secondary: #3e3e42;
+  --color-border-tertiary: #3e3e42;
+  --color-text-primary: #d4d4d4;
+  --color-text-secondary: #858585;
+  --color-text-tertiary: #666;
+  --font-sans: "Consolas", "Malgun Gothic", "Apple SD Gothic Neo", monospace;
+  --font-mono: "Consolas", "Courier New", monospace;
+  --border-radius-lg: 6px;
+  --border-radius-md: 4px;
+}
+
+html,
+body {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  font-family: var(--font-sans) !important;
+}
+
+body {
+  min-height: 100vh;
+  -webkit-text-size-adjust: 100%;
+  zoom: var(--viewer-scale, 1);
+  overflow: auto !important;
+}
+
+body,
+.main,
+#main-content,
+.layout,
+.page,
+.wrap {
+  transform-origin: top center;
+}
+
+.main {
+  overflow: visible !important;
+}
+
+svg {
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: #569cd6;
+}
+
+h1,
+.top-bar h1 {
+  color: var(--muted) !important;
+}
+
+.sub,
+.desc,
+.section-title,
+.panel-title,
+.state-title,
+.summary-meta,
+.footnote,
+.count,
+.step-info,
+.step-count,
+.var-label,
+.log-header,
+.log-table th,
+.panel-header,
+.panel-title,
+.vname,
+.fvars,
+.b-idx,
+.b-sep,
+.ptr,
+.idx,
+.stat-lbl,
+.bucket-meta,
+.legend,
+.leg,
+#sd,
+#sl,
+#step-counter,
+#pass-label,
+#j-info {
+  color: var(--muted) !important;
+}
+
+.page,
+.wrap,
+.layout,
+body > div:first-child {
+  max-width: 1120px;
+}
+
+.panel,
+.card,
+.state-box,
+.code-box,
+.log,
+.log-header,
+.var-card,
+.panel-header,
+.panel-body,
+.stack-frame,
+.found-box,
+.frame,
+.stat,
+.sbox,
+.section,
+.bucket-row.active,
+.chapter,
+.state-title,
+.code-panel,
+.bucket-values,
+.bucket-row,
+.decision.last-d,
+.decision.sub-d,
+.decision.add-d,
+.var-card,
+.found-box,
+.note-box {
+  background: var(--panel) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+
+.top-bar,
+.bottom-bar,
+.controls,
+.control-bar,
+#code-title,
+.log-header,
+.panel-header,
+.chapter-no,
+.folder-chip,
+.badge,
+.phase-chip {
+  background: var(--panel-2) !important;
+  color: var(--badge-text) !important;
+  border-color: var(--border) !important;
+}
+
+details,
+.chapter,
+.nested details {
+  background: var(--panel) !important;
+  border-color: var(--border) !important;
+  box-shadow: none !important;
+}
+
+details[open] {
+  background: var(--panel) !important;
+}
+
+.summary-icon,
+.chapter-no,
+.folder-chip {
+  background: var(--panel-2) !important;
+  color: var(--muted) !important;
+  border-color: var(--border) !important;
+}
+
+.links a,
+.chip,
+.pill,
+.nd,
+.frame,
+.var-card,
+.log-list li,
+.bucket-values .pill,
+.chips .chip,
+.stack-frame,
+.found-box {
+  background: var(--panel) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+.code-line.active,
+.cline.hl,
+pre .line.active,
+.current-log td,
+.frame.top,
+.stack-frame.active,
+.top,
+.phase-chip {
+  background: rgba(255, 255, 120, 0.07) !important;
+  border-left-color: #dcdcaa !important;
+}
+
+.active,
+.current,
+.key,
+.next,
+.box.key,
+.char-box.current,
+.char-box.next,
+.cell.active,
+.inval.current {
+  background: rgba(247, 178, 103, 0.18) !important;
+  border-color: #f7b267 !important;
+  color: #f7b267 !important;
+}
+
+.sorted,
+.ok,
+.done,
+.placed,
+.merged,
+.inserted,
+.found,
+.visited,
+.true,
+.box.sorted,
+.box.placed,
+.char-box.done,
+.nd.found,
+.nd.inserting,
+.inval.true,
+.log-list li.insert,
+.log-list li.find,
+.log-list li.done {
+  background: rgba(78, 201, 176, 0.14) !important;
+  border-color: #4ec9b0 !important;
+  color: #4ec9b0 !important;
+}
+
+.moving,
+.rotated,
+.collision,
+.removed,
+.delete,
+.danger,
+.box.moving,
+.nd.collision,
+.log-list li.collision,
+.btn.danger {
+  background: rgba(240, 128, 128, 0.12) !important;
+  border-color: #f09595 !important;
+  color: #f09595 !important;
+}
+
+.median,
+.promoted,
+.path,
+.pivot,
+.chip-r,
+.chip-s {
+  background: rgba(155, 155, 234, 0.14) !important;
+  border-color: #9b9bea !important;
+  color: #9b9bea !important;
+}
+
+.chip-q {
+  background: rgba(206, 145, 120, 0.12) !important;
+  border-color: #ce9178 !important;
+  color: #ce9178 !important;
+}
+
+.links a {
+  background: var(--link-bg) !important;
+  color: var(--link-text) !important;
+}
+
+.links a.subtle,
+.folder-chip {
+  background: var(--chip-bg) !important;
+  color: var(--chip-text) !important;
+}
+
+button,
+.btn,
+.nbtn,
+#pb,
+#nb,
+#t0,
+#t1 {
+  background: var(--button-bg) !important;
+  color: var(--button-text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px !important;
+  font-family: var(--font-sans) !important;
+  box-shadow: none !important;
+}
+
+button:hover:not(:disabled),
+.btn:hover:not(:disabled),
+.nbtn:hover:not(:disabled) {
+  background: #3e3e42 !important;
+}
+
+.btn.primary,
+.btn.danger {
+  background: var(--button-bg) !important;
+  color: var(--button-text) !important;
+  border-color: var(--border) !important;
+}
+
+svg#sv,
+svg#tree,
+svg#treeSvg,
+svg#gsvg,
+.panel-body svg {
+  background: var(--panel) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+}
+
+pre,
+#codebox,
+#code-panel,
+.code-box,
+.code-panel {
+  background: #1e1e1e !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+pre .line.active,
+.code-line.active,
+.cline.hl {
+  background: rgba(255, 255, 120, 0.07) !important;
+  color: var(--text) !important;
+  border-left-color: #dcdcaa !important;
+}
+
+.progress,
+.progress-bar,
+.progress-fill,
+.fill,
+.ans-bar-track,
+.ans-bar-fill {
+  border-color: var(--border) !important;
+}
+
+.progress,
+.ans-bar-track {
+  background: #2d2d2d !important;
+}
+
+.progress-bar,
+.progress-fill,
+.fill,
+.ans-bar-fill {
+  background: #569cd6 !important;
+}
+
+.box,
+.cell,
+.char-box,
+.var-card,
+.stat,
+.frame,
+.icell .inval {
+  background: var(--panel-2) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+.box.key,
+.cell.active,
+.char-box.next,
+.inval.current {
+  background: rgba(247, 178, 103, 0.16) !important;
+  border-color: #f7b267 !important;
+  color: #f7b267 !important;
+}
+
+.box.sorted,
+.box.placed,
+.cell.merged,
+.char-box.done,
+.inval.true,
+.nd.inserting,
+.nd.found,
+.nd.collision,
+.log-list li.insert,
+.log-list li.find,
+.log-list li.collision,
+.log-list li.done {
+  border-color: var(--border) !important;
+}
+
+.explain-box,
+#step-desc,
+.decision,
+.note-box {
+  background: var(--panel) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+}
+
+#step-desc {
+  border-left: 3px solid #569cd6 !important;
+}
+
+#badge {
+  background: var(--panel-2) !important;
+  color: #569cd6 !important;
+  border: 1px solid var(--border) !important;
+}
+
+#st,
+.headline,
+.summary-title,
+.chapter-title {
+  color: var(--text) !important;
+}
+
+#dots > *,
+.dot {
+  background: #3e3e42 !important;
+}
+
+#dots > *.active,
+.dot.active {
+  background: var(--muted) !important;
+}
+
+#viewer-hotkeys {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(37, 37, 38, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(6px);
+}
+
+#viewer-hotkeys .vh-btn {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+#viewer-hotkeys .vh-scale {
+  min-width: 48px;
+  text-align: center;
+  color: var(--text);
+  font-weight: 700;
+}
+
+#viewer-hotkeys .vh-hint {
+  white-space: nowrap;
+}
+
+.panel-body,
+.code-body,
+.chapter-body,
+.folder-body {
+  scrollbar-color: #3e3e42 #1e1e1e;
+}
+
+.panel-body::-webkit-scrollbar,
+.chapter-body::-webkit-scrollbar,
+.folder-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel-body::-webkit-scrollbar-track,
+.chapter-body::-webkit-scrollbar-track,
+.folder-body::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.panel-body::-webkit-scrollbar-thumb,
+.chapter-body::-webkit-scrollbar-thumb,
+.folder-body::-webkit-scrollbar-thumb {
+  background: #3e3e42;
+  border-radius: 999px;
+}

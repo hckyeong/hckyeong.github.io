@@ -1,0 +1,404 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BreadthFirstPaths 시각화</title>
+<link rel="stylesheet" href="../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:'Consolas','Courier New',monospace;font-size:13px;padding:16px}
+h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacing:.5px}
+#case-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.cbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 12px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px}
+.cbtn.active{background:rgba(86,156,214,.12);border-color:#569cd6;color:#569cd6}
+#step-counter{font-size:11px;color:#858585}
+#step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:38px;line-height:1.6;padding:7px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}.leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
+#main-content{display:flex;gap:14px;margin:12px 0}
+#graph-panel{flex:0 0 460px;background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:6px}
+#graph-panel svg{width:100%;display:block}
+#right-panel{flex:1;display:flex;flex-direction:column;gap:8px}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+#visited-grid,#prev-grid{display:flex;gap:5px;flex-wrap:wrap}
+.icell{display:flex;flex-direction:column;align-items:center;gap:2px}.inlabel{font-size:10px;color:#555}
+.inval{min-width:32px;height:28px;padding:0 6px;border:1px solid #3e3e42;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:#2d2d2d;color:#d4d4d4;transition:all .25s}
+.inval.true{border-color:#4ec9b0;color:#4ec9b0;background:rgba(78,201,176,.1)}
+.inval.curr{border-color:#f7b267;color:#f7b267;background:rgba(247,178,103,.12)}
+.inval.prev{border-color:#9b9bea;color:#9b9bea;background:rgba(155,155,234,.12)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;min-height:26px;align-items:center}.chip{padding:2px 8px;border-radius:3px;font-size:12px;font-weight:700;transition:all .2s}
+.chip-q{background:rgba(206,145,120,.12);border:1px solid #ce9178;color:#ce9178}
+.chip-r{background:rgba(78,201,176,.1);border:1px solid #4ec9b0;color:#4ec9b0}
+.chip-s{background:rgba(86,156,214,.1);border:1px solid #569cd6;color:#569cd6}.empty{color:#444;font-size:11px}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin-bottom:12px}
+#code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}#code-body{padding:6px 0}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent;transition:background .2s}
+.cline.hl{background:rgba(255,255,120,.08);border-left:2px solid #dcdcaa}
+.cline.hl .lnum{color:#858585;background:rgba(255,255,255,.02)}
+.cline.hl .lcode{background:rgba(255,255,255,.015)}
+.lnum{width:40px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre}
+.lcode::before{
+  content:'';
+  position:absolute;
+  left:14px;
+  top:0;
+  bottom:0;
+  width:calc(var(--indent,0) * 18px);
+  background-image:repeating-linear-gradient(
+    to right,
+    transparent 0 13px,
+    rgba(255,255,255,.11) 13px 14px,
+    transparent 14px 18px
+  );
+  pointer-events:none;
+}
+.kw{color:#569cd6}
+.fn{color:#dcdcaa}
+.tp{color:#4ec9b0}
+.id{color:#9cdcfe}
+.num{color:#b5cea8}
+.str{color:#ce9178}
+.op{color:#d4d4d4}
+.cm{color:#6a9955;font-style:italic}
+#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px}.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}.nbtn:hover:not(:disabled){background:#3e3e42}.nbtn:disabled{opacity:.3;cursor:default}
+#dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:420px;justify-content:center}.dot{width:6px;height:6px;border-radius:50%;background:#3e3e42;transition:background .2s}.dot.active{background:#858585}
+@media (max-width:980px){#main-content{flex-direction:column}#graph-panel{flex:1 1 auto}}
+</style>
+</head>
+<body>
+<h1>BreadthFirstPaths — 단계별 실행 시각화</h1>
+<div id="case-bar"></div>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="legend">
+  <div class="leg"><div class="leg-c" style="background:rgba(60,60,60,.4);border-color:#555"></div>미방문</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(206,145,120,.2);border-color:#ce9178"></div>큐 대기</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(247,178,103,.2);border-color:#f7b267"></div>현재 pop</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(155,155,234,.2);border-color:#9b9bea"></div>prev 갱신</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(78,201,176,.2);border-color:#4ec9b0"></div>최종 경로</div>
+</div>
+<div id="main-content">
+  <div id="graph-panel">
+    <svg id="gsvg" viewBox="0 0 460 330">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <g id="edge-group"></g>
+      <g id="node-group"></g>
+    </svg>
+  </div>
+  <div id="right-panel">
+    <div class="sbox"><div class="slabel">Queue (front → back)</div><div class="chips" id="qdisp"></div></div>
+    <div class="sbox"><div class="slabel">visited</div><div id="visited-grid"></div></div>
+    <div class="sbox"><div class="slabel">prev (정점 ← 이전 정점)</div><div id="prev-grid"></div></div>
+    <div class="sbox"><div class="slabel">Reconstructed Path</div><div class="chips" id="pdisp"></div></div>
+  </div>
+</div>
+<div id="code-panel">
+  <div id="code-title">deque&lt;Vertex*&gt; BreadthFirstPaths(int source, int sink)</div>
+  <div id="code-body"></div>
+</div>
+<div id="nav">
+  <button class="nbtn" id="prev" onclick="go(-1)">← 이전</button>
+  <div id="dots"></div>
+  <button class="nbtn" id="next" onclick="go(1)">다음 →</button>
+</div>
+<script>
+const LINES = [
+  'deque<Vertex*> BreadthFirstPaths(int source, int sink)',
+  '{',
+  '    for (auto* v : vertices) v->visited = false;',
+  '    vector<Vertex*> prev(vertices.size(), nullptr);',
+  '    vertices[source]->visited = true;',
+  '    queue<Vertex*> q; q.push(vertices[source]);',
+  '',
+  '    while (!q.empty()) {',
+  '        Vertex* v = q.front(); q.pop();',
+  '        if (v == vertices[sink]) break;',
+  '',
+  '        for (Vertex* w : v->out_neighbors)',
+  '            if (!w->visited) {',
+  '                w->visited = true;',
+  '                q.push(w);',
+  '                prev[w->value] = v;',
+  '            }',
+  '    }',
+  '',
+  '    deque<Vertex*> path;',
+  '    if (prev[sink]) path.push_front(vertices[sink]);',
+  '    else cout << "No path found" << endl;',
+  '',
+  '    Vertex* p = prev[sink];',
+  '    while (p != nullptr) {',
+  '        path.push_front(p); p = prev[p->value];',
+  '    }',
+  '    return path;',
+  '}'
+];
+
+const HL = {
+  init:[2,3],
+  sourceQueue:[4,5],
+  pop:[7,8],
+  sinkBreak:[9],
+  neighbor:[11,12],
+  visitPrev:[13,14,15],
+  pathDecl:[19],
+  sinkPush:[20],
+  noPath:[20,21],
+  pInit:[23],
+  pLoop:[24,25],
+  ret:[27]
+};
+
+const CASES = [
+  {
+    key:'simple',
+    label:'Simple 0→2',
+    source:0,
+    sink:2,
+    nodes:[0,1,2],
+    edges:[[0,1],[1,2],[0,2]],
+    pos:{0:{x:90,y:165},1:{x:230,y:85},2:{x:370,y:165}}
+  },
+  {
+    key:'directed-51',
+    label:'Directed 5→1',
+    source:5,
+    sink:1,
+    nodes:[0,1,2,3,4,5],
+    edges:[[5,2],[5,0],[4,0],[4,1],[2,3],[3,1]],
+    pos:{0:{x:240,y:165},1:{x:385,y:285},2:{x:95,y:225},3:{x:215,y:285},4:{x:375,y:65},5:{x:105,y:65}}
+  },
+  {
+    key:'directed-50',
+    label:'Directed 5→0',
+    source:5,
+    sink:0,
+    nodes:[0,1,2,3,4,5],
+    edges:[[5,2],[5,0],[4,0],[4,1],[2,3],[3,1]],
+    pos:{0:{x:240,y:165},1:{x:385,y:285},2:{x:95,y:225},3:{x:215,y:285},4:{x:375,y:65},5:{x:105,y:65}}
+  }
+];
+
+const SC = {
+  idle:{f:'rgba(55,55,55,.5)',s:'#555',t:'#777'},
+  queued:{f:'rgba(206,145,120,.15)',s:'#ce9178',t:'#ce9178'},
+  current:{f:'rgba(247,178,103,.18)',s:'#f7b267',t:'#f7b267'},
+  prev:{f:'rgba(155,155,234,.18)',s:'#9b9bea',t:'#9b9bea'},
+  path:{f:'rgba(78,201,176,.15)',s:'#4ec9b0',t:'#4ec9b0'},
+  source:{f:'rgba(86,156,214,.18)',s:'#569cd6',t:'#569cd6'},
+  sink:{f:'rgba(240,128,128,.16)',s:'#f09595',t:'#f09595'}
+};
+
+let caseIndex = 0;
+let steps = [];
+let cur = 0;
+
+function buildCode() {
+  const body = document.getElementById('code-body');
+  body.innerHTML = LINES.map((line, i) => {
+    const indent = Math.floor((line.match(/^\s*/)[0].length) / 4);
+    const trimmed = line.trimStart();
+    const html = trimmed.length ? colorizeCode(trimmed) : '&nbsp;';
+    return `<div class="cline" id="cl-${i}"><div class="lnum">${i + 1}</div><div class="lcode" style="--indent:${indent}">${html}</div></div>`;
+  }).join('');
+}
+function escapeHtml(text){return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function colorizeCode(text){
+  return escapeHtml(text)
+    .replace(/"([^"]*)"/g, '<span class="str">"$1"</span>')
+    .replace(/\b(for|while|if|else|break|return)\b/g, '<span class="kw">$1</span>')
+    .replace(/\b(true|false|nullptr)\b/g, '<span class="kw">$1</span>')
+    .replace(/\b(Vertex|vector|queue|deque|int)\b/g, '<span class="tp">$1</span>')
+    .replace(/\b(BreadthFirstPaths|front|pop|push|push_front|empty)\b/g, '<span class="fn">$1</span>')
+    .replace(/\b(visited|source|sink|prev|path|value|out_neighbors|vertices|cout|endl)\b/g, '<span class="id">$1</span>')
+    .replace(/\b(\d+)\b/g, '<span class="num">$1</span>');
+}
+function edgeKey(a,b){ return `${a}->${b}`; }
+function clonePrev(prev){ return prev.map(v => v === null ? null : v); }
+function cloneStepsState(state, desc, hl){
+  return {
+    desc,
+    hl,
+    queue:[...state.queue],
+    visited:[...state.visited],
+    prev:clonePrev(state.prev),
+    path:[...state.path],
+    current:state.current,
+    inspect:state.inspect,
+    activeEdge:state.activeEdge,
+    pathEdges:[...state.pathEdges]
+  };
+}
+function buildStepsForCase(config){
+  const adj = {};
+  config.nodes.forEach(n => adj[n] = []);
+  config.edges.forEach(([a,b]) => adj[a].push(b));
+  const state = {
+    queue:[], visited: config.nodes.map(()=>false), prev: config.nodes.map(()=>null), path:[], current:null, inspect:null, activeEdge:null, pathEdges:[]
+  };
+  const idx = (v) => config.nodes.indexOf(v);
+  const out = [];
+  out.push(cloneStepsState(state, `초기 상태입니다. source=${config.source}, sink=${config.sink}. visited를 모두 false로 시작합니다.`, HL.init));
+  state.visited[idx(config.source)] = true;
+  state.queue.push(config.source);
+  out.push(cloneStepsState(state, `source ${config.source}를 방문 처리하고 queue에 넣습니다.`, HL.sourceQueue));
+
+  while (state.queue.length) {
+    const v = state.queue.shift();
+    state.current = v;
+    state.activeEdge = null;
+    state.inspect = null;
+    out.push(cloneStepsState(state, `queue의 front인 ${v}를 pop합니다. 이제 ${v}의 이웃을 검사합니다.`, HL.pop));
+
+    if (v === config.sink) {
+      out.push(cloneStepsState(state, `현재 정점 ${v}가 sink와 같으므로 BFS 탐색을 종료합니다.`, HL.sinkBreak));
+      break;
+    }
+
+    for (const w of adj[v]) {
+      state.inspect = w;
+      state.activeEdge = edgeKey(v,w);
+      out.push(cloneStepsState(state, `${v} -> ${w} 간선을 확인합니다. visited[${w}]를 검사합니다.`, HL.neighbor));
+      if (!state.visited[idx(w)]) {
+        state.visited[idx(w)] = true;
+        state.queue.push(w);
+        state.prev[idx(w)] = v;
+        out.push(cloneStepsState(state, `${w}는 처음 방문한 정점입니다. visited=true, queue push, prev[${w}] = ${v}로 저장합니다.`, HL.visitPrev));
+      } else {
+        out.push(cloneStepsState(state, `${w}는 이미 방문했으므로 queue에 다시 넣지 않습니다.`, HL.neighbor));
+      }
+    }
+    state.current = null;
+    state.inspect = null;
+    state.activeEdge = null;
+  }
+
+  if (state.prev[idx(config.sink)] !== null) {
+    state.path.unshift(config.sink);
+    out.push(cloneStepsState(state, `prev[sink]가 존재하므로 path의 맨 앞에 sink ${config.sink}를 넣습니다.`, HL.sinkPush));
+  } else {
+    out.push(cloneStepsState(state, `prev[sink]가 nullptr이면 경로가 없습니다. 이 경우 코드는 "No path found"를 출력합니다.`, HL.noPath));
+  }
+
+  let p = state.prev[idx(config.sink)];
+  out.push(cloneStepsState(state, `p = prev[sink]부터 시작해서 prev를 따라 역추적합니다.`, HL.pInit));
+  while (p !== null) {
+    state.path.unshift(p);
+    if (state.path.length >= 2) state.pathEdges = buildPathEdges(state.path);
+    out.push(cloneStepsState(state, `path 앞쪽에 ${p}를 넣고, p = prev[${p}]로 이동합니다.`, HL.pLoop));
+    p = state.prev[idx(p)];
+  }
+
+  if (state.path.length >= 2) state.pathEdges = buildPathEdges(state.path);
+  out.push(cloneStepsState(state, `최종 경로는 ${state.path.length ? state.path.join(' -> ') : '(없음)'} 입니다. BFS이므로 간선 수가 최소인 경로입니다.`, HL.ret));
+  return out;
+}
+function buildPathEdges(path){
+  const list = [];
+  for(let i=0;i<path.length-1;i++) list.push(edgeKey(path[i], path[i+1]));
+  return list;
+}
+function buildCaseButtons(){
+  const bar = document.getElementById('case-bar');
+  bar.innerHTML = CASES.map((c,i)=>`<button class="cbtn ${i===caseIndex?'active':''}" onclick="switchCase(${i})">${c.label}</button>`).join('');
+}
+function buildDots(){
+  document.getElementById('dots').innerHTML = steps.map((_,i)=>`<div class="dot ${i===cur?'active':''}"></div>`).join('');
+}
+function buildSVG(){
+  const g = CASES[caseIndex];
+  const eg = document.getElementById('edge-group');
+  const ng = document.getElementById('node-group');
+  eg.innerHTML=''; ng.innerHTML='';
+  const SVG='http://www.w3.org/2000/svg';
+  const R=22;
+  g.edges.forEach(([a,b])=>{
+    const from=g.pos[a], to=g.pos[b];
+    const dx=to.x-from.x, dy=to.y-from.y, len=Math.sqrt(dx*dx+dy*dy); const ux=dx/len, uy=dy/len;
+    const x1=from.x+ux*R, y1=from.y+uy*R, x2=to.x-ux*(R+2), y2=to.y-uy*(R+2);
+    const line=document.createElementNS(SVG,'line');
+    line.setAttribute('x1',x1); line.setAttribute('y1',y1); line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke-width','1.5'); line.setAttribute('marker-end','url(#arr)'); line.id='e-'+edgeKey(a,b); eg.appendChild(line);
+  });
+  g.nodes.forEach((id)=>{
+    const pos=g.pos[id];
+    const c=document.createElementNS(SVG,'circle'); c.setAttribute('cx',pos.x); c.setAttribute('cy',pos.y); c.setAttribute('r',R); c.setAttribute('stroke-width','1.5'); c.id='c'+id; ng.appendChild(c);
+    const t=document.createElementNS(SVG,'text'); t.setAttribute('x',pos.x); t.setAttribute('y',pos.y-1); t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','central'); t.setAttribute('font-size','14'); t.setAttribute('font-weight','600'); t.setAttribute('font-family','Consolas, monospace'); t.id='t'+id; t.textContent=id; ng.appendChild(t);
+    const b=document.createElementNS(SVG,'text'); b.setAttribute('x',pos.x); b.setAttribute('y',pos.y+36); b.setAttribute('text-anchor','middle'); b.setAttribute('font-size','10'); b.setAttribute('font-family','Consolas, monospace'); b.setAttribute('fill','#666'); b.textContent = id===g.source ? 'source' : (id===g.sink ? 'sink' : ''); ng.appendChild(b);
+  });
+}
+function stateForNode(id, step){
+  const g = CASES[caseIndex];
+  if (step.path.includes(id)) return 'path';
+  if (id === g.source) return 'source';
+  if (id === g.sink) return step.current === id ? 'current' : 'sink';
+  if (step.current === id) return 'current';
+  if (step.queue.includes(id)) return 'queued';
+  if (step.prev[CASES[caseIndex].nodes.indexOf(id)] !== null && !step.path.includes(id)) return 'prev';
+  if (step.visited[CASES[caseIndex].nodes.indexOf(id)]) return 'prev';
+  return 'idle';
+}
+function render(){
+  const g = CASES[caseIndex];
+  const step = steps[cur];
+  document.getElementById('step-counter').textContent = `${g.label} · Step ${cur+1} / ${steps.length}`;
+  document.getElementById('step-desc').textContent = step.desc;
+  buildDots(); buildCaseButtons();
+
+  g.nodes.forEach((id)=>{
+    const st = stateForNode(id, step); const sc = SC[st];
+    const c=document.getElementById('c'+id), t=document.getElementById('t'+id);
+    c.setAttribute('fill', sc.f); c.setAttribute('stroke', sc.s); t.setAttribute('fill', sc.t);
+  });
+  g.edges.forEach(([a,b])=>{
+    const line = document.getElementById('e-'+edgeKey(a,b));
+    let stroke = '#555', width='1.5';
+    if (step.pathEdges.includes(edgeKey(a,b))) { stroke='#4ec9b0'; width='2.4'; }
+    else if (step.activeEdge === edgeKey(a,b)) { stroke='#f7b267'; width='2.2'; }
+    else if (step.prev[g.nodes.indexOf(b)] === a) { stroke='#9b9bea'; width='1.9'; }
+    line.setAttribute('stroke', stroke); line.setAttribute('stroke-width', width);
+  });
+
+  document.getElementById('qdisp').innerHTML = step.queue.length ? step.queue.map(v => `<span class="chip chip-q">${v}</span>`).join('') : '<span class="empty">empty</span>';
+  document.getElementById('pdisp').innerHTML = step.path.length ? step.path.map(v => `<span class="chip chip-r">${v}</span>`).join('') : '<span class="empty">empty</span>';
+
+  document.getElementById('visited-grid').innerHTML = g.nodes.map((id)=>{
+    const active = step.current===id ? ' curr' : (step.visited[g.nodes.indexOf(id)] ? ' true' : '');
+    const value = step.visited[g.nodes.indexOf(id)] ? 'T' : 'F';
+    return `<div class="icell"><div class="inlabel">${id}</div><div class="inval${active}">${value}</div></div>`;
+  }).join('');
+
+  document.getElementById('prev-grid').innerHTML = g.nodes.map((id)=>{
+    const pv = step.prev[g.nodes.indexOf(id)];
+    const cls = pv !== null ? ' prev' : '';
+    return `<div class="icell"><div class="inlabel">${id}</div><div class="inval${cls}">${pv === null ? '-' : pv}</div></div>`;
+  }).join('');
+
+  document.querySelectorAll('.cline').forEach((el,i)=> el.classList.toggle('hl', step.hl.includes(i)));
+  document.getElementById('prev').disabled = cur===0;
+  document.getElementById('next').disabled = cur===steps.length-1;
+}
+function switchCase(i){caseIndex=i;steps=buildStepsForCase(CASES[caseIndex]);cur=0;buildSVG();render();}
+function go(dir){cur=Math.max(0, Math.min(steps.length-1, cur+dir)); render();}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+  if (e.key === 'Home') { e.preventDefault(); cur = 0; render(); }
+  if (e.key === 'End') { e.preventDefault(); cur = steps.length - 1; render(); }
+});
+
+buildCode();
+switchCase(0);
+</script>
+<script src="../shared/viewer-controls.js"></script>
+</body>
+</html>

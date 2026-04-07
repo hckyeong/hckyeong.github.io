@@ -1,4 +1,4 @@
-
+﻿
 <style>
   .cell { display:inline-flex; flex-direction:column; align-items:center; margin:2px; }
   .box { width:46px; height:46px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:monospace; font-size:14px; font-weight:600; border:1px solid var(--color-border-secondary); background:var(--color-background-secondary); color:var(--color-text-primary); transition:background 0.2s, color 0.2s, border-color 0.2s; }
@@ -17,6 +17,7 @@
   .sec-label { font-size:11px; color:var(--color-text-secondary); margin-bottom:4px; font-weight:500; }
   .legend-dot { width:12px; height:12px; border-radius:3px; display:inline-block; margin-right:4px; vertical-align:middle; }
 </style>
+<link rel="stylesheet" href="../shared/topological-baseline.css">
 
 <div style="padding:1rem 0;">
   <div style="font-size:15px; font-weight:500; color:var(--color-text-primary); margin-bottom:2px;">Insertion Sort 시각화</div>
@@ -187,3 +188,7 @@ function stopAuto() {
 
 render();
 </script>
+
+
+<script src="../shared/viewer-controls.js"></script>
+

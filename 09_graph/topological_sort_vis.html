@@ -1,8 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <title>QueueBasedTopologicalSort 시각화</title>
+<link rel="stylesheet" href="../shared/topological-baseline.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;min-height:100vh}
@@ -366,11 +367,13 @@ function go(dir){
 }
 
 document.addEventListener('keydown',e=>{
-  if(e.key==='ArrowLeft')go(-1);
-  if(e.key==='ArrowRight')go(1);
+  if(e.key==='ArrowLeft'){e.preventDefault();go(-1);}
+  if(e.key==='ArrowRight'){e.preventDefault();go(1);}
 });
 
 buildSVG();buildCode();buildDots();render();
 </script>
+<script src="../shared/viewer-controls.js"></script>
 </body>
 </html>
+
