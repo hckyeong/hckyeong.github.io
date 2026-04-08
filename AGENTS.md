@@ -43,6 +43,12 @@ These rules apply to this repository in all future sessions.
    - visited state
    - auxiliary arrays or maps such as `prev`, `indegree`, `dist`, etc.
    - final result structure
+Additional rules for this project:
+- On narrow screens, panels should stack vertically instead of shrinking queue/array/state panels until they become hard to read.
+- For mobile layouts, keep floating step controls touch-friendly and prefer a single-row `Prev` / `Next` arrangement when possible.
+- Do not keep unnecessary zoom ratio controls in the floating toolbar unless the user explicitly asks for them.
+- For Safari-sensitive graph pages, prefer explicit SVG geometry such as `polygon` arrowheads instead of relying only on SVG `marker`.
+- Arrowheads should follow the same visual state as their edge, including active/highlighted/path states.
 
 ## 4. Code panel rules
 
@@ -113,6 +119,8 @@ These rules apply to this repository in all future sessions.
    - `.tmp_*`
    - `.codex/`
    - other caches, logs, and temporary screenshots
+Additional rules for this project:
+- Prefer storing disposable screenshots, browser profiles, Playwright outputs, manual review captures, and similar non-functional artifacts under `temp/`.
 
 ## 10. Playwright review workflow
 
@@ -128,3 +136,8 @@ These rules apply to this repository in all future sessions.
    - `webkit-iphone12`
    - `chromium-desktop`
 37. Treat Playwright WebKit as the default Safari-adjacent review environment, and only rely on the user's real iPhone/Safari check as a final confirmation step when needed.
+Additional review rules for this project:
+- For responsive/layout fixes, validate both desktop PC layout and iPhone 12-sized mobile layout.
+- On desktop, keep the intended horizontal composition when the screen is wide enough.
+- On mobile, prefer vertical stacking and touch-usable controls.
+- Review important visualization pages for broken Korean text encoding, incorrect graph edge direction, missing arrowheads, and missing arrowhead highlighting.

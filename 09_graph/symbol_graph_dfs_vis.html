@@ -1,0 +1,277 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SymbolGraph DFS 단계별 시각화</title>
+<link rel="stylesheet" href="../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:'Consolas','Courier New',monospace;font-size:13px;padding:16px}
+h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacing:.5px}
+#step-counter{font-size:11px;color:#858585}
+#step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:42px;line-height:1.6;padding:7px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}.leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
+#main-content{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px;margin:12px 0}
+#graph-panel{flex:1 1 560px;min-width:min(100%,560px);background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:6px}
+#graph-panel svg{width:100%;display:block}
+#right-panel{flex:1 1 420px;min-width:min(100%,420px);display:flex;flex-direction:column;gap:8px}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.inline-note{font-size:11px;color:#858585;line-height:1.5}
+.kv-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.kv-cell{border:1px solid #3e3e42;border-radius:4px;background:#2d2d2d;padding:6px 8px;font-size:11px;line-height:1.45}
+.kv-cell.active{border-color:#569cd6;color:#9cdcfe;background:rgba(86,156,214,.12)}
+.kv-key{display:block;color:#858585;font-size:10px;margin-bottom:2px}
+#visited-grid{display:flex;gap:5px;flex-wrap:wrap}
+.icell{display:flex;flex-direction:column;align-items:center;gap:2px}.inlabel{font-size:10px;color:#555}
+.inval{min-width:34px;height:28px;padding:0 6px;border:1px solid #3e3e42;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:#2d2d2d;color:#d4d4d4;transition:all .25s}
+.inval.true{border-color:#4ec9b0;color:#4ec9b0;background:rgba(78,201,176,.1)}
+.inval.curr{border-color:#f7b267;color:#f7b267;background:rgba(247,178,103,.12)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;min-height:26px;align-items:center}.chip{padding:2px 8px;border-radius:3px;font-size:12px;font-weight:700;transition:all .2s}
+.chip-stack{background:rgba(86,156,214,.1);border:1px solid #569cd6;color:#9cdcfe}
+.chip-out{background:rgba(78,201,176,.1);border:1px solid #4ec9b0;color:#4ec9b0}
+.chip-cur{background:rgba(247,178,103,.14);border:1px solid #f7b267;color:#f7b267}
+.empty{color:#444;font-size:11px}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin-bottom:12px}
+#code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}#code-body{padding:6px 0}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent;transition:background .2s}.cline.hl{background:rgba(255,255,120,.08);border-left:2px solid #dcdcaa}.cline.hl .lnum{color:#858585;background:rgba(255,255,255,.02)}.cline.hl .lcode{background:rgba(255,255,255,.015)}
+.lnum{width:40px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre}
+.lcode::before{content:'';position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.id{color:#9cdcfe}.num{color:#b5cea8}.str{color:#ce9178}.cm{color:#6a9955;font-style:italic}
+#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px;flex-wrap:wrap}.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}.nbtn:hover:not(:disabled){background:#3e3e42}.nbtn:disabled{opacity:.3;cursor:default}
+#dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:420px;justify-content:center}.dot{width:6px;height:6px;border-radius:50%;background:#3e3e42;transition:background .2s}.dot.active{background:#858585}
+@media (max-width:980px){#main-content{flex-direction:column}#graph-panel{flex:1 1 auto}.kv-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.kv-grid{grid-template-columns:1fr}.nbtn{padding:6px 16px}}
+</style>
+</head>
+<body>
+<h1>SymbolGraph DFS - 단계별 실행 시각화</h1>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="legend">
+  <div class="leg"><div class="leg-c" style="background:rgba(60,60,60,.4);border-color:#555"></div>미방문</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(86,156,214,.2);border-color:#569cd6"></div>호출 스택</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(247,178,103,.2);border-color:#f7b267"></div>현재 정점</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(78,201,176,.2);border-color:#4ec9b0"></div>출력 완료</div>
+</div>
+<div id="main-content">
+  <div id="graph-panel">
+    <svg id="gsvg" viewBox="0 0 560 340">
+      <g id="edge-group"></g>
+      <g id="node-group"></g>
+    </svg>
+  </div>
+  <div id="right-panel">
+    <div class="sbox">
+      <div class="slabel">table lookup</div>
+      <div class="kv-grid" id="table-grid"></div>
+      <div class="inline-note" id="lookup-note"></div>
+    </div>
+    <div class="sbox"><div class="slabel">visited</div><div id="visited-grid"></div></div>
+    <div class="sbox"><div class="slabel">Call Stack (bottom → top)</div><div class="chips" id="stack-disp"></div></div>
+    <div class="sbox"><div class="slabel">Postorder Output</div><div class="chips" id="output-disp"></div></div>
+  </div>
+</div>
+<div id="code-panel">
+  <div id="code-title">void DFS(string k) / DFS(int source) / DFS(Vertex* source)</div>
+  <div id="code-body"></div>
+</div>
+<div id="nav">
+  <button class="nbtn" id="prev" onclick="go(-1)">← 이전</button>
+  <div id="dots"></div>
+  <button class="nbtn" id="next" onclick="go(1)">다음 →</button>
+</div>
+<script>
+const NODES = ['A','B','C','D','E','F','G','H','I'];
+const INDEX = Object.fromEntries(NODES.map((k,i)=>[k,i]));
+const EDGES = [['F','B'],['F','G'],['B','A'],['B','D'],['D','C'],['D','E'],['G','I'],['I','H']];
+const POS = {
+  F:{x:70,y:170},
+  B:{x:190,y:90},
+  G:{x:190,y:250},
+  A:{x:310,y:40},
+  D:{x:310,y:120},
+  I:{x:310,y:250},
+  C:{x:470,y:80},
+  E:{x:470,y:160},
+  H:{x:470,y:290}
+};
+const SC = {
+  idle:{f:'rgba(55,55,55,.5)',s:'#555',t:'#777'},
+  stack:{f:'rgba(86,156,214,.14)',s:'#569cd6',t:'#9cdcfe'},
+  current:{f:'rgba(247,178,103,.18)',s:'#f7b267',t:'#f7b267'},
+  done:{f:'rgba(78,201,176,.15)',s:'#4ec9b0',t:'#4ec9b0'}
+};
+const TABLE_ENTRIES = NODES.map((k,i)=>({key:k,index:i}));
+const CODE = [
+  'void DFS(string k)',
+  '{',
+  '    DFS(table[k]);',
+  '}',
+  '',
+  'void DFS(int source)',
+  '{',
+  '    for (auto* v : this->vertices)',
+  '        v->visited = false;',
+  '    DFS(vertices[source]);',
+  '    cout << endl;',
+  '}',
+  '',
+  'void DFS(Vertex* source)',
+  '{',
+  '    source->visited = true;',
+  '    for (auto* w : source->out_neighbors)',
+  '        if (!w->visited)',
+  '            DFS(w);',
+  '    cout << source->key << " ";',
+  '}'
+];
+const STEPS = [
+  {desc:'main에서 DFS("F")를 호출한다. 문자열 key를 바로 탐색하지 않고 table로 index를 찾는 구조다.',hl:[1,2,3],lookup:'F',lookupNote:'table["F"] = 5 이므로 다음 단계에서 DFS(5)로 연결된다.',call:[],visited:[],output:[],current:null,activeEdge:null},
+  {desc:'DFS(int source)가 시작된다. 모든 vertices의 visited를 false로 초기화한다.',hl:[6,7,8,9],lookup:'F',lookupNote:'초기화 단계이므로 아직 어떤 정점도 방문되지 않았다.',call:[],visited:[],output:[],current:null,activeEdge:null},
+  {desc:'vertices[5]는 key가 F인 정점이다. 이제 DFS(Vertex* source)로 내려간다.',hl:[6,10],lookup:'F',lookupNote:'source = 5, vertices[5]->key = F',call:['F'],visited:['F'],output:[],current:'F',activeEdge:null},
+  {desc:'F를 visited=true로 만들고, out_neighbors를 순회한다. 첫 이웃은 B다.',hl:[14,15,16,17,18,19],lookup:'F',lookupNote:'F의 이웃 순서는 B, G 순서다.',call:['F'],visited:['F'],output:[],current:'F',activeEdge:['F','B']},
+  {desc:'B로 재귀 호출한다. 호출 스택은 F → B가 된다.',hl:[14,15,16],lookup:'F',lookupNote:'table은 string→index 변환용이고, 실제 DFS는 Vertex* 기준으로 동작한다.',call:['F','B'],visited:['F','B'],output:[],current:'B',activeEdge:null},
+  {desc:'B의 첫 이웃 A는 아직 방문하지 않았으므로 재귀 호출한다.',hl:[16,17,18,19],lookup:'F',lookupNote:'B의 이웃 순서는 A, D 순서다.',call:['F','B'],visited:['F','B'],output:[],current:'B',activeEdge:['B','A']},
+  {desc:'A를 방문한다. A는 더 내려갈 이웃이 없으므로 곧 postorder 출력이 일어난다.',hl:[14,15,16,17],lookup:'F',lookupNote:'A는 leaf 정점이다.',call:['F','B','A'],visited:['F','B','A'],output:[],current:'A',activeEdge:null},
+  {desc:'for 루프를 마친 뒤 cout << source->key 가 실행된다. 그래서 A가 가장 먼저 출력된다.',hl:[20],lookup:'F',lookupNote:'출력이 재귀 호출 뒤에 있으므로 이 코드는 preorder가 아니라 postorder를 출력한다.',call:['F','B','A'],visited:['F','B','A'],output:['A'],current:'A',activeEdge:null},
+  {desc:'A에서 돌아온 뒤, B는 다음 이웃 D를 확인한다.',hl:[16,17,18,19],lookup:'F',lookupNote:'A는 이미 출력 완료 상태다.',call:['F','B'],visited:['F','B','A'],output:['A'],current:'B',activeEdge:['B','D']},
+  {desc:'D로 재귀 호출한다. 호출 스택은 F → B → D가 된다.',hl:[14,15,16],lookup:'F',lookupNote:'D의 이웃 순서는 C, E 순서다.',call:['F','B','D'],visited:['F','B','A','D'],output:['A'],current:'D',activeEdge:null},
+  {desc:'D의 첫 이웃 C로 내려간다.',hl:[16,17,18,19],lookup:'F',lookupNote:'C는 아직 방문되지 않았다.',call:['F','B','D'],visited:['F','B','A','D'],output:['A'],current:'D',activeEdge:['D','C']},
+  {desc:'C는 leaf 정점이므로 방문 후 바로 출력된다.',hl:[20],lookup:'F',lookupNote:'출력 누적: A C',call:['F','B','D','C'],visited:['F','B','A','D','C'],output:['A','C'],current:'C',activeEdge:null},
+  {desc:'D로 돌아와서 다음 이웃 E를 탐색한다.',hl:[16,17,18,19],lookup:'F',lookupNote:'D의 남은 이웃은 E 하나다.',call:['F','B','D'],visited:['F','B','A','D','C'],output:['A','C'],current:'D',activeEdge:['D','E']},
+  {desc:'E도 leaf 정점이므로 방문 후 바로 출력된다.',hl:[20],lookup:'F',lookupNote:'출력 누적: A C E',call:['F','B','D','E'],visited:['F','B','A','D','C','E'],output:['A','C','E'],current:'E',activeEdge:null},
+  {desc:'D의 모든 이웃 처리가 끝났으므로 이제 D를 출력한다.',hl:[20],lookup:'F',lookupNote:'postorder 출력은 자식이 끝난 뒤 부모가 나온다.',call:['F','B','D'],visited:['F','B','A','D','C','E'],output:['A','C','E','D'],current:'D',activeEdge:null},
+  {desc:'B도 더 이상 내려갈 곳이 없으므로 B를 출력한다.',hl:[20],lookup:'F',lookupNote:'현재까지 출력: A C E D B',call:['F','B'],visited:['F','B','A','D','C','E'],output:['A','C','E','D','B'],current:'B',activeEdge:null},
+  {desc:'다시 F로 올라와 두 번째 이웃 G를 탐색한다.',hl:[16,17,18,19],lookup:'F',lookupNote:'F의 남은 이웃은 G다.',call:['F'],visited:['F','B','A','D','C','E'],output:['A','C','E','D','B'],current:'F',activeEdge:['F','G']},
+  {desc:'G로 재귀 호출한다.',hl:[14,15,16],lookup:'F',lookupNote:'G의 유일한 이웃은 I다.',call:['F','G'],visited:['F','B','A','D','C','E','G'],output:['A','C','E','D','B'],current:'G',activeEdge:null},
+  {desc:'G에서 I로 내려간다.',hl:[16,17,18,19],lookup:'F',lookupNote:'I의 유일한 이웃은 H다.',call:['F','G'],visited:['F','B','A','D','C','E','G'],output:['A','C','E','D','B'],current:'G',activeEdge:['G','I']},
+  {desc:'I를 방문한다.',hl:[14,15,16],lookup:'F',lookupNote:'I에서 다음으로 H를 보게 된다.',call:['F','G','I'],visited:['F','B','A','D','C','E','G','I'],output:['A','C','E','D','B'],current:'I',activeEdge:null},
+  {desc:'I에서 H로 내려간다.',hl:[16,17,18,19],lookup:'F',lookupNote:'H는 마지막 leaf 정점이다.',call:['F','G','I'],visited:['F','B','A','D','C','E','G','I'],output:['A','C','E','D','B'],current:'I',activeEdge:['I','H']},
+  {desc:'H는 leaf 정점이므로 바로 출력된다.',hl:[20],lookup:'F',lookupNote:'출력 누적: A C E D B H',call:['F','G','I','H'],visited:['F','B','A','D','C','E','G','I','H'],output:['A','C','E','D','B','H'],current:'H',activeEdge:null},
+  {desc:'I의 이웃 처리가 끝났으므로 I를 출력한다.',hl:[20],lookup:'F',lookupNote:'출력 누적: A C E D B H I',call:['F','G','I'],visited:['F','B','A','D','C','E','G','I','H'],output:['A','C','E','D','B','H','I'],current:'I',activeEdge:null},
+  {desc:'G도 더 내려갈 곳이 없으므로 G를 출력한다.',hl:[20],lookup:'F',lookupNote:'출력 누적: A C E D B H I G',call:['F','G'],visited:['F','B','A','D','C','E','G','I','H'],output:['A','C','E','D','B','H','I','G'],current:'G',activeEdge:null},
+  {desc:'마지막으로 F를 출력한다. 최종 postorder 결과는 A C E D B H I G F 이다.',hl:[20,10],lookup:'F',lookupNote:'DFS(Vertex*)에서 출력이 가장 마지막 줄에 있기 때문에 루트 F가 맨 마지막에 출력된다.',call:['F'],visited:['F','B','A','D','C','E','G','I','H'],output:['A','C','E','D','B','H','I','G','F'],current:'F',activeEdge:null}
+];
+let cur = 0;
+function buildCode(){
+  const body=document.getElementById('code-body');
+  body.innerHTML = CODE.map((line,i)=>{
+    const indent=Math.floor((line.match(/^\s*/)[0].length)/4);
+    const trimmed=line.trimStart();
+    const html=trimmed.length?colorize(trimmed):'&nbsp;';
+    return `<div class="cline" id="cl-${i}"><div class="lnum">${i+1}</div><div class="lcode" style="--indent:${indent}">${html}</div></div>`;
+  }).join('');
+}
+function colorize(text){
+  return escapeHtml(text)
+    .replace(/"([^"]*)"/g,'<span class="str">"$1"</span>')
+    .replace(/\b(void|for|if|return|auto)\b/g,'<span class="kw">$1</span>')
+    .replace(/\b(true|false)\b/g,'<span class="kw">$1</span>')
+    .replace(/\b(Vertex|string|int)\b/g,'<span class="tp">$1</span>')
+    .replace(/\b(DFS|cout)\b/g,'<span class="fn">$1</span>')
+    .replace(/\b(table|vertices|visited|source|key|out_neighbors|endl|w|v|k)\b/g,'<span class="id">$1</span>');
+}
+function escapeHtml(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function nodeState(id, step){
+  if(step.output.includes(id)) return 'done';
+  if(step.current === id) return 'current';
+  if(step.call.includes(id)) return 'stack';
+  return 'idle';
+}
+function edgeKey(a,b){ return `${a}->${b}`; }
+function buildGraph(){
+  const SVG='http://www.w3.org/2000/svg';
+  const eg=document.getElementById('edge-group');
+  const ng=document.getElementById('node-group');
+  eg.innerHTML=''; ng.innerHTML='';
+  const arrowLen=12, arrowWidth=8;
+  EDGES.forEach(([a,b],i)=>{
+    const p1=POS[a], p2=POS[b];
+    const dx=p2.x-p1.x, dy=p2.y-p1.y;
+    const len=Math.hypot(dx,dy);
+    const ux=dx/len, uy=dy/len;
+    const x1=p1.x+ux*28, y1=p1.y+uy*28;
+    const x2=p2.x-ux*28, y2=p2.y-uy*28;
+    const line=document.createElementNS(SVG,'line');
+    line.id=`e-${i}`;
+    line.setAttribute('x1',x1); line.setAttribute('y1',y1); line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke','#555'); line.setAttribute('stroke-width','1.6'); line.setAttribute('opacity','0.45');
+    eg.appendChild(line);
+    const bx=x2-ux*arrowLen, by=y2-uy*arrowLen;
+    const nx=-uy*(arrowWidth/2), ny=ux*(arrowWidth/2);
+    const arrow=document.createElementNS(SVG,'polygon');
+    arrow.id=`a-${i}`;
+    arrow.setAttribute('points',`${x2},${y2} ${bx+nx},${by+ny} ${bx-nx},${by-ny}`);
+    arrow.setAttribute('fill','#555'); arrow.setAttribute('stroke','none'); arrow.setAttribute('stroke-width','0'); arrow.setAttribute('opacity','0.45');
+    eg.appendChild(arrow);
+  });
+  NODES.forEach(id=>{
+    const p=POS[id];
+    const group=document.createElementNS(SVG,'g');
+    const c=document.createElementNS(SVG,'circle'); c.id=`n-${id}`; c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r',24);
+    const t=document.createElementNS(SVG,'text'); t.id=`t-${id}`; t.setAttribute('x',p.x); t.setAttribute('y',p.y); t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','central'); t.setAttribute('font-size','14'); t.setAttribute('font-weight','700');
+    t.textContent=id;
+    const sub=document.createElementNS(SVG,'text'); sub.id=`s-${id}`; sub.setAttribute('x',p.x); sub.setAttribute('y',p.y+34); sub.setAttribute('text-anchor','middle'); sub.setAttribute('font-size','10'); sub.setAttribute('fill','#666');
+    sub.textContent=`idx ${INDEX[id]}`;
+    group.appendChild(c); group.appendChild(t); group.appendChild(sub); ng.appendChild(group);
+  });
+}
+function render(){
+  const step=STEPS[cur];
+  document.getElementById('step-counter').textContent=`step ${cur+1} / ${STEPS.length}`;
+  document.getElementById('step-desc').textContent=step.desc;
+  document.getElementById('lookup-note').textContent=step.lookupNote;
+  document.querySelectorAll('.cline').forEach((el,i)=> el.classList.toggle('hl', step.hl.includes(i+1)));
+  TABLE_ENTRIES.forEach(({key,index})=>{
+    const cell=document.getElementById(`table-${key}`);
+    cell.classList.toggle('active', step.lookup===key);
+    cell.innerHTML=`<span class="kv-key">${key}</span>${index}`;
+  });
+  const vg=document.getElementById('visited-grid');
+  vg.innerHTML='';
+  NODES.forEach(id=>{
+    const div=document.createElement('div'); div.className='icell';
+    const label=document.createElement('div'); label.className='inlabel'; label.textContent=id;
+    const value=document.createElement('div');
+    let cls='inval';
+    if(step.current===id) cls+=' curr';
+    else if(step.visited.includes(id)) cls+=' true';
+    value.className=cls;
+    value.textContent=step.visited.includes(id)?'T':'F';
+    div.appendChild(label); div.appendChild(value); vg.appendChild(div);
+  });
+  document.getElementById('stack-disp').innerHTML = step.call.length ? step.call.map((id,idx)=>`<span class="chip ${idx===step.call.length-1?'chip-cur':'chip-stack'}">${id}</span>`).join('') : '<span class="empty">empty</span>';
+  document.getElementById('output-disp').innerHTML = step.output.length ? step.output.map(id=>`<span class="chip chip-out">${id}</span>`).join('') : '<span class="empty">empty</span>';
+  NODES.forEach(id=>{
+    const state=nodeState(id,step), sc=SC[state];
+    const c=document.getElementById(`n-${id}`), t=document.getElementById(`t-${id}`), s=document.getElementById(`s-${id}`);
+    c.setAttribute('fill',sc.f); c.setAttribute('stroke',sc.s); c.setAttribute('stroke-width',state==='current'?'2.4':'1.4');
+    t.setAttribute('fill',sc.t); s.setAttribute('fill',state==='idle'?'#666':sc.t);
+  });
+  EDGES.forEach(([a,b],i)=>{
+    const line=document.getElementById(`e-${i}`), arrow=document.getElementById(`a-${i}`);
+    const active=step.activeEdge && step.activeEdge[0]===a && step.activeEdge[1]===b;
+    const color=active ? '#f7b267' : '#585860';
+    line.setAttribute('stroke',color); line.setAttribute('stroke-width',active?'2.3':'1.6'); line.setAttribute('opacity',active?'1':'0.45');
+    arrow.setAttribute('fill',color); arrow.setAttribute('stroke',active?'#ffd59a':'none'); arrow.setAttribute('stroke-width',active?'0.9':'0'); arrow.setAttribute('opacity',active?'1':'0.45');
+  });
+  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active', i===cur));
+  document.getElementById('prev').disabled = cur===0;
+  document.getElementById('next').disabled = cur===STEPS.length-1;
+}
+function buildDots(){ document.getElementById('dots').innerHTML = STEPS.map((_,i)=>`<span class="dot ${i===0?'active':''}"></span>`).join(''); }
+function buildTable(){
+  const grid=document.getElementById('table-grid');
+  grid.innerHTML = TABLE_ENTRIES.map(({key})=>`<div class="kv-cell" id="table-${key}"></div>`).join('');
+}
+function go(delta){ const next=Math.max(0,Math.min(STEPS.length-1,cur+delta)); if(next!==cur){ cur=next; render(); } }
+document.addEventListener('keydown',e=>{ if(e.key==='ArrowLeft'){e.preventDefault();go(-1);} else if(e.key==='ArrowRight'){e.preventDefault();go(1);} else if(e.key==='Home'){e.preventDefault();cur=0;render();} else if(e.key==='End'){e.preventDefault();cur=STEPS.length-1;render();} });
+buildCode(); buildGraph(); buildTable(); buildDots(); render();
+</script>
+<script src="../shared/viewer-controls.js"></script>
+</body>
+</html>
