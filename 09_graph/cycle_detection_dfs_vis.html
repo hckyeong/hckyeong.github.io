@@ -1,0 +1,330 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DFS Cycle Detection 단계별 시각화</title>
+<link rel="stylesheet" href="../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:'Consolas','Courier New',monospace;font-size:13px;padding:16px}
+h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacing:.5px}
+#case-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.cbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 12px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px}
+.cbtn.active{background:rgba(86,156,214,.12);border-color:#569cd6;color:#569cd6}
+#step-counter{font-size:11px;color:#858585}
+#step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:42px;line-height:1.6;padding:7px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}.leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
+#main-content{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px;margin:12px 0}
+#graph-panel{flex:1 1 560px;min-width:min(100%,560px);background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:6px}
+#graph-panel svg{width:100%;display:block}
+#right-panel{flex:1 1 430px;min-width:min(100%,430px);display:flex;flex-direction:column;gap:8px}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.inline-note{font-size:11px;color:#858585;line-height:1.5}
+.grid4{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.icell{display:flex;flex-direction:column;align-items:center;gap:2px}.inlabel{font-size:10px;color:#555}
+.inval{min-width:34px;height:28px;padding:0 6px;border:1px solid #3e3e42;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:#2d2d2d;color:#d4d4d4;transition:all .25s}
+.inval.vis{border-color:#4ec9b0;color:#4ec9b0;background:rgba(78,201,176,.1)}
+.inval.stack{border-color:#569cd6;color:#9cdcfe;background:rgba(86,156,214,.14)}
+.inval.curr{border-color:#f7b267;color:#f7b267;background:rgba(247,178,103,.12)}
+.inval.cyc{border-color:#f09595;color:#f09595;background:rgba(240,149,149,.12)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;min-height:26px;align-items:center}.chip{padding:2px 8px;border-radius:3px;font-size:12px;font-weight:700;transition:all .2s}
+.chip-stack{background:rgba(86,156,214,.1);border:1px solid #569cd6;color:#9cdcfe}
+.chip-cur{background:rgba(247,178,103,.14);border:1px solid #f7b267;color:#f7b267}
+.chip-prev{background:rgba(155,155,234,.12);border:1px solid #9b9bea;color:#c9c9ff}
+.chip-cyc{background:rgba(240,149,149,.12);border:1px solid #f09595;color:#ffb8b8}
+.empty{color:#444;font-size:11px}
+#visited-grid,#stack-grid,#prev-grid{display:flex;gap:5px;flex-wrap:wrap}
+.pcell{display:flex;flex-direction:column;align-items:center;gap:2px}
+.pval{min-width:38px;height:28px;padding:0 6px;border:1px solid #3e3e42;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:#2d2d2d;color:#d4d4d4}
+.pval.set{border-color:#9b9bea;color:#c9c9ff;background:rgba(155,155,234,.12)}
+#console-log{display:flex;flex-direction:column;gap:6px;font-size:12px;line-height:1.5;color:#d4d4d4}
+.logline{padding:6px 8px;border-radius:4px;background:#1f1f1f;border:1px solid #343434}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin-bottom:12px}
+#code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}#code-body{padding:6px 0}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent;transition:background .2s}.cline.hl{background:rgba(255,255,120,.08);border-left:2px solid #dcdcaa}.cline.hl .lnum{color:#858585;background:rgba(255,255,255,.02)}.cline.hl .lcode{background:rgba(255,255,255,.015)}
+.lnum{width:40px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre}
+.lcode::before{content:'';position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.id{color:#9cdcfe}.num{color:#b5cea8}.str{color:#ce9178}
+#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px;flex-wrap:wrap}.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}.nbtn:hover:not(:disabled){background:#3e3e42}.nbtn:disabled{opacity:.3;cursor:default}
+#dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:420px;justify-content:center}.dot{width:6px;height:6px;border-radius:50%;background:#3e3e42;transition:background .2s}.dot.active{background:#858585}
+@media (max-width:980px){#main-content{flex-direction:column}#graph-panel{flex:1 1 auto}.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.grid4{grid-template-columns:1fr}.nbtn{padding:6px 16px}}
+</style>
+</head>
+<body>
+<h1>DFS Cycle Detection - 단계별 실행 시각화</h1>
+<div id="case-bar"></div>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="legend">
+  <div class="leg"><div class="leg-c" style="background:rgba(60,60,60,.4);border-color:#555"></div>미방문</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(78,201,176,.2);border-color:#4ec9b0"></div>visited</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(86,156,214,.2);border-color:#569cd6"></div>on_stack</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(247,178,103,.2);border-color:#f7b267"></div>현재 / 활성 간선</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(240,149,149,.2);border-color:#f09595"></div>cycle / back edge</div>
+</div>
+<div id="main-content">
+  <div id="graph-panel">
+    <svg id="gsvg" viewBox="0 0 560 340">
+      <g id="edge-group"></g>
+      <g id="node-group"></g>
+    </svg>
+  </div>
+  <div id="right-panel">
+    <div class="sbox"><div class="slabel">Call Stack (bottom → top)</div><div class="chips" id="stack-disp"></div></div>
+    <div class="sbox"><div class="slabel">visited</div><div id="visited-grid"></div></div>
+    <div class="sbox"><div class="slabel">on_stack</div><div id="stack-grid"></div></div>
+    <div class="sbox"><div class="slabel">prev (child ← parent)</div><div id="prev-grid"></div></div>
+    <div class="sbox"><div class="slabel">Cycle Path (normalized for learning)</div><div class="chips" id="cycle-disp"></div><div class="inline-note" id="cycle-note"></div></div>
+    <div class="sbox"><div class="slabel">Console Output</div><div id="console-log"></div></div>
+  </div>
+</div>
+<div id="code-panel">
+  <div id="code-title">void DetectCycle() / void DetectCycle(Vertex* v)</div>
+  <div id="code-body"></div>
+</div>
+<div id="nav">
+  <button class="nbtn" id="prev" onclick="go(-1)">← 이전</button>
+  <div id="dots"></div>
+  <button class="nbtn" id="next" onclick="go(1)">다음 →</button>
+</div>
+<script>
+const CODE = [
+  'void DetectCycle()',
+  '{',
+  '    prev.resize(vertices.size(), nullptr);',
+  '    on_stack.resize(vertices.size(), false);',
+  '    cycle.clear();',
+  '    for (auto* v : vertices)',
+  '        v->visited = false;',
+  '    for (auto* v : vertices)',
+  '    {',
+  '        DetectCycle(v);',
+  '        if (!cycle.empty()) {',
+  '            cout << "Cycle detected" << endl;',
+  '            PrintCycle(cycle);',
+  '            return;',
+  '        }',
+  '    }',
+  '    if (cycle.empty())',
+  '        cout << "No cycle detected" << endl;',
+  '}',
+  '',
+  'void DetectCycle(Vertex* v)',
+  '{',
+  '    v->visited = true;',
+  '    on_stack[v->index] = true;',
+  '    for (auto* w : v->out_neighbors)',
+  '    {',
+  '        if (!cycle.empty())',
+  '            return;',
+  '        else if (!w->visited)',
+  '        {',
+  '            prev[w->index] = v;',
+  '            DetectCycle(w);',
+  '        }',
+  '        else if (on_stack[w->index])',
+  '        {',
+  '            cycle.push_back(w);',
+  '            Vertex* current = v;',
+  '            while (current != w)',
+  '            {',
+  '                cycle.push_back(prev[current->index]);',
+  '                current = prev[current->index];',
+  '            }',
+  '            cycle.push_back(w);',
+  '        }',
+  '    }',
+  '    on_stack[v->index] = false;',
+  '}'
+];
+const CASES = [
+  {
+    key:'simple', label:'Simple 0→1→2→0',
+    nodes:[0,1,2],
+    edges:[[0,1],[1,2],[2,0]],
+    pos:{0:{x:110,y:70},1:{x:420,y:70},2:{x:265,y:250}},
+    steps:[
+      {desc:'DetectCycle()가 시작된다. prev, on_stack, cycle을 초기화하고 모든 visited를 false로 만든다.',hl:[1,2,3,4,5,6,7],visited:[],onstack:[],call:[],prev:[null,null,null],cycle:[],current:null,activeEdge:null,cycleEdges:[],console:['DetectCycle() start'],cycleNote:'아직 cycle은 비어 있다.'},
+      {desc:'outer loop에서 첫 번째 정점 0으로 DetectCycle(0)을 호출한다.',hl:[8,9,10],visited:[],onstack:[],call:[0],prev:[null,null,null],cycle:[],current:0,activeEdge:null,cycleEdges:[],console:['DetectCycle(v=0) call'],cycleNote:'현재 DFS 트리의 루트는 0이다.'},
+      {desc:'0을 방문하고 on_stack[0] = true로 표시한다. 현재 재귀 스택에는 0만 있다.',hl:[21,22,23,24],visited:[0],onstack:[0],call:[0],prev:[null,null,null],cycle:[],current:0,activeEdge:null,cycleEdges:[],console:['On stack: 0'],cycleNote:'on_stack은 재귀 호출이 아직 끝나지 않은 정점을 뜻한다.'},
+      {desc:'0의 이웃 1은 아직 방문되지 않았으므로 prev[1] = 0을 기록하고 재귀 호출한다.',hl:[25,26,29,30,31,32],visited:[0],onstack:[0],call:[0],prev:[null,0,null],cycle:[],current:0,activeEdge:[0,1],cycleEdges:[],console:['On stack: 0'],cycleNote:'prev[child] = parent 구조로 DFS tree를 기록한다.'},
+      {desc:'1을 방문한다. 현재 재귀 스택은 0 → 1 이다.',hl:[21,22,23,24],visited:[0,1],onstack:[0,1],call:[0,1],prev:[null,0,null],cycle:[],current:1,activeEdge:null,cycleEdges:[],console:['On stack: 0','On stack: 0 1'],cycleNote:'방문은 되었지만 아직 함수가 끝나지 않았으므로 on_stack에도 남아 있다.'},
+      {desc:'1의 이웃 2도 아직 방문되지 않았으므로 prev[2] = 1 후 재귀 호출한다.',hl:[25,26,29,30,31,32],visited:[0,1],onstack:[0,1],call:[0,1],prev:[null,0,1],cycle:[],current:1,activeEdge:[1,2],cycleEdges:[],console:['On stack: 0','On stack: 0 1'],cycleNote:'DFS tree는 0 → 1 → 2로 확장된다.'},
+      {desc:'2를 방문한다. 현재 재귀 스택은 0 → 1 → 2 이다.',hl:[21,22,23,24],visited:[0,1,2],onstack:[0,1,2],call:[0,1,2],prev:[null,0,1],cycle:[],current:2,activeEdge:null,cycleEdges:[],console:['On stack: 0','On stack: 0 1','On stack: 0 1 2'],cycleNote:'이제 2의 이웃을 확인한다.'},
+      {desc:'2의 이웃 0은 이미 visited이고, 동시에 on_stack[0]도 true다. 즉 back edge 2 → 0을 만나 cycle을 감지한다.',hl:[25,26,34,35],visited:[0,1,2],onstack:[0,1,2],call:[0,1,2],prev:[null,0,1],cycle:[0],current:2,activeEdge:[2,0],cycleEdges:[[2,0]],console:['On stack: 0','On stack: 0 1','On stack: 0 1 2','Cycle detected: 0'],cycleNote:'visited && on_stack 조건이 바로 directed cycle 판정 지점이다.'},
+      {desc:'back edge 2 → 0 과 prev를 기준으로 보면, 학습용 cycle path는 0 → 1 → 2 → 0 으로 이해하는 것이 맞다.',hl:[35,36,37,38,39,40,41,42,43],visited:[0,1,2],onstack:[0,1,2],call:[0,1,2],prev:[null,0,1],cycle:[0,1,0,0],current:2,activeEdge:[2,0],cycleEdges:[[2,0]],console:['On stack: 0','On stack: 0 1','On stack: 0 1 2','Cycle detected: 0'],cycleNote:'아래 패널은 back edge와 prev를 기준으로 정규화한 cycle path를 보여준다.'},
+      {desc:'DetectCycle()는 cycle을 발견했음을 보고 종료한다. 시각화는 이해가 쉬운 cycle path 0 → 1 → 2 → 0 을 표시한다.',hl:[11,12,13,14],visited:[0,1,2],onstack:[0,1,2],call:[0,1,2],prev:[null,0,1],cycle:[0,1,0,0],current:2,activeEdge:[2,0],cycleEdges:[[2,0]],console:['On stack: 0','On stack: 0 1','On stack: 0 1 2','Cycle detected: 0','Cycle detected'],cycleNote:'코드의 raw cycle 저장 문제는 노트에서 설명하고, 시각화는 의미가 분명한 cycle path를 보여준다.'}
+    ]
+  },
+  {
+    key:'sedgewick', label:'Sedgewick 0→2→1→5→0',
+    nodes:[0,1,2,3,4,5],
+    edges:[[0,2],[2,1],[2,3],[3,4],[1,5],[2,4],[0,5],[5,0]],
+    pos:{0:{x:80,y:160},2:{x:220,y:80},1:{x:340,y:80},3:{x:340,y:200},4:{x:500,y:200},5:{x:220,y:280}},
+    steps:[
+      {desc:'DetectCycle() 초기화. prev, on_stack, cycle을 비우고 visited를 false로 만든다.',hl:[1,2,3,4,5,6,7],visited:[],onstack:[],call:[],prev:[null,null,null,null,null,null],cycle:[],current:null,activeEdge:null,cycleEdges:[],console:['DetectCycle() start'],cycleNote:'아직 어떤 cycle도 발견되지 않았다.'},
+      {desc:'outer loop가 0에서 시작한다. DetectCycle(0)을 호출한다.',hl:[8,9,10],visited:[],onstack:[],call:[0],prev:[null,null,null,null,null,null],cycle:[],current:0,activeEdge:null,cycleEdges:[],console:['DetectCycle(v=0) call'],cycleNote:'0에서 시작한 DFS가 실제로 cycle을 찾는다.'},
+      {desc:'0 방문, on_stack[0] = true. 콘솔의 On stack 출력은 0 이다.',hl:[21,22,23,24],visited:[0],onstack:[0],call:[0],prev:[null,null,null,null,null,null],cycle:[],current:0,activeEdge:null,cycleEdges:[],console:['On stack: 0'],cycleNote:'0의 이웃은 2, 5 순서다.'},
+      {desc:'첫 이웃 2는 미방문이므로 prev[2] = 0을 기록하고 재귀 호출한다.',hl:[25,26,29,30,31,32],visited:[0],onstack:[0],call:[0],prev:[null,null,0,null,null,null],cycle:[],current:0,activeEdge:[0,2],cycleEdges:[],console:['On stack: 0'],cycleNote:'prev[2]가 0이 되면서 DFS tree가 시작된다.'},
+      {desc:'2 방문, on_stack은 0 → 2 가 된다.',hl:[21,22,23,24],visited:[0,2],onstack:[0,2],call:[0,2],prev:[null,null,0,null,null,null],cycle:[],current:2,activeEdge:null,cycleEdges:[],console:['On stack: 0','On stack: 0 2'],cycleNote:'2의 이웃 순서는 1, 3, 4 이다.'},
+      {desc:'2의 첫 이웃 1은 미방문이다. prev[1] = 2 를 저장하고 내려간다.',hl:[25,26,29,30,31,32],visited:[0,2],onstack:[0,2],call:[0,2],prev:[null,2,0,null,null,null],cycle:[],current:2,activeEdge:[2,1],cycleEdges:[],console:['On stack: 0','On stack: 0 2'],cycleNote:'DFS tree는 0 → 2 → 1로 확장된다.'},
+      {desc:'1 방문, on_stack은 0 → 2 → 1 이다.',hl:[21,22,23,24],visited:[0,2,1],onstack:[0,2,1],call:[0,2,1],prev:[null,2,0,null,null,null],cycle:[],current:1,activeEdge:null,cycleEdges:[],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2'],cycleNote:'1의 유일한 이웃은 5다.'},
+      {desc:'1의 이웃 5는 미방문이므로 prev[5] = 1 을 저장하고 재귀 호출한다.',hl:[25,26,29,30,31,32],visited:[0,2,1],onstack:[0,2,1],call:[0,2,1],prev:[null,2,0,null,null,1],cycle:[],current:1,activeEdge:[1,5],cycleEdges:[],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2'],cycleNote:'이제 5에서 0으로 향하는 간선이 cycle을 만든다.'},
+      {desc:'5 방문, on_stack은 0 → 2 → 1 → 5 이다.',hl:[21,22,23,24],visited:[0,2,1,5],onstack:[0,2,1,5],call:[0,2,1,5],prev:[null,2,0,null,null,1],cycle:[],current:5,activeEdge:null,cycleEdges:[],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2','On stack: 0 1 2 5'],cycleNote:'5의 이웃 0은 이미 visited이며 현재 on_stack에도 있다.'},
+      {desc:'5 → 0 은 back edge 이다. visited[0] = true 이면서 on_stack[0] = true 이므로 cycle을 감지한다.',hl:[25,26,34,35],visited:[0,2,1,5],onstack:[0,2,1,5],call:[0,2,1,5],prev:[null,2,0,null,null,1],cycle:[0],current:5,activeEdge:[5,0],cycleEdges:[[5,0]],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2','On stack: 0 1 2 5','Cycle detected: 0'],cycleNote:'directed cycle 판정은 back edge를 만나는 순간이다.'},
+      {desc:'back edge 5 → 0 과 prev를 기준으로 보면, 학습용 cycle path는 0 → 2 → 1 → 5 → 0 이다.',hl:[35,36,37,38,39,40,41,42,43],visited:[0,2,1,5],onstack:[0,2,1,5],call:[0,2,1,5],prev:[null,2,0,null,null,1],cycle:[0,1,2,0,0],current:5,activeEdge:[5,0],cycleEdges:[[5,0]],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2','On stack: 0 1 2 5','Cycle detected: 0'],cycleNote:'아래 패널은 back edge와 prev를 따라 복원한 cycle path를 표시한다.'},
+      {desc:'DetectCycle()는 cycle을 발견했음을 보고 종료한다. 시각화는 이해가 쉬운 cycle path 0 → 2 → 1 → 5 → 0 을 표시한다.',hl:[11,12,13,14],visited:[0,2,1,5],onstack:[0,2,1,5],call:[0,2,1,5],prev:[null,2,0,null,null,1],cycle:[0,1,2,0,0],current:5,activeEdge:[5,0],cycleEdges:[[5,0]],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2','On stack: 0 1 2 5','Cycle detected: 0','Cycle detected'],cycleNote:'코드의 raw cycle 저장 문제는 노트에서 설명하고, 시각화는 의미가 분명한 cycle path를 보여준다.'}
+    ]
+  }
+];
+let caseIndex = 0;
+let cur = 0;
+function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function colorize(text){
+  return escapeHtml(text)
+    .replace(/"([^"]*)"/g,'<span class="str">"$1"</span>')
+    .replace(/\b(void|for|if|else|return|while)\b/g,'<span class="kw">$1</span>')
+    .replace(/\b(true|false|nullptr)\b/g,'<span class="kw">$1</span>')
+    .replace(/\b(Vertex|Graph|vector|bool)\b/g,'<span class="tp">$1</span>')
+    .replace(/\b(DetectCycle|PrintCycle|push_back|resize|clear|empty)\b/g,'<span class="fn">$1</span>')
+    .replace(/\b(vertices|visited|on_stack|cycle|prev|index|out_neighbors|current|w|v|cout|endl)\b/g,'<span class="id">$1</span>')
+    .replace(/\b(\d+)\b/g,'<span class="num">$1</span>');
+}
+function buildCode(){
+  const body=document.getElementById('code-body');
+  body.innerHTML = CODE.map((line,i)=>{
+    const indent=Math.floor((line.match(/^\s*/)[0].length)/4);
+    const trimmed=line.trimStart();
+    const html=trimmed.length?colorize(trimmed):'&nbsp;';
+    return `<div class="cline" id="cl-${i}"><div class="lnum">${i+1}</div><div class="lcode" style="--indent:${indent}">${html}</div></div>`;
+  }).join('');
+}
+function nodeState(id, step){
+  if(step.current===id) return 'current';
+  if(step.cycle.includes(id)) return 'cycle';
+  if(step.onstack.includes(id)) return 'stack';
+  if(step.visited.includes(id)) return 'visited';
+  return 'idle';
+}
+function normalizedCyclePath(step){
+  if (step.cyclePath && step.cyclePath.length) return step.cyclePath;
+  if (!step.activeEdge) return [];
+  const [from, to] = step.activeEdge;
+  if (!step.onstack.includes(to)) return [];
+  const chain = [from];
+  let current = from;
+  let guard = 0;
+  while (current !== to && guard < 100) {
+    current = step.prev[current];
+    if (current === null || current === undefined) return [];
+    chain.push(current);
+    guard++;
+  }
+  if (chain[chain.length - 1] !== to) return [];
+  return chain.slice().reverse().concat(to);
+}
+function buildGraph(){
+  const cfg=CASES[caseIndex];
+  const SVG='http://www.w3.org/2000/svg';
+  const eg=document.getElementById('edge-group');
+  const ng=document.getElementById('node-group');
+  eg.innerHTML=''; ng.innerHTML='';
+  const arrowLen=12, arrowWidth=8;
+  cfg.edges.forEach(([a,b],i)=>{
+    const p1=cfg.pos[a], p2=cfg.pos[b];
+    const dx=p2.x-p1.x, dy=p2.y-p1.y; const len=Math.hypot(dx,dy); const ux=dx/len, uy=dy/len;
+    const x1=p1.x+ux*28, y1=p1.y+uy*28; const x2=p2.x-ux*28, y2=p2.y-uy*28;
+    const line=document.createElementNS(SVG,'line');
+    line.id=`e-${i}`; line.setAttribute('x1',x1); line.setAttribute('y1',y1); line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke','#555'); line.setAttribute('stroke-width','1.6'); line.setAttribute('opacity','0.45'); eg.appendChild(line);
+    const bx=x2-ux*arrowLen, by=y2-uy*arrowLen; const nx=-uy*(arrowWidth/2), ny=ux*(arrowWidth/2);
+    const arrow=document.createElementNS(SVG,'polygon');
+    arrow.id=`a-${i}`; arrow.setAttribute('points',`${x2},${y2} ${bx+nx},${by+ny} ${bx-nx},${by-ny}`);
+    arrow.setAttribute('fill','#555'); arrow.setAttribute('stroke','none'); arrow.setAttribute('stroke-width','0'); arrow.setAttribute('opacity','0.45'); eg.appendChild(arrow);
+  });
+  cfg.nodes.forEach(id=>{
+    const p=cfg.pos[id];
+    const group=document.createElementNS(SVG,'g');
+    const c=document.createElementNS(SVG,'circle'); c.id=`n-${id}`; c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r',24);
+    const t=document.createElementNS(SVG,'text'); t.id=`t-${id}`; t.setAttribute('x',p.x); t.setAttribute('y',p.y); t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','central'); t.setAttribute('font-size','14'); t.setAttribute('font-weight','700'); t.textContent=id;
+    group.appendChild(c); group.appendChild(t); ng.appendChild(group);
+  });
+}
+function renderCaseButtons(){
+  document.getElementById('case-bar').innerHTML = CASES.map((cfg,i)=>`<button class="cbtn ${i===caseIndex?'active':''}" onclick="setCase(${i})">${cfg.label}</button>`).join('');
+}
+function renderPrev(step, count){
+  const wrap=document.getElementById('prev-grid'); wrap.innerHTML='';
+  for(let i=0;i<count;i++){
+    const cell=document.createElement('div'); cell.className='pcell';
+    const lab=document.createElement('div'); lab.className='inlabel'; lab.textContent=i;
+    const val=document.createElement('div'); val.className='pval'+(step.prev[i]!==null?' set':'');
+    val.textContent=step.prev[i]===null?'·':step.prev[i];
+    cell.appendChild(lab); cell.appendChild(val); wrap.appendChild(cell);
+  }
+}
+function renderBoolGrid(targetId, count, activeList, current, cycleList, mode){
+  const wrap=document.getElementById(targetId); wrap.innerHTML='';
+  for(let i=0;i<count;i++){
+    const cell=document.createElement('div'); cell.className='icell';
+    const lab=document.createElement('div'); lab.className='inlabel'; lab.textContent=i;
+    const val=document.createElement('div');
+    let cls='inval';
+    if(current===i) cls+=' curr';
+    else if(cycleList.includes(i)) cls+=' cyc';
+    else if(activeList.includes(i)) cls+= mode==='stack' ? ' stack' : ' vis';
+    val.className=cls;
+    val.textContent=activeList.includes(i)?'T':'F';
+    cell.appendChild(lab); cell.appendChild(val); wrap.appendChild(cell);
+  }
+}
+function render(){
+  const cfg=CASES[caseIndex];
+  const step=cfg.steps[cur];
+  const cyclePath = normalizedCyclePath(step);
+  document.getElementById('step-counter').textContent=`${cfg.label}  step ${cur+1} / ${cfg.steps.length}`;
+  document.getElementById('step-desc').textContent=step.desc;
+  document.getElementById('cycle-note').textContent=step.cycleNote;
+  document.querySelectorAll('.cline').forEach((el,i)=>el.classList.toggle('hl', step.hl.includes(i+1)));
+  renderBoolGrid('visited-grid', cfg.nodes.length, step.visited, step.current, cyclePath, 'visited');
+  renderBoolGrid('stack-grid', cfg.nodes.length, step.onstack, step.current, cyclePath, 'stack');
+  renderPrev(step, cfg.nodes.length);
+  document.getElementById('stack-disp').innerHTML = step.call.length ? step.call.map((id,idx)=>`<span class="chip ${idx===step.call.length-1?'chip-cur':'chip-stack'}">${id}</span>`).join('') : '<span class="empty">empty</span>';
+  document.getElementById('cycle-disp').innerHTML = cyclePath.length ? cyclePath.map(v=>`<span class="chip chip-cyc">${v}</span>`).join('') : '<span class="empty">empty</span>';
+  const clog=document.getElementById('console-log');
+  clog.innerHTML = step.console.length ? step.console.map(line=>`<div class="logline">${escapeHtml(line)}</div>`).join('') : '<div class="logline">(no output)</div>';
+  cfg.nodes.forEach(id=>{
+    const c=document.getElementById(`n-${id}`), t=document.getElementById(`t-${id}`);
+    const state=(id===step.current)?'current':(cyclePath.includes(id)?'cycle':(step.onstack.includes(id)?'stack':(step.visited.includes(id)?'visited':'idle')));
+    const map={idle:{f:'rgba(55,55,55,.5)',s:'#555',t:'#777'},visited:{f:'rgba(78,201,176,.14)',s:'#4ec9b0',t:'#4ec9b0'},stack:{f:'rgba(86,156,214,.14)',s:'#569cd6',t:'#9cdcfe'},current:{f:'rgba(247,178,103,.18)',s:'#f7b267',t:'#f7b267'},cycle:{f:'rgba(240,149,149,.16)',s:'#f09595',t:'#ffb8b8'}}[state];
+    c.setAttribute('fill',map.f); c.setAttribute('stroke',map.s); c.setAttribute('stroke-width',state==='current'?'2.5':'1.5');
+    t.setAttribute('fill',map.t);
+  });
+  cfg.edges.forEach(([a,b],i)=>{
+    const line=document.getElementById(`e-${i}`), arrow=document.getElementById(`a-${i}`);
+    const active = step.activeEdge && step.activeEdge[0]===a && step.activeEdge[1]===b;
+    const cyc = step.cycleEdges.some(([x,y])=>x===a && y===b);
+    const color = cyc ? '#f09595' : (active ? '#f7b267' : '#585860');
+    const width = cyc ? '2.6' : (active ? '2.3' : '1.6');
+    const opacity = cyc || active ? '1' : '0.45';
+    line.setAttribute('stroke',color); line.setAttribute('stroke-width',width); line.setAttribute('opacity',opacity);
+    arrow.setAttribute('fill',color); arrow.setAttribute('stroke',(cyc||active)?color:'none'); arrow.setAttribute('stroke-width',(cyc||active)?'0.8':'0'); arrow.setAttribute('opacity',opacity);
+  });
+  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active', i===cur));
+  document.getElementById('prev').disabled = cur===0;
+  document.getElementById('next').disabled = cur===cfg.steps.length-1;
+}
+function buildDots(){ const cfg=CASES[caseIndex]; document.getElementById('dots').innerHTML = cfg.steps.map((_,i)=>`<span class="dot ${i===0?'active':''}"></span>`).join(''); }
+function setCase(i){ caseIndex=i; cur=0; renderCaseButtons(); buildGraph(); buildDots(); render(); }
+function go(delta){ const cfg=CASES[caseIndex]; const next=Math.max(0,Math.min(cfg.steps.length-1,cur+delta)); if(next!==cur){ cur=next; render(); } }
+document.addEventListener('keydown',e=>{ if(e.key==='ArrowLeft'){e.preventDefault();go(-1);} else if(e.key==='ArrowRight'){e.preventDefault();go(1);} else if(e.key==='Home'){e.preventDefault();cur=0;render();} else if(e.key==='End'){e.preventDefault();cur=CASES[caseIndex].steps.length-1;render();} });
+buildCode(); renderCaseButtons(); buildGraph(); buildDots(); render();
+</script>
+<script src="../shared/viewer-controls.js"></script>
+</body>
+</html>

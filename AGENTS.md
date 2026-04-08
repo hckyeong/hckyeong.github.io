@@ -101,6 +101,11 @@ Additional rules for this project:
    - Answer agent: acts as an instructor who explains data structures and algorithms to a C++ beginner. Preferred model profile: `gpt-5.4` with low reasoning effort
    - Coding agent: acts as a senior engineer who turns the given code into step-by-step HTML visualizations. Preferred model profile: `gpt-5.4` with low reasoning effort
    - Notes agent: acts as an instructor who organizes the given code and the user's questions into HTML study material with visual aids and code explanations. Preferred model profile: `gpt-5.4` with low reasoning effort
+Additional rules for this project:
+- When the user asks for visualization material, automatically use the coding sub-agent by default.
+- When the visualization request also naturally needs a study note or the user asks for summary material, automatically use the notes sub-agent as well.
+Additional rule for this project:
+- When the user asks for visualization material, automatically use the relevant sub-agents instead of waiting for a separate delegation request.
 
 ## 8. Working autonomy in this project
 
