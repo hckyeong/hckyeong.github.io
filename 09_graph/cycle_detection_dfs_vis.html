@@ -23,6 +23,7 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 .sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
 .slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 .inline-note{font-size:11px;color:#858585;line-height:1.5}
+#cycle-build{white-space:pre-line}
 .grid4{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
 .icell{display:flex;flex-direction:column;align-items:center;gap:2px}.inlabel{font-size:10px;color:#555}
 .inval{min-width:34px;height:28px;padding:0 6px;border:1px solid #3e3e42;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:#2d2d2d;color:#d4d4d4;transition:all .25s}
@@ -33,13 +34,13 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 .chips{display:flex;flex-wrap:wrap;gap:4px;min-height:26px;align-items:center}.chip{padding:2px 8px;border-radius:3px;font-size:12px;font-weight:700;transition:all .2s}
 .chip-stack{background:rgba(86,156,214,.1);border:1px solid #569cd6;color:#9cdcfe}
 .chip-cur{background:rgba(247,178,103,.14);border:1px solid #f7b267;color:#f7b267}
-.chip-prev{background:rgba(155,155,234,.12);border:1px solid #9b9bea;color:#c9c9ff}
 .chip-cyc{background:rgba(240,149,149,.12);border:1px solid #f09595;color:#ffb8b8}
 .empty{color:#444;font-size:11px}
 #visited-grid,#stack-grid,#prev-grid{display:flex;gap:5px;flex-wrap:wrap}
 .pcell{display:flex;flex-direction:column;align-items:center;gap:2px}
 .pval{min-width:38px;height:28px;padding:0 6px;border:1px solid #3e3e42;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:#2d2d2d;color:#d4d4d4}
 .pval.set{border-color:#9b9bea;color:#c9c9ff;background:rgba(155,155,234,.12)}
+.pval.focus{border-color:#f7b267;color:#f7b267;background:rgba(247,178,103,.12)}
 #console-log{display:flex;flex-direction:column;gap:6px;font-size:12px;line-height:1.5;color:#d4d4d4}
 .logline{padding:6px 8px;border-radius:4px;background:#1f1f1f;border:1px solid #343434}
 #code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin-bottom:12px}
@@ -79,7 +80,7 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
     <div class="sbox"><div class="slabel">visited</div><div id="visited-grid"></div></div>
     <div class="sbox"><div class="slabel">on_stack</div><div id="stack-grid"></div></div>
     <div class="sbox"><div class="slabel">prev (child ← parent)</div><div id="prev-grid"></div></div>
-    <div class="sbox"><div class="slabel">Cycle Path (normalized for learning)</div><div class="chips" id="cycle-disp"></div><div class="inline-note" id="cycle-note"></div></div>
+    <div class="sbox"><div class="slabel">Cycle Vector (raw push_back sequence)</div><div class="chips" id="cycle-disp"></div><div class="inline-note" id="cycle-build"></div><div class="slabel" style="margin-top:10px">Cycle Path (interpreted)</div><div class="chips" id="cycle-path-disp"></div><div class="inline-note" id="cycle-note"></div></div>
     <div class="sbox"><div class="slabel">Console Output</div><div id="console-log"></div></div>
   </div>
 </div>
@@ -156,9 +157,10 @@ const CASES = [
       {desc:'1을 방문한다. 현재 재귀 스택은 0 → 1 이다.',hl:[21,22,23,24],visited:[0,1],onstack:[0,1],call:[0,1],prev:[null,0,null],cycle:[],current:1,activeEdge:null,cycleEdges:[],console:['On stack: 0','On stack: 0 1'],cycleNote:'방문은 되었지만 아직 함수가 끝나지 않았으므로 on_stack에도 남아 있다.'},
       {desc:'1의 이웃 2도 아직 방문되지 않았으므로 prev[2] = 1 후 재귀 호출한다.',hl:[25,26,29,30,31,32],visited:[0,1],onstack:[0,1],call:[0,1],prev:[null,0,1],cycle:[],current:1,activeEdge:[1,2],cycleEdges:[],console:['On stack: 0','On stack: 0 1'],cycleNote:'DFS tree는 0 → 1 → 2로 확장된다.'},
       {desc:'2를 방문한다. 현재 재귀 스택은 0 → 1 → 2 이다.',hl:[21,22,23,24],visited:[0,1,2],onstack:[0,1,2],call:[0,1,2],prev:[null,0,1],cycle:[],current:2,activeEdge:null,cycleEdges:[],console:['On stack: 0','On stack: 0 1','On stack: 0 1 2'],cycleNote:'이제 2의 이웃을 확인한다.'},
-      {desc:'2의 이웃 0은 이미 visited이고, 동시에 on_stack[0]도 true다. 즉 back edge 2 → 0을 만나 cycle을 감지한다.',hl:[25,26,34,35],visited:[0,1,2],onstack:[0,1,2],call:[0,1,2],prev:[null,0,1],cycle:[0],current:2,activeEdge:[2,0],cycleEdges:[[2,0]],console:['On stack: 0','On stack: 0 1','On stack: 0 1 2','Cycle detected: 0'],cycleNote:'visited && on_stack 조건이 바로 directed cycle 판정 지점이다.'},
-      {desc:'back edge 2 → 0 과 prev를 기준으로 보면, 학습용 cycle path는 0 → 1 → 2 → 0 으로 이해하는 것이 맞다.',hl:[35,36,37,38,39,40,41,42,43],visited:[0,1,2],onstack:[0,1,2],call:[0,1,2],prev:[null,0,1],cycle:[0,1,0,0],current:2,activeEdge:[2,0],cycleEdges:[[2,0]],console:['On stack: 0','On stack: 0 1','On stack: 0 1 2','Cycle detected: 0'],cycleNote:'아래 패널은 back edge와 prev를 기준으로 정규화한 cycle path를 보여준다.'},
-      {desc:'DetectCycle()는 cycle을 발견했음을 보고 종료한다. 시각화는 이해가 쉬운 cycle path 0 → 1 → 2 → 0 을 표시한다.',hl:[11,12,13,14],visited:[0,1,2],onstack:[0,1,2],call:[0,1,2],prev:[null,0,1],cycle:[0,1,0,0],current:2,activeEdge:[2,0],cycleEdges:[[2,0]],console:['On stack: 0','On stack: 0 1','On stack: 0 1 2','Cycle detected: 0','Cycle detected'],cycleNote:'코드의 raw cycle 저장 문제는 노트에서 설명하고, 시각화는 의미가 분명한 cycle path를 보여준다.'}
+      {desc:'2의 이웃 0은 이미 visited이고, 동시에 on_stack[0]도 true다. 즉 back edge 2 → 0을 만나 cycle을 감지한다. 이 순간 코드가 먼저 cycle.push_back(w)를 실행해서 cycle vector는 [0]이 된다.',hl:[25,26,34,35],visited:[0,1,2],onstack:[0,1,2],call:[0,1,2],prev:[null,0,1],cycle:[0],current:2,activeEdge:[2,0],cycleEdges:[[2,0]],console:['On stack: 0','On stack: 0 1','On stack: 0 1 2','Cycle detected: 0'],cycleBuild:'1) cycle.push_back(w=0)  =>  [0]',cycleNote:'visited && on_stack 조건이 바로 directed cycle 판정 지점이다.'},
+      {desc:'while 루프의 첫 반복이다. current는 2이고 prev[2] = 1 이므로 cycle.push_back(1)이 실행되어 cycle vector는 [0, 1]이 된다.',hl:[35,36,37,38,39,40,41],visited:[0,1,2],onstack:[0,1,2],call:[0,1,2],prev:[null,0,1],cycle:[0,1],current:2,tracePrev:2,traceEdge:[1,2],cycleEdges:[[2,0]],console:['On stack: 0','On stack: 0 1','On stack: 0 1 2','Cycle detected: 0'],cycleBuild:'1) push_back(w=0)  =>  [0]\n2) push_back(prev[2]=1)  =>  [0, 1]',cycleNote:'prev[2]를 따라가며 child 2의 parent인 1이 cycle vector에 추가된다.'},
+      {desc:'while 루프의 두 번째 반복이다. current를 1로 옮긴 뒤 prev[1] = 0 이므로 cycle.push_back(0)이 실행되어 cycle vector는 [0, 1, 0]이 된다.',hl:[38,39,40,41],visited:[0,1,2],onstack:[0,1,2],call:[0,1,2],prev:[null,0,1],cycle:[0,1,0],current:1,tracePrev:1,traceEdge:[0,1],cycleEdges:[[2,0]],console:['On stack: 0','On stack: 0 1','On stack: 0 1 2','Cycle detected: 0'],cycleBuild:'1) push_back(w=0)  =>  [0]\n2) push_back(prev[2]=1)  =>  [0, 1]\n3) push_back(prev[1]=0)  =>  [0, 1, 0]',cycleNote:'여기서 current가 0이 되므로 while(current != w)는 종료된다.'},
+      {desc:'while 종료 후 코드가 마지막으로 cycle.push_back(w)를 한 번 더 실행한다. 그래서 raw cycle vector는 [0, 1, 0, 0]이 된다. 해석 가능한 cycle path는 0 → 1 → 2 → 0 이다.',hl:[11,12,13,14,42],visited:[0,1,2],onstack:[0,1,2],call:[0,1,2],prev:[null,0,1],cycle:[0,1,0,0],cyclePath:[0,1,2,0],current:2,cycleEdges:[[2,0]],console:['On stack: 0','On stack: 0 1','On stack: 0 1 2','Cycle detected: 0','Cycle detected'],cycleBuild:'1) push_back(w=0)  =>  [0]\n2) push_back(prev[2]=1)  =>  [0, 1]\n3) push_back(prev[1]=0)  =>  [0, 1, 0]\n4) push_back(w=0)  =>  [0, 1, 0, 0]',cycleNote:'현재 코드의 raw vector에는 시작 정점 0이 중복으로 들어가므로, 실제 cycle path 해석은 별도로 봐야 한다.'}
     ]
   },
   {
@@ -176,9 +178,11 @@ const CASES = [
       {desc:'1 방문, on_stack은 0 → 2 → 1 이다.',hl:[21,22,23,24],visited:[0,2,1],onstack:[0,2,1],call:[0,2,1],prev:[null,2,0,null,null,null],cycle:[],current:1,activeEdge:null,cycleEdges:[],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2'],cycleNote:'1의 유일한 이웃은 5다.'},
       {desc:'1의 이웃 5는 미방문이므로 prev[5] = 1 을 저장하고 재귀 호출한다.',hl:[25,26,29,30,31,32],visited:[0,2,1],onstack:[0,2,1],call:[0,2,1],prev:[null,2,0,null,null,1],cycle:[],current:1,activeEdge:[1,5],cycleEdges:[],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2'],cycleNote:'이제 5에서 0으로 향하는 간선이 cycle을 만든다.'},
       {desc:'5 방문, on_stack은 0 → 2 → 1 → 5 이다.',hl:[21,22,23,24],visited:[0,2,1,5],onstack:[0,2,1,5],call:[0,2,1,5],prev:[null,2,0,null,null,1],cycle:[],current:5,activeEdge:null,cycleEdges:[],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2','On stack: 0 1 2 5'],cycleNote:'5의 이웃 0은 이미 visited이며 현재 on_stack에도 있다.'},
-      {desc:'5 → 0 은 back edge 이다. visited[0] = true 이면서 on_stack[0] = true 이므로 cycle을 감지한다.',hl:[25,26,34,35],visited:[0,2,1,5],onstack:[0,2,1,5],call:[0,2,1,5],prev:[null,2,0,null,null,1],cycle:[0],current:5,activeEdge:[5,0],cycleEdges:[[5,0]],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2','On stack: 0 1 2 5','Cycle detected: 0'],cycleNote:'directed cycle 판정은 back edge를 만나는 순간이다.'},
-      {desc:'back edge 5 → 0 과 prev를 기준으로 보면, 학습용 cycle path는 0 → 2 → 1 → 5 → 0 이다.',hl:[35,36,37,38,39,40,41,42,43],visited:[0,2,1,5],onstack:[0,2,1,5],call:[0,2,1,5],prev:[null,2,0,null,null,1],cycle:[0,1,2,0,0],current:5,activeEdge:[5,0],cycleEdges:[[5,0]],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2','On stack: 0 1 2 5','Cycle detected: 0'],cycleNote:'아래 패널은 back edge와 prev를 따라 복원한 cycle path를 표시한다.'},
-      {desc:'DetectCycle()는 cycle을 발견했음을 보고 종료한다. 시각화는 이해가 쉬운 cycle path 0 → 2 → 1 → 5 → 0 을 표시한다.',hl:[11,12,13,14],visited:[0,2,1,5],onstack:[0,2,1,5],call:[0,2,1,5],prev:[null,2,0,null,null,1],cycle:[0,1,2,0,0],current:5,activeEdge:[5,0],cycleEdges:[[5,0]],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2','On stack: 0 1 2 5','Cycle detected: 0','Cycle detected'],cycleNote:'코드의 raw cycle 저장 문제는 노트에서 설명하고, 시각화는 의미가 분명한 cycle path를 보여준다.'}
+      {desc:'5 → 0 은 back edge 이다. visited[0] = true 이면서 on_stack[0] = true 이므로 cycle을 감지한다. 코드가 먼저 cycle.push_back(w)를 실행해서 cycle vector는 [0]이 된다.',hl:[25,26,34,35],visited:[0,2,1,5],onstack:[0,2,1,5],call:[0,2,1,5],prev:[null,2,0,null,null,1],cycle:[0],current:5,activeEdge:[5,0],cycleEdges:[[5,0]],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2','On stack: 0 1 2 5','Cycle detected: 0'],cycleBuild:'1) cycle.push_back(w=0)  =>  [0]',cycleNote:'directed cycle 판정은 back edge를 만나는 순간이다.'},
+      {desc:'while 루프의 첫 반복이다. current는 5이고 prev[5] = 1 이므로 cycle.push_back(1)이 실행되어 cycle vector는 [0, 1]이 된다.',hl:[35,36,37,38,39,40,41],visited:[0,2,1,5],onstack:[0,2,1,5],call:[0,2,1,5],prev:[null,2,0,null,null,1],cycle:[0,1],current:5,tracePrev:5,traceEdge:[1,5],cycleEdges:[[5,0]],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2','On stack: 0 1 2 5','Cycle detected: 0'],cycleBuild:'1) push_back(w=0)  =>  [0]\n2) push_back(prev[5]=1)  =>  [0, 1]',cycleNote:'prev[5]를 따라가며 5의 parent인 1이 vector에 들어간다.'},
+      {desc:'while 루프의 두 번째 반복이다. current를 1로 옮기고 prev[1] = 2 를 읽어서 cycle.push_back(2)를 실행하면 cycle vector는 [0, 1, 2]가 된다.',hl:[38,39,40,41],visited:[0,2,1,5],onstack:[0,2,1,5],call:[0,2,1,5],prev:[null,2,0,null,null,1],cycle:[0,1,2],current:1,tracePrev:1,traceEdge:[2,1],cycleEdges:[[5,0]],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2','On stack: 0 1 2 5','Cycle detected: 0'],cycleBuild:'1) push_back(w=0)  =>  [0]\n2) push_back(prev[5]=1)  =>  [0, 1]\n3) push_back(prev[1]=2)  =>  [0, 1, 2]',cycleNote:'이제 current는 2가 되고, 한 번 더 prev를 따라간다.'},
+      {desc:'while 루프의 세 번째 반복이다. current를 2로 옮기고 prev[2] = 0 을 읽어서 cycle.push_back(0)를 실행하면 cycle vector는 [0, 1, 2, 0]이 된다.',hl:[38,39,40,41],visited:[0,2,1,5],onstack:[0,2,1,5],call:[0,2,1,5],prev:[null,2,0,null,null,1],cycle:[0,1,2,0],current:2,tracePrev:2,traceEdge:[0,2],cycleEdges:[[5,0]],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2','On stack: 0 1 2 5','Cycle detected: 0'],cycleBuild:'1) push_back(w=0)  =>  [0]\n2) push_back(prev[5]=1)  =>  [0, 1]\n3) push_back(prev[1]=2)  =>  [0, 1, 2]\n4) push_back(prev[2]=0)  =>  [0, 1, 2, 0]',cycleNote:'여기서 current가 0이 되므로 while(current != w)는 종료된다.'},
+      {desc:'while 종료 후 코드가 마지막으로 cycle.push_back(w)를 한 번 더 실행한다. 그래서 raw cycle vector는 [0, 1, 2, 0, 0]이 된다. 해석 가능한 cycle path는 0 → 2 → 1 → 5 → 0 이다.',hl:[11,12,13,14,42],visited:[0,2,1,5],onstack:[0,2,1,5],call:[0,2,1,5],prev:[null,2,0,null,null,1],cycle:[0,1,2,0,0],cyclePath:[0,2,1,5,0],current:5,cycleEdges:[[5,0]],console:['On stack: 0','On stack: 0 2','On stack: 0 1 2','On stack: 0 1 2 5','Cycle detected: 0','Cycle detected'],cycleBuild:'1) push_back(w=0)  =>  [0]\n2) push_back(prev[5]=1)  =>  [0, 1]\n3) push_back(prev[1]=2)  =>  [0, 1, 2]\n4) push_back(prev[2]=0)  =>  [0, 1, 2, 0]\n5) push_back(w=0)  =>  [0, 1, 2, 0, 0]',cycleNote:'현재 코드의 raw vector에는 시작 정점 0이 중복으로 들어가므로, 실제 cycle path 해석은 별도로 봐야 한다.'}
     ]
   }
 ];
@@ -203,30 +207,6 @@ function buildCode(){
     const html=trimmed.length?colorize(trimmed):'&nbsp;';
     return `<div class="cline" id="cl-${i}"><div class="lnum">${i+1}</div><div class="lcode" style="--indent:${indent}">${html}</div></div>`;
   }).join('');
-}
-function nodeState(id, step){
-  if(step.current===id) return 'current';
-  if(step.cycle.includes(id)) return 'cycle';
-  if(step.onstack.includes(id)) return 'stack';
-  if(step.visited.includes(id)) return 'visited';
-  return 'idle';
-}
-function normalizedCyclePath(step){
-  if (step.cyclePath && step.cyclePath.length) return step.cyclePath;
-  if (!step.activeEdge) return [];
-  const [from, to] = step.activeEdge;
-  if (!step.onstack.includes(to)) return [];
-  const chain = [from];
-  let current = from;
-  let guard = 0;
-  while (current !== to && guard < 100) {
-    current = step.prev[current];
-    if (current === null || current === undefined) return [];
-    chain.push(current);
-    guard++;
-  }
-  if (chain[chain.length - 1] !== to) return [];
-  return chain.slice().reverse().concat(to);
 }
 function buildGraph(){
   const cfg=CASES[caseIndex];
@@ -263,7 +243,7 @@ function renderPrev(step, count){
   for(let i=0;i<count;i++){
     const cell=document.createElement('div'); cell.className='pcell';
     const lab=document.createElement('div'); lab.className='inlabel'; lab.textContent=i;
-    const val=document.createElement('div'); val.className='pval'+(step.prev[i]!==null?' set':'');
+    const val=document.createElement('div'); val.className='pval'+(step.prev[i]!==null?' set':'')+(step.tracePrev===i?' focus':'');
     val.textContent=step.prev[i]===null?'·':step.prev[i];
     cell.appendChild(lab); cell.appendChild(val); wrap.appendChild(cell);
   }
@@ -286,16 +266,18 @@ function renderBoolGrid(targetId, count, activeList, current, cycleList, mode){
 function render(){
   const cfg=CASES[caseIndex];
   const step=cfg.steps[cur];
-  const cyclePath = normalizedCyclePath(step);
+  const cyclePath = step.cyclePath || [];
   document.getElementById('step-counter').textContent=`${cfg.label}  step ${cur+1} / ${cfg.steps.length}`;
   document.getElementById('step-desc').textContent=step.desc;
   document.getElementById('cycle-note').textContent=step.cycleNote;
+  document.getElementById('cycle-build').textContent=step.cycleBuild || 'back edge를 만난 뒤 cycle.push_back(...)가 실행되면 여기에 누적 과정이 표시된다.';
   document.querySelectorAll('.cline').forEach((el,i)=>el.classList.toggle('hl', step.hl.includes(i+1)));
   renderBoolGrid('visited-grid', cfg.nodes.length, step.visited, step.current, cyclePath, 'visited');
   renderBoolGrid('stack-grid', cfg.nodes.length, step.onstack, step.current, cyclePath, 'stack');
   renderPrev(step, cfg.nodes.length);
   document.getElementById('stack-disp').innerHTML = step.call.length ? step.call.map((id,idx)=>`<span class="chip ${idx===step.call.length-1?'chip-cur':'chip-stack'}">${id}</span>`).join('') : '<span class="empty">empty</span>';
-  document.getElementById('cycle-disp').innerHTML = cyclePath.length ? cyclePath.map(v=>`<span class="chip chip-cyc">${v}</span>`).join('') : '<span class="empty">empty</span>';
+  document.getElementById('cycle-disp').innerHTML = step.cycle.length ? step.cycle.map(v=>`<span class="chip chip-cyc">${v}</span>`).join('') : '<span class="empty">empty</span>';
+  document.getElementById('cycle-path-disp').innerHTML = cyclePath.length ? cyclePath.map(v=>`<span class="chip chip-cyc">${v}</span>`).join('') : '<span class="empty">not built yet</span>';
   const clog=document.getElementById('console-log');
   clog.innerHTML = step.console.length ? step.console.map(line=>`<div class="logline">${escapeHtml(line)}</div>`).join('') : '<div class="logline">(no output)</div>';
   cfg.nodes.forEach(id=>{
@@ -309,11 +291,12 @@ function render(){
     const line=document.getElementById(`e-${i}`), arrow=document.getElementById(`a-${i}`);
     const active = step.activeEdge && step.activeEdge[0]===a && step.activeEdge[1]===b;
     const cyc = step.cycleEdges.some(([x,y])=>x===a && y===b);
-    const color = cyc ? '#f09595' : (active ? '#f7b267' : '#585860');
-    const width = cyc ? '2.6' : (active ? '2.3' : '1.6');
-    const opacity = cyc || active ? '1' : '0.45';
+    const trace = step.traceEdge && step.traceEdge[0]===a && step.traceEdge[1]===b;
+    const color = cyc ? '#f09595' : (trace ? '#9b9bea' : (active ? '#f7b267' : '#585860'));
+    const width = cyc ? '2.6' : (trace ? '2.3' : (active ? '2.3' : '1.6'));
+    const opacity = cyc || trace || active ? '1' : '0.45';
     line.setAttribute('stroke',color); line.setAttribute('stroke-width',width); line.setAttribute('opacity',opacity);
-    arrow.setAttribute('fill',color); arrow.setAttribute('stroke',(cyc||active)?color:'none'); arrow.setAttribute('stroke-width',(cyc||active)?'0.8':'0'); arrow.setAttribute('opacity',opacity);
+    arrow.setAttribute('fill',color); arrow.setAttribute('stroke',(cyc||trace||active)?color:'none'); arrow.setAttribute('stroke-width',(cyc||trace||active)?'0.8':'0'); arrow.setAttribute('opacity',opacity);
   });
   document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active', i===cur));
   document.getElementById('prev').disabled = cur===0;
