@@ -17,10 +17,10 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 #step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:38px;line-height:1.6;padding:7px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
 #legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
 .leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}.leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
-#main-content{display:flex;gap:14px;margin:12px 0}
-#graph-panel{flex:0 0 460px;background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:6px}
+#main-content{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px;margin:12px 0}
+#graph-panel{flex:1 1 460px;min-width:min(100%,460px);background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:6px}
 #graph-panel svg{width:100%;display:block}
-#right-panel{flex:1;display:flex;flex-direction:column;gap:8px}
+#right-panel{flex:1 1 400px;min-width:min(100%,400px);display:flex;flex-direction:column;gap:8px}
 .sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
 .slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 #visited-grid,#prev-grid{display:flex;gap:5px;flex-wrap:wrap}
@@ -64,7 +64,7 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 .str{color:#ce9178}
 .op{color:#d4d4d4}
 .cm{color:#6a9955;font-style:italic}
-#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px}.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}.nbtn:hover:not(:disabled){background:#3e3e42}.nbtn:disabled{opacity:.3;cursor:default}
+#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px;flex-wrap:wrap}.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}.nbtn:hover:not(:disabled){background:#3e3e42}.nbtn:disabled{opacity:.3;cursor:default}
 #dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:420px;justify-content:center}.dot{width:6px;height:6px;border-radius:50%;background:#3e3e42;transition:background .2s}.dot.active{background:#858585}
 @media (max-width:980px){#main-content{flex-direction:column}#graph-panel{flex:1 1 auto}}
 </style>

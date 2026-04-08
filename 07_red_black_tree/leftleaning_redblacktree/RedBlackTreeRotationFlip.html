@@ -1,4 +1,9 @@
-﻿
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Red-Black Tree Rotation / FlipColors</title>
 <style>
 #vx{padding:.4rem 0 1.2rem;font-family:system-ui,sans-serif}
 #vx *{box-sizing:border-box}
@@ -14,20 +19,22 @@
 .kw{color:#2563eb}
 </style>
 <link rel="stylesheet" href="../../shared/topological-baseline.css">
+</head>
+<body>
 <div id="vx">
   <div class="vxt">
     <button class="vxtb on" onclick="vxtab(0)">RotateLeft</button>
     <button class="vxtb" onclick="vxtab(1)">RotateRight</button>
     <button class="vxtb" onclick="vxtab(2)">FlipColors</button>
   </div>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
     <span id="vxti" style="font-size:14px;font-weight:500;color:#111"></span>
     <div id="vxdo" style="display:flex;gap:5px"></div>
   </div>
   <div id="vxcd" class="vxcd"></div>
   <svg id="vxsv" class="vxsv" width="100%" viewBox="0 0 680 320"></svg>
   <div id="vxde" class="vxde"></div>
-  <div style="display:flex;gap:8px;align-items:center">
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <button id="vxpb" onclick="vxprev()" style="padding:6px 14px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:13px">← Prev</button>
     <button id="vxnb" onclick="vxnext()" style="padding:6px 14px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:13px">Next →</button>
     <span id="vxci" style="font-size:12px;color:#aaa;margin-left:2px"></span>
@@ -306,4 +313,5 @@ render(false);
 
 
 <script src="../../shared/viewer-controls.js"></script>
-
+</body>
+</html>

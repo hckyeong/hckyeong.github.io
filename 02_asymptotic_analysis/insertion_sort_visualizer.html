@@ -1,4 +1,9 @@
-﻿
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Insertion Sort Visualizer</title>
 <style>
   .cell { display:inline-flex; flex-direction:column; align-items:center; margin:2px; }
   .box { width:46px; height:46px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:monospace; font-size:14px; font-weight:600; border:1px solid var(--color-border-secondary); background:var(--color-background-secondary); color:var(--color-text-primary); transition:background 0.2s, color 0.2s, border-color 0.2s; }
@@ -16,9 +21,16 @@
   .progress-fill { height:100%; background:#378ADD; border-radius:2px; transition:width 0.3s; }
   .sec-label { font-size:11px; color:var(--color-text-secondary); margin-bottom:4px; font-weight:500; }
   .legend-dot { width:12px; height:12px; border-radius:3px; display:inline-block; margin-right:4px; vertical-align:middle; }
+  @media (max-width: 430px) {
+    .controls-row { display:grid !important; grid-template-columns:1fr 1fr; gap:8px !important; align-items:stretch !important; }
+    .controls-row .btn { width:100% !important; }
+    .legend-row { display:grid !important; grid-template-columns:1fr 1fr; gap:8px 12px !important; }
+    .legend-row span { min-width:0; }
+  }
 </style>
 <link rel="stylesheet" href="../shared/topological-baseline.css">
-
+</head>
+<body>
 <div style="padding:1rem 0;">
   <div style="font-size:15px; font-weight:500; color:var(--color-text-primary); margin-bottom:2px;">Insertion Sort 시각화</div>
   <div style="font-size:12px; color:var(--color-text-secondary); margin-bottom:12px)">예시 배열: [5, 3, 8, 1, 9, 2, 7, 4]</div>
@@ -33,13 +45,13 @@
   <div class="explain-box" id="explain"></div>
 
   <!-- key value display -->
-  <div style="display:flex; align-items:center; gap:16px; margin-bottom:10px; font-size:13px;">
+  <div style="display:flex; align-items:center; gap:16px; margin-bottom:10px; font-size:13px; flex-wrap:wrap;">
     <div style="color:var(--color-text-secondary);">key =</div>
     <div id="key-box" style="width:46px; height:46px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:monospace; font-size:14px; font-weight:600; background:#FAC775; color:#633806; border:1px solid #BA7517;">-</div>
     <div id="j-info" style="font-size:12px; color:var(--color-text-secondary);"></div>
   </div>
 
-  <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+  <div class="controls-row" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:8px; align-items:stretch;">
     <button class="btn primary" onclick="prev()">◀ 이전</button>
     <button class="btn primary" onclick="next()">다음 ▶</button>
     <button class="btn" onclick="autoPlay()" id="auto-btn">▶ 자동 재생</button>
@@ -47,7 +59,7 @@
     <span style="font-size:12px; color:var(--color-text-secondary);" id="step-counter"></span>
   </div>
 
-  <div style="display:flex; gap:12px; flex-wrap:wrap; font-size:11px; color:var(--color-text-secondary); align-items:center; margin-top:10px;">
+  <div class="legend-row" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px 12px; font-size:11px; color:var(--color-text-secondary); align-items:center; margin-top:10px;">
     <span><span class="legend-dot" style="background:#C0DD97;"></span>정렬된 구간</span>
     <span><span class="legend-dot" style="background:#FAC775;"></span>key (뽑은 값)</span>
     <span><span class="legend-dot" style="background:#F4C0D1;"></span>오른쪽으로 이동 중</span>
@@ -191,4 +203,5 @@ render();
 
 
 <script src="../shared/viewer-controls.js"></script>
-
+</body>
+</html>

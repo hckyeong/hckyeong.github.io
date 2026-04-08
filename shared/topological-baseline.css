@@ -446,7 +446,8 @@ pre .line.active,
   bottom: 14px;
   z-index: 9999;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
   padding: 8px 10px;
   background: rgba(37, 37, 38, 0.92);
@@ -457,6 +458,20 @@ pre .line.active,
   line-height: 1.2;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(6px);
+}
+
+#viewer-hotkeys .vh-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#viewer-hotkeys .vh-nav-row {
+  justify-content: stretch;
+}
+
+#viewer-hotkeys .vh-scale-row {
+  justify-content: space-between;
 }
 
 #viewer-hotkeys .vh-btn {
@@ -471,6 +486,22 @@ pre .line.active,
   border-radius: 4px;
   color: var(--text);
   cursor: pointer;
+  width: auto !important;
+  max-width: none !important;
+  white-space: nowrap;
+}
+
+#viewer-hotkeys .vh-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+#viewer-hotkeys .vh-nav-btn {
+  flex: 1 1 0;
+  min-width: 72px;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
 #viewer-hotkeys .vh-scale {
@@ -508,4 +539,165 @@ pre .line.active,
 .folder-body::-webkit-scrollbar-thumb {
   background: #3e3e42;
   border-radius: 999px;
+}
+
+@media (max-width: 430px) {
+  html,
+  body {
+    width: 100%;
+    min-width: 0;
+  }
+
+  body {
+    padding: 12px !important;
+    overflow-x: auto !important;
+  }
+
+  .page,
+  .wrap,
+  .layout,
+  #main-content,
+  .main,
+  #graph-panel,
+  #right-panel,
+  .p-graph,
+  .p-code,
+  .p-state,
+  .top-grid,
+  .chapter-body,
+  .folder-body {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #main-content,
+  .main,
+  .top-grid,
+  .vxt,
+  .step-controls,
+  .controls,
+  .bottom-bar,
+  .top-bar,
+  #nav {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  #graph-panel,
+  #right-panel,
+  .p-graph,
+  .p-code,
+  .p-state,
+  .code-box,
+  .state-box,
+  .sbox,
+  .panel,
+  .card {
+    flex: 1 1 auto !important;
+  }
+
+  .chapter-summary,
+  .folder-summary,
+  .summary-left {
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+  }
+
+  .summary-title {
+    font-size: 17px !important;
+  }
+
+  h1 {
+    font-size: 18px !important;
+    line-height: 1.35 !important;
+  }
+
+  svg,
+  svg#sv,
+  svg#vxsv,
+  svg#gsvg,
+  svg#tree,
+  svg#treeSvg {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 48vh !important;
+  }
+
+  #code-panel,
+  #codebox,
+  .code-box,
+  pre {
+    max-width: 100% !important;
+    overflow: auto !important;
+  }
+
+  #code-body,
+  .panel-body,
+  .code-body {
+    max-height: 42vh !important;
+  }
+
+  .log {
+    overflow-x: auto !important;
+  }
+
+  .log-table,
+  .log table {
+    min-width: 560px !important;
+  }
+
+  #viewer-hotkeys {
+    right: 8px;
+    bottom: 8px;
+    gap: 6px;
+    padding: 8px;
+    min-width: 188px;
+  }
+
+  #viewer-hotkeys .vh-row {
+    gap: 6px;
+  }
+
+  #viewer-hotkeys .vh-nav-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #viewer-hotkeys .vh-nav-btn {
+    height: 34px;
+    min-width: 0;
+    width: 100% !important;
+  }
+
+  #viewer-hotkeys .vh-hint {
+    display: none;
+  }
+
+  button,
+  .btn,
+  .nbtn,
+  .vxtb,
+  #pb,
+  #nb,
+  #t0,
+  #t1,
+  #vxpb,
+  #vxnb,
+  #btn-prev,
+  #btn-next,
+  #btn-reset {
+    width: 100% !important;
+    max-width: 100% !important;
+    white-space: normal !important;
+  }
+
+  #dots,
+  #vxdo,
+  .links {
+    max-width: 100% !important;
+    flex-wrap: wrap !important;
+  }
 }

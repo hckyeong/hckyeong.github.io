@@ -1,4 +1,9 @@
-﻿
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Roman Numeral Visualization</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:var(--font-sans);}
@@ -6,7 +11,7 @@ body{font-family:var(--font-sans);}
 h1{font-size:18px;font-weight:500;color:var(--color-text-primary);margin-bottom:0.25rem;}
 .sub{font-size:13px;color:var(--color-text-secondary);margin-bottom:1.5rem;}
 
-.top-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;}
+.top-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:1rem;margin-bottom:1.5rem;align-items:start;}
 
 .code-box{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem;font-family:var(--font-mono);font-size:12px;line-height:1.9;color:var(--color-text-secondary);}
 .code-line{padding:0 6px;border-radius:4px;transition:background 0.2s;}
@@ -25,7 +30,7 @@ h1{font-size:18px;font-weight:500;color:var(--color-text-primary);margin-bottom:
 .char-box.done{background:var(--color-background-secondary);color:var(--color-text-secondary);}
 .char-val{font-size:10px;color:var(--color-text-secondary);}
 
-.vars{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;}
+.vars{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:1rem;}
 .var-card{background:var(--color-background-secondary);border-radius:6px;padding:8px 10px;}
 .var-label{font-size:11px;color:var(--color-text-secondary);margin-bottom:2px;}
 .var-value{font-size:18px;font-weight:500;color:var(--color-text-primary);}
@@ -40,7 +45,7 @@ h1{font-size:18px;font-weight:500;color:var(--color-text-primary);margin-bottom:
 .ans-bar-track{background:var(--color-background-secondary);border-radius:99px;height:8px;overflow:hidden;}
 .ans-bar-fill{height:8px;border-radius:99px;background:#185FA5;transition:width 0.4s;}
 
-.step-controls{display:flex;align-items:center;gap:10px;margin-bottom:1rem;}
+.step-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:1rem;}
 button{background:transparent;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:6px 16px;font-size:13px;color:var(--color-text-primary);cursor:pointer;}
 button:hover{background:var(--color-background-secondary);}
 button:disabled{opacity:0.35;cursor:default;}
@@ -57,7 +62,8 @@ button:disabled{opacity:0.35;cursor:default;}
 .op-add{color:#0F6E56;font-weight:500;}
 </style>
 <link rel="stylesheet" href="../shared/topological-baseline.css">
-
+</head>
+<body>
 <div class="wrap">
 <h1>RomanToInt("MCMXCIV") 단계별 실행</h1>
 <p class="sub">결과: MCMXCIV = 1994 &nbsp;|&nbsp; 총 7단계 (i = 0 ~ 6)</p>
@@ -192,11 +198,11 @@ function render(){
     highlight(['cl-for','cl-else','cl-add']);
   } else if(st.isSub){
     db.className='decision sub-d';
-    db.textContent = `${st.cur} < ${st.nxt} ✅ → ans -= ${st.cur} → ${st.prevAns} - ${st.cur} = ${st.ans}`;
+    db.textContent = `${st.cur} < ${st.nxt} ? → ans -= ${st.cur} → ${st.prevAns} - ${st.cur} = ${st.ans}`;
     highlight(['cl-for','cl-if','cl-sub']);
   } else {
     db.className='decision add-d';
-    db.textContent = `${st.cur} < ${st.nxt} ❌ → ans += ${st.cur} → ${st.prevAns} + ${st.cur} = ${st.ans}`;
+    db.textContent = `${st.cur} < ${st.nxt} ? → ans += ${st.cur} → ${st.prevAns} + ${st.cur} = ${st.ans}`;
     highlight(['cl-for','cl-if','cl-else','cl-add']);
   }
 
@@ -220,4 +226,5 @@ render();
 
 
 <script src="../shared/viewer-controls.js"></script>
-
+</body>
+</html>

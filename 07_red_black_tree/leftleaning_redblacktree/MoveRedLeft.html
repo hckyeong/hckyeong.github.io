@@ -1,8 +1,15 @@
-﻿<link rel="stylesheet" href="../../shared/topological-baseline.css">
-
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MoveRedLeft Visualization</title>
+<link rel="stylesheet" href="../../shared/topological-baseline.css">
+</head>
+<body>
 <div style="padding:0.75rem 0;font-family:sans-serif;">
 
-<div style="display:flex;gap:6px;justify-content:center;margin-bottom:14px;">
+<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;">
   <button id="t0" onclick="sw(0)" style="padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;border:0.5px solid #888;background:#dde4f0;color:#1a3a6b;font-weight:500;">Case 1: 형제 = 2-노드 (FlipColors만)</button>
   <button id="t1" onclick="sw(1)" style="padding:7px 18px;border-radius:8px;cursor:pointer;font-size:13px;border:0.5px solid #ccc;background:transparent;color:#666;">Case 2: 형제 = 3-노드 (Borrow)</button>
 </div>
@@ -18,7 +25,7 @@
 <div style="text-align:center;margin:2px 0 10px;"><span id="sd" style="font-size:12px;color:#555;max-width:540px;display:inline-block;"></span></div>
 
 <div style="display:flex;gap:5px;justify-content:center;margin:5px 0;" id="dots"></div>
-<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:6px 0;">
+<div style="display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;margin:6px 0;">
   <button id="pb" onclick="nav(-1)" style="padding:7px 24px;border-radius:8px;cursor:pointer;font-size:13px;border:0.5px solid #888;background:transparent;color:#111;">← 이전</button>
   <span id="sl" style="font-size:12px;color:#666;min-width:50px;text-align:center;"></span>
   <button id="nb" onclick="nav(1)" style="padding:7px 24px;border-radius:8px;cursor:pointer;font-size:13px;border:0.5px solid #888;background:transparent;color:#111;">다음 →</button>
@@ -355,4 +362,5 @@ sw(0);
 
 
 <script src="../../shared/viewer-controls.js"></script>
-
+</body>
+</html>

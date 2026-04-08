@@ -1,7 +1,8 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>QueueBasedTopologicalSort 시각화</title>
 <link rel="stylesheet" href="../shared/topological-baseline.css">
 <style>
@@ -14,10 +15,10 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 #legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
 .leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
 .leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
-#main-content{display:flex;gap:14px;margin:12px 0}
-#graph-panel{flex:0 0 460px;background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:6px}
+#main-content{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px;margin:12px 0}
+#graph-panel{flex:1 1 460px;min-width:min(100%,460px);background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:6px}
 #graph-panel svg{width:100%;display:block}
-#right-panel{flex:1;display:flex;flex-direction:column;gap:8px}
+#right-panel{flex:1 1 400px;min-width:min(100%,400px);display:flex;flex-direction:column;gap:8px}
 .sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
 .slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 #indegree-grid{display:flex;gap:5px;flex-wrap:wrap}
@@ -40,17 +41,17 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 .lnum{width:36px;text-align:right;padding-right:12px;color:#444;font-size:11px;user-select:none;flex-shrink:0}
 .lcode{font-size:12px;white-space:pre;color:#d4d4d4}
 .kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.cm{color:#6a9955;font-style:italic}.op{color:#d4d4d4}
-#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px}
+#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px;flex-wrap:wrap}
 .nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
 .nbtn:hover:not(:disabled){background:#3e3e42}
 .nbtn:disabled{opacity:.3;cursor:default}
-#dots{display:flex;gap:5px;align-items:center}
+#dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:420px;justify-content:center}
 .dot{width:6px;height:6px;border-radius:50%;background:#3e3e42;transition:background .2s}
 .dot.active{background:#858585}
 </style>
 </head>
 <body>
-<h1>QueueBasedTopologicalSort — 단계별 실행 시각화</h1>
+<h1>QueueBasedTopologicalSort - 단계별 실행 시각화</h1>
 <div id="step-counter"></div>
 <div id="step-desc"></div>
 
@@ -88,7 +89,7 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
       <div class="chips" id="rdisp"></div>
     </div>
     <div class="sbox" id="sbox" style="display:none">
-      <div class="slabel">Stack (top → bottom) — 최종 출력 순서</div>
+      <div class="slabel">Stack (top → bottom) - 최종 출력 순서</div>
       <div class="chips" id="sdisp"></div>
     </div>
   </div>
@@ -140,9 +141,9 @@ const LINES = [
 // ns: nodeState, id: indegree, q: queue, r: result, s: stack, hl: highlight lines, ae: active edge indices
 const STEPS = [
   {
-    desc:'초기 상태 — indegree 벡터를 vertices 크기(6)만큼 0으로 초기화합니다.',
+    desc:'초기 상태 - indegree 벡터를 vertices 크기(6)만큼 0으로 초기화합니다.',
     ns:{0:'idle',1:'idle',2:'idle',3:'idle',4:'idle',5:'idle'},
-    id:['?','?','?','?','?','?'],q:[],r:[],s:null,
+    id:[0,0,0,0,0,0],q:[],r:[],s:null,
     hl:[1],ae:[]
   },
   {
@@ -164,25 +165,25 @@ const STEPS = [
     hl:[10,11,12,13,14,15,16],ae:[3,4]
   },
   {
-    desc:'5 꺼냄 → result 추가. 5→2: indegree[2]=1, 5→0: indegree[0]=0 ✅ → 0 큐 추가',
+    desc:'5 꺼냄 → result 추가. 5→2: indegree[2]=1, 5→0: indegree[0]=0 → 0 큐 추가',
     ns:{0:'queued',1:'idle',2:'modified',3:'idle',4:'visited',5:'current'},
     id:[0,1,1,1,0,0],q:[0],r:[4,5],s:null,
     hl:[10,11,12,13,14,15,16],ae:[0,1]
   },
   {
-    desc:'0 꺼냄 → result 추가. 0→2: indegree[2]=0 ✅ → 2 큐 추가',
+    desc:'0 꺼냄 → result 추가. 0→2: indegree[2]=0 → 2 큐 추가',
     ns:{0:'current',1:'idle',2:'queued',3:'idle',4:'visited',5:'visited'},
     id:[0,1,0,1,0,0],q:[2],r:[4,5,0],s:null,
     hl:[10,11,12,13,14,15,16],ae:[2]
   },
   {
-    desc:'2 꺼냄 → result 추가. 2→3: indegree[3]=0 ✅ → 3 큐 추가',
+    desc:'2 꺼냄 → result 추가. 2→3: indegree[3]=0 → 3 큐 추가',
     ns:{0:'visited',1:'idle',2:'current',3:'queued',4:'visited',5:'visited'},
     id:[0,1,0,0,0,0],q:[3],r:[4,5,0,2],s:null,
     hl:[10,11,12,13,14,15,16],ae:[5]
   },
   {
-    desc:'3 꺼냄 → result 추가. 3→1: indegree[1]=0 ✅ → 1 큐 추가',
+    desc:'3 꺼냄 → result 추가. 3→1: indegree[1]=0 → 1 큐 추가',
     ns:{0:'visited',1:'queued',2:'visited',3:'current',4:'visited',5:'visited'},
     id:[0,0,0,0,0,0],q:[1],r:[4,5,0,2,3],s:null,
     hl:[10,11,12,13,14,15,16],ae:[6]
@@ -194,7 +195,7 @@ const STEPS = [
     hl:[10,11,12,17],ae:[]
   },
   {
-    desc:'위상정렬 완료! ✅  result를 역순으로 stack에 저장. 출력: 4 → 5 → 0 → 2 → 3 → 1',
+    desc:'위상정렬 완료 - result를 역순으로 stack에 저장. 출력: 4 → 5 → 0 → 2 → 3 → 1',
     ns:{0:'visited',1:'visited',2:'visited',3:'visited',4:'visited',5:'visited'},
     id:[0,0,0,0,0,0],q:[],r:[4,5,0,2,3,1],s:[4,5,0,2,3,1],
     hl:[18,19,20,21],ae:[]
@@ -376,4 +377,6 @@ buildSVG();buildCode();buildDots();render();
 <script src="../shared/viewer-controls.js"></script>
 </body>
 </html>
+
+
 

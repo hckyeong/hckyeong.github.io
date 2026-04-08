@@ -15,10 +15,10 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 #legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
 .leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
 .leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
-#main-content{display:flex;gap:14px;margin:12px 0}
-#graph-panel{flex:0 0 460px;background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:6px}
+#main-content{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px;margin:12px 0}
+#graph-panel{flex:1 1 460px;min-width:min(100%,460px);background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:6px}
 #graph-panel svg{width:100%;display:block}
-#right-panel{flex:1;display:flex;flex-direction:column;gap:8px}
+#right-panel{flex:1 1 400px;min-width:min(100%,400px);display:flex;flex-direction:column;gap:8px}
 .sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
 .slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 #visited-grid{display:flex;gap:5px;flex-wrap:wrap}

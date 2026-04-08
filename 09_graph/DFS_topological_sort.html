@@ -1,7 +1,8 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DFS Topological Sort 시각화</title>
 <link rel="stylesheet" href="../shared/topological-baseline.css">
 <style>
@@ -14,10 +15,10 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 #legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
 .leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
 .leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
-#main-content{display:flex;gap:14px;margin:12px 0}
-#graph-panel{flex:0 0 460px;background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:6px}
+#main-content{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px;margin:12px 0}
+#graph-panel{flex:1 1 460px;min-width:min(100%,460px);background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:6px}
 #graph-panel svg{width:100%;display:block}
-#right-panel{flex:1;display:flex;flex-direction:column;gap:8px}
+#right-panel{flex:1 1 400px;min-width:min(100%,400px);display:flex;flex-direction:column;gap:8px}
 .sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
 .slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 #indegree-grid{display:flex;gap:5px;flex-wrap:wrap}
@@ -40,7 +41,7 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 .lnum{width:36px;text-align:right;padding-right:12px;color:#444;font-size:11px;user-select:none;flex-shrink:0}
 .lcode{font-size:12px;white-space:pre;color:#d4d4d4}
 .kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.cm{color:#6a9955;font-style:italic}.op{color:#d4d4d4}
-#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px}
+#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px;flex-wrap:wrap}
 .nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
 .nbtn:hover:not(:disabled){background:#3e3e42}
 .nbtn:disabled{opacity:.3;cursor:default}
@@ -425,4 +426,6 @@ render();
 <script src="../shared/viewer-controls.js"></script>
 </body>
 </html>
+
+
 
