@@ -28,7 +28,7 @@
     return null;
   }
 
-  function findByText(regex) {
+  function findByAsciiText(regex) {
     const buttons = Array.from(document.querySelectorAll('button, [role="button"], input[type="button"]'));
     return buttons.find((el) => regex.test((el.textContent || el.value || '').trim())) || null;
   }
@@ -40,31 +40,19 @@
   }
 
   function getNextTarget() {
-    return (
-      findByIds(['next', 'bn', 'nb', 'btn-next']) ||
-      findByText(/다음|next/i)
-    );
+    return findByIds(['next', 'bn', 'nb', 'btn-next', 'vxnb']) || findByAsciiText(/\bnext\b/i);
   }
 
   function getPrevTarget() {
-    return (
-      findByIds(['prev', 'bp', 'pb', 'btn-prev']) ||
-      findByText(/이전|prev/i)
-    );
+    return findByIds(['prev', 'bp', 'pb', 'btn-prev', 'vxpb']) || findByAsciiText(/\bprev\b/i);
   }
 
   function getResetTarget() {
-    return (
-      findByIds(['reset', 'btn-reset']) ||
-      findByText(/처음|초기화|reset/i)
-    );
+    return findByIds(['reset', 'btn-reset']) || findByAsciiText(/\breset\b/i);
   }
 
   function getPlayTarget() {
-    return (
-      findByIds(['play', 'auto-btn']) ||
-      findByText(/자동|재생|일시정지|play|pause/i)
-    );
+    return findByIds(['play', 'auto-btn']) || findByAsciiText(/\b(play|pause|auto)\b/i);
   }
 
   function goNext() {
@@ -89,6 +77,7 @@
     scale = clampScale(nextScale);
     document.documentElement.style.setProperty('--viewer-scale', String(scale));
     window.localStorage.setItem(SCALE_KEY, String(scale));
+
     const label = document.querySelector('#viewer-hotkeys .vh-scale');
     if (label) label.textContent = `${Math.round(scale * 100)}%`;
   }
@@ -107,43 +96,72 @@
     if (nextButton) nextButton.disabled = !nextTarget || !!nextTarget.disabled;
   }
 
+  function makeButton(className, text, onClick) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.textContent = text;
+    button.addEventListener('click', function () {
+      onClick();
+      window.setTimeout(syncOverlayButtons, 0);
+    });
+    return button;
+  }
+
   function injectOverlay() {
     if (document.getElementById('viewer-hotkeys')) return;
 
     const wrap = document.createElement('div');
     wrap.id = 'viewer-hotkeys';
-    wrap.innerHTML = [
-      '<div class="vh-row vh-nav-row">',
-      '<button class="vh-btn vh-nav-btn" type="button" data-action="prev">← 이전</button>',
-      '<button class="vh-btn vh-nav-btn" type="button" data-action="next">다음 →</button>',
-      '</div>',
-      '<div class="vh-row vh-scale-row">',
-      '<button class="vh-btn" type="button" data-scale="-1">A-</button>',
-      '<div class="vh-scale">100%</div>',
-      '<button class="vh-btn" type="button" data-scale="1">A+</button>',
-      '</div>',
-      '<div class="vh-hint">←/→ 이동 · Home 처음 · Space 재생</div>'
-    ].join('');
+
+    const navRow = document.createElement('div');
+    navRow.className = 'vh-row vh-nav-row';
+
+    const prevButton = makeButton('vh-btn vh-nav-btn', 'Prev / 이전', goPrev);
+    prevButton.setAttribute('data-action', 'prev');
+
+    const nextButton = makeButton('vh-btn vh-nav-btn', 'Next / 다음', goNext);
+    nextButton.setAttribute('data-action', 'next');
+
+    navRow.appendChild(prevButton);
+    navRow.appendChild(nextButton);
+
+    const scaleRow = document.createElement('div');
+    scaleRow.className = 'vh-row vh-scale-row';
+
+    const downButton = makeButton('vh-btn', 'A-', function () {
+      applyScale(scale - STEP);
+    });
+    downButton.setAttribute('data-scale', '-1');
+
+    const scaleLabel = document.createElement('div');
+    scaleLabel.className = 'vh-scale';
+    scaleLabel.textContent = '100%';
+
+    const upButton = makeButton('vh-btn', 'A+', function () {
+      applyScale(scale + STEP);
+    });
+    upButton.setAttribute('data-scale', '1');
+
+    scaleRow.appendChild(downButton);
+    scaleRow.appendChild(scaleLabel);
+    scaleRow.appendChild(upButton);
+
+    const hint = document.createElement('div');
+    hint.className = 'vh-hint';
+    hint.textContent = 'Arrow 이동 · Home 처음 · Space 재생';
+
+    wrap.appendChild(navRow);
+    wrap.appendChild(scaleRow);
+    wrap.appendChild(hint);
     document.body.appendChild(wrap);
 
-    wrap.addEventListener('click', function (event) {
-      const actionButton = event.target.closest('[data-action]');
-      if (actionButton) {
-        const action = actionButton.getAttribute('data-action');
-        if (action === 'prev') goPrev();
-        if (action === 'next') goNext();
-        window.setTimeout(syncOverlayButtons, 0);
-        return;
-      }
-
-      const scaleButton = event.target.closest('[data-scale]');
-      if (!scaleButton) return;
-      const dir = parseInt(scaleButton.getAttribute('data-scale'), 10);
-      if (!Number.isFinite(dir)) return;
-      applyScale(scale + dir * STEP);
-    });
-
     window.setTimeout(syncOverlayButtons, 0);
+  }
+
+  function init() {
+    applyScale(scale);
+    injectOverlay();
   }
 
   document.addEventListener('keydown', function (event) {
@@ -201,12 +219,17 @@
     }
   });
 
-  document.addEventListener('click', function () {
-    window.setTimeout(syncOverlayButtons, 0);
-  }, true);
+  document.addEventListener(
+    'click',
+    function () {
+      window.setTimeout(syncOverlayButtons, 0);
+    },
+    true
+  );
 
-  document.addEventListener('DOMContentLoaded', function () {
-    applyScale(scale);
-    injectOverlay();
-  });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
