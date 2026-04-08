@@ -230,6 +230,8 @@ function buildSVG() {
     const ar=document.createElementNS(SVG,'polygon');
     ar.setAttribute('points',`${x2},${y2} ${bx+anx},${by+any} ${bx-anx},${by-any}`);
     ar.setAttribute('fill','#585860');
+    ar.setAttribute('stroke','none');
+    ar.setAttribute('stroke-width','0');
     ar.setAttribute('opacity','0.4');
     ar.id='a'+idx;
     eg.appendChild(ar);
@@ -305,13 +307,19 @@ function render() {
     const el=document.getElementById('e'+i);
     const ar=document.getElementById('a'+i);
     const ll=document.getElementById('el'+i);
+    const edgeColor = active ? '#f7b267' : '#585860';
     if(el){
-      el.setAttribute('stroke',active?'#858585':'#585860');
-      el.setAttribute('stroke-width',active?'2':'1.5');
+      el.setAttribute('stroke',edgeColor);
+      el.setAttribute('stroke-width',active?'2.2':'1.5');
       el.setAttribute('opacity',active?'1':'0.4');
     }
-    if(ar){ar.setAttribute('fill',active?'#858585':'#585860');ar.setAttribute('opacity',active?'1':'0.4');}
-    if(ll){ll.setAttribute('fill',active?'#858585':'#585860');}
+    if(ar){
+      ar.setAttribute('fill',edgeColor);
+      ar.setAttribute('stroke',active?'#ffd59a':'none');
+      ar.setAttribute('stroke-width',active?'0.9':'0');
+      ar.setAttribute('opacity',active?'1':'0.4');
+    }
+    if(ll){ll.setAttribute('fill',edgeColor);}
   });
 
   // indegree grid

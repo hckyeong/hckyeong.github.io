@@ -329,6 +329,8 @@ function buildSVG(){
     const arrow=document.createElementNS(SVG,'polygon');
     arrow.setAttribute('points',`${x2},${y2} ${bx+anx},${by+any} ${bx-anx},${by-any}`);
     arrow.setAttribute('fill','#555');
+    arrow.setAttribute('stroke','none');
+    arrow.setAttribute('stroke-width','0');
     arrow.id='a-'+a+'-'+b;
     eg.appendChild(arrow);
   });
@@ -370,7 +372,13 @@ function render(){
     else if (step.activeEdge === edgeKey(a,b)) { stroke='#f7b267'; width='2.2'; }
     else if (step.prev[g.nodes.indexOf(b)] === a) { stroke='#9b9bea'; width='1.9'; }
     line.setAttribute('stroke', stroke); line.setAttribute('stroke-width', width);
-    if (arrow) arrow.setAttribute('fill', stroke);
+    if (arrow) {
+      const emphasized = stroke !== '#555';
+      arrow.setAttribute('fill', stroke);
+      arrow.setAttribute('stroke', emphasized ? stroke : 'none');
+      arrow.setAttribute('stroke-width', emphasized ? '0.9' : '0');
+      arrow.setAttribute('opacity', emphasized ? '1' : '0.7');
+    }
   });
 
   document.getElementById('qdisp').innerHTML = step.queue.length ? step.queue.map(v => `<span class="chip chip-q">${v}</span>`).join('') : '<span class="empty">empty</span>';

@@ -579,6 +579,8 @@ function ensureArrowheads(){
     poly.id=id+'-arrow';
     poly.setAttribute('points',arrowPointsForLine(line));
     poly.setAttribute('fill','#555');
+    poly.setAttribute('stroke','none');
+    poly.setAttribute('stroke-width','0');
     poly.setAttribute('pointer-events','none');
     group.appendChild(poly);
   });
@@ -628,13 +630,23 @@ function render(){
     var ar=document.getElementById(id+'-arrow');
     if(s.eg[id]){
       el.setAttribute('stroke',s.eg[id]);el.setAttribute('stroke-width','2.5');
-      if(ar) ar.setAttribute('fill',s.eg[id]);
+      if(ar){
+        ar.setAttribute('fill',s.eg[id]);
+        ar.setAttribute('stroke',s.eg[id]);
+        ar.setAttribute('stroke-width','0.9');
+        ar.setAttribute('opacity','1');
+      }
     }
     else{
       var def = '#555';
       var dw = '1.1';
       el.setAttribute('stroke',def);el.setAttribute('stroke-width',dw);
-      if(ar) ar.setAttribute('fill',def);
+      if(ar){
+        ar.setAttribute('fill',def);
+        ar.setAttribute('stroke','none');
+        ar.setAttribute('stroke-width','0');
+        ar.setAttribute('opacity','0.7');
+      }
     }
   });
 

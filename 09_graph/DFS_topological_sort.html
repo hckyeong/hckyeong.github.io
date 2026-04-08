@@ -274,6 +274,8 @@ function buildSVG() {
     const ar=document.createElementNS(SVG,'polygon');
     ar.setAttribute('points',`${x2},${y2} ${bx+anx},${by+any} ${bx-anx},${by-any}`);
     ar.setAttribute('fill','#585860');
+    ar.setAttribute('stroke','none');
+    ar.setAttribute('stroke-width','0');
     ar.setAttribute('opacity','0.4');
     ar.id='a'+idx;
     eg.appendChild(ar);
@@ -388,7 +390,12 @@ function render() {
       el.setAttribute('stroke-width', active ? '2.2' : '1.5');
       el.setAttribute('opacity', active ? '1' : '0.4');
     }
-    if (ar) { ar.setAttribute('fill', active ? '#f0d87a' : '#585860'); ar.setAttribute('opacity', active ? '1' : '0.4'); }
+    if (ar) {
+      ar.setAttribute('fill', active ? '#f0d87a' : '#585860');
+      ar.setAttribute('stroke', active ? '#fff0b3' : 'none');
+      ar.setAttribute('stroke-width', active ? '0.9' : '0');
+      ar.setAttribute('opacity', active ? '1' : '0.4');
+    }
     if (ll) ll.setAttribute('fill', active ? '#f0d87a' : '#585860');
   });
 
