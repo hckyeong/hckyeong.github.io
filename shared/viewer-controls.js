@@ -1,5 +1,4 @@
 (function () {
-  const SCALE_KEY = 'dsv_viewer_scale';
   const MIN_SCALE = 0.7;
   const MAX_SCALE = 1.8;
   const STEP = 0.1;
@@ -14,8 +13,24 @@
     return Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.round(value * 100) / 100));
   }
 
+  function readStorage(key) {
+    try {
+      return window.localStorage.getItem(key);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function writeStorage(key, value) {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch (error) {
+      return;
+    }
+  }
+
   function getScale() {
-    const raw = window.localStorage.getItem(SCALE_KEY);
+    const raw = readStorage('dsv_viewer_scale');
     const parsed = raw ? parseFloat(raw) : 1;
     return Number.isFinite(parsed) ? clampScale(parsed) : 1;
   }
@@ -76,10 +91,7 @@
   function applyScale(nextScale) {
     scale = clampScale(nextScale);
     document.documentElement.style.setProperty('--viewer-scale', String(scale));
-    window.localStorage.setItem(SCALE_KEY, String(scale));
-
-    const label = document.querySelector('#viewer-hotkeys .vh-scale');
-    if (label) label.textContent = `${Math.round(scale * 100)}%`;
+    writeStorage('dsv_viewer_scale', String(scale));
   }
 
   function syncOverlayButtons() {
@@ -126,33 +138,11 @@
     navRow.appendChild(prevButton);
     navRow.appendChild(nextButton);
 
-    const scaleRow = document.createElement('div');
-    scaleRow.className = 'vh-row vh-scale-row';
-
-    const downButton = makeButton('vh-btn', 'A-', function () {
-      applyScale(scale - STEP);
-    });
-    downButton.setAttribute('data-scale', '-1');
-
-    const scaleLabel = document.createElement('div');
-    scaleLabel.className = 'vh-scale';
-    scaleLabel.textContent = '100%';
-
-    const upButton = makeButton('vh-btn', 'A+', function () {
-      applyScale(scale + STEP);
-    });
-    upButton.setAttribute('data-scale', '1');
-
-    scaleRow.appendChild(downButton);
-    scaleRow.appendChild(scaleLabel);
-    scaleRow.appendChild(upButton);
-
     const hint = document.createElement('div');
     hint.className = 'vh-hint';
     hint.textContent = 'Arrow 이동 · Home 처음 · Space 재생';
 
     wrap.appendChild(navRow);
-    wrap.appendChild(scaleRow);
     wrap.appendChild(hint);
     document.body.appendChild(wrap);
 
