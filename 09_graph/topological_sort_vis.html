@@ -66,14 +66,6 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 <div id="main-content">
   <div id="graph-panel">
     <svg id="gsvg" viewBox="0 0 460 370">
-      <defs>
-        <marker id="arr-muted" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto" markerUnits="strokeWidth">
-          <path d="M1 1L9 5L1 9Z" fill="#585860"/>
-        </marker>
-        <marker id="arr-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto" markerUnits="strokeWidth">
-          <path d="M1 1L9 5L1 9Z" fill="#858585"/>
-        </marker>
-      </defs>
       <g id="eg"></g>
       <g id="ng"></g>
     </svg>
@@ -219,6 +211,8 @@ function buildSVG() {
   const eg = document.getElementById('eg');
   const ng = document.getElementById('ng');
   const SVG = 'http://www.w3.org/2000/svg';
+  const arrowLen = 12;
+  const arrowWidth = 8;
 
   EDGES.forEach(([from,to],idx) => {
     const f=NP[from],t=NP[to];
@@ -229,9 +223,16 @@ function buildSVG() {
     ln.setAttribute('x1',x1);ln.setAttribute('y1',y1);
     ln.setAttribute('x2',x2);ln.setAttribute('y2',y2);
     ln.setAttribute('stroke-width','1.5');
-    ln.setAttribute('marker-end','url(#arr-muted)');
     ln.id='e'+idx;
     eg.appendChild(ln);
+    const bx=x2-ux*arrowLen, by=y2-uy*arrowLen;
+    const anx=-uy*(arrowWidth/2), any=ux*(arrowWidth/2);
+    const ar=document.createElementNS(SVG,'polygon');
+    ar.setAttribute('points',`${x2},${y2} ${bx+anx},${by+any} ${bx-anx},${by-any}`);
+    ar.setAttribute('fill','#585860');
+    ar.setAttribute('opacity','0.4');
+    ar.id='a'+idx;
+    eg.appendChild(ar);
     // edge label at midpoint
     const mx=(f.x+t.x)/2,my=(f.y+t.y)/2;
     const nx=-uy*11,ny=ux*11;
@@ -302,13 +303,14 @@ function render() {
   EDGES.forEach((_,i) => {
     const active=s.ae.includes(i);
     const el=document.getElementById('e'+i);
+    const ar=document.getElementById('a'+i);
     const ll=document.getElementById('el'+i);
     if(el){
       el.setAttribute('stroke',active?'#858585':'#585860');
       el.setAttribute('stroke-width',active?'2':'1.5');
       el.setAttribute('opacity',active?'1':'0.4');
-      el.setAttribute('marker-end',active?'url(#arr-active)':'url(#arr-muted)');
     }
+    if(ar){ar.setAttribute('fill',active?'#858585':'#585860');ar.setAttribute('opacity',active?'1':'0.4');}
     if(ll){ll.setAttribute('fill',active?'#858585':'#585860');}
   });
 
