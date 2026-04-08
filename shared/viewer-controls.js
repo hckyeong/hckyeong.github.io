@@ -129,18 +129,20 @@
     const navRow = document.createElement('div');
     navRow.className = 'vh-row vh-nav-row';
 
-    const prevButton = makeButton('vh-btn vh-nav-btn', 'Prev / 이전', goPrev);
+    const prevButton = makeButton('vh-btn vh-nav-btn', 'Prev', goPrev);
     prevButton.setAttribute('data-action', 'prev');
+    prevButton.setAttribute('aria-label', 'Previous step');
 
-    const nextButton = makeButton('vh-btn vh-nav-btn', 'Next / 다음', goNext);
+    const nextButton = makeButton('vh-btn vh-nav-btn', 'Next', goNext);
     nextButton.setAttribute('data-action', 'next');
+    nextButton.setAttribute('aria-label', 'Next step');
 
     navRow.appendChild(prevButton);
     navRow.appendChild(nextButton);
 
     const hint = document.createElement('div');
     hint.className = 'vh-hint';
-    hint.textContent = 'Arrow 이동 · Home 처음 · Space 재생';
+    hint.textContent = 'Arrows · Home · Space';
 
     wrap.appendChild(navRow);
     wrap.appendChild(hint);

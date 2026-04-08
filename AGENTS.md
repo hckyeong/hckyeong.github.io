@@ -96,3 +96,35 @@ These rules apply to this repository in all future sessions.
    - Coding agent: acts as a senior engineer who turns the given code into step-by-step HTML visualizations. Preferred model profile: `gpt-5.4` with low reasoning effort
    - Notes agent: acts as an instructor who organizes the given code and the user's questions into HTML study material with visual aids and code explanations. Preferred model profile: `gpt-5.4` with low reasoning effort
 
+## 8. Working autonomy in this project
+
+29. Within this repository, proceed without asking for confirmation for normal edits, verification steps, file creation, browser rendering checks, and layout/style adjustments.
+30. Only pause for confirmation when the action is destructive, has hidden external side effects, or the system requires an explicit permission approval dialog.
+
+## 9. Commit and push hygiene
+
+31. When preparing commits or pushes, include only files that are functionally necessary for the feature, fix, or maintained review workflow.
+32. Do not commit or push generated, temporary, cache, local-environment, or review-output files unless the user explicitly asks for them.
+33. Exclude items such as:
+   - `node_modules/`
+   - `.pw-shots/`
+   - `.pw-report/`
+   - `test-results/`
+   - `.tmp_*`
+   - `.codex/`
+   - other caches, logs, and temporary screenshots
+
+## 10. Playwright review workflow
+
+34. Prefer repository-local Playwright review before asking the user to manually test layout or rendering issues.
+35. Use the project's Playwright setup:
+   - `playwright.config.js`
+   - `tests/render-html.spec.js`
+   - `npm run review:webkit`
+   - `npm run review:desktop`
+   - `npm run review:html`
+36. The primary automatic review targets are:
+   - `webkit-desktop`
+   - `webkit-iphone12`
+   - `chromium-desktop`
+37. Treat Playwright WebKit as the default Safari-adjacent review environment, and only rely on the user's real iPhone/Safari check as a final confirmation step when needed.

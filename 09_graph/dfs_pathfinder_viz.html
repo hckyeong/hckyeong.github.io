@@ -100,8 +100,14 @@ svg text{font-family:'Consolas','Courier New',monospace}
   <div id="graph-panel">
     <svg viewBox="0 0 420 380" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <marker id="ah-default" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto" markerUnits="strokeWidth">
+          <path d="M1 1L9 5L1 9Z" fill="#555"/>
+        </marker>
+        <marker id="ah-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto" markerUnits="strokeWidth">
+          <path d="M1 1L9 5L1 9Z" fill="#569cd6"/>
+        </marker>
+        <marker id="ah-skip" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto" markerUnits="strokeWidth">
+          <path d="M1 1L9 5L1 9Z" fill="#9b9bea"/>
         </marker>
       </defs>
 
@@ -112,14 +118,14 @@ svg text{font-family:'Consolas','Courier New',monospace}
       <circle id="glow4" cx="210" cy="320" r="30" fill="none" opacity="0"/>
       <circle id="glow5" cx="370" cy="320" r="30" fill="none" opacity="0"/>
 
-      <line id="e02" x1="96" y1="60" x2="184" y2="60" stroke="#555" stroke-width="1.1" marker-end="url(#ah)"/>
-      <line id="e21" x1="194" y1="84" x2="116" y2="168" stroke="#555" stroke-width="1.1" marker-end="url(#ah)"/>
-      <line id="e23" x1="230" y1="80" x2="304" y2="170" stroke="#555" stroke-width="1.1" marker-end="url(#ah)"/>
-      <line id="e34" x1="306" y1="210" x2="226" y2="300" stroke="#555" stroke-width="1.1" marker-end="url(#ah)"/>
-      <line id="e15" x1="120" y1="208" x2="352" y2="304" stroke="#555" stroke-width="1.1" marker-end="url(#ah)"/>
-      <line id="e24" x1="224" y1="82" x2="216" y2="296" stroke="#555" stroke-width="1.1" marker-end="url(#ah)"/>
-      <line id="e35" x1="338" y1="210" x2="358" y2="298" stroke="#555" stroke-width="1.1" marker-end="url(#ah)"/>
-      <line id="e53" x1="352" y1="300" x2="332" y2="212" stroke="#555" stroke-width="1.1" marker-end="url(#ah)"/>
+      <line id="e02" x1="96" y1="60" x2="184" y2="60" stroke="#555" stroke-width="1.1" marker-end="url(#ah-default)"/>
+      <line id="e21" x1="194" y1="84" x2="116" y2="168" stroke="#555" stroke-width="1.1" marker-end="url(#ah-default)"/>
+      <line id="e23" x1="230" y1="80" x2="304" y2="170" stroke="#555" stroke-width="1.1" marker-end="url(#ah-default)"/>
+      <line id="e34" x1="306" y1="210" x2="226" y2="300" stroke="#555" stroke-width="1.1" marker-end="url(#ah-default)"/>
+      <line id="e15" x1="120" y1="208" x2="352" y2="304" stroke="#555" stroke-width="1.1" marker-end="url(#ah-default)"/>
+      <line id="e24" x1="224" y1="82" x2="216" y2="296" stroke="#555" stroke-width="1.1" marker-end="url(#ah-default)"/>
+      <line id="e35" x1="338" y1="210" x2="358" y2="298" stroke="#555" stroke-width="1.1" marker-end="url(#ah-default)"/>
+      <line id="e53" x1="352" y1="300" x2="332" y2="212" stroke="#555" stroke-width="1.1" marker-end="url(#ah-default)"/>
 
       <circle cx="70" cy="60" r="24" fill="#2d2d2d" stroke="#555" stroke-width="1.1"/>
       <text x="70" y="60" text-anchor="middle" dominant-baseline="central" fill="#777" font-size="14" font-weight="700">0</text>
@@ -598,11 +604,15 @@ function render(){
 
   ['e02','e21','e23','e34','e15','e24','e35','e53'].forEach(function(id){
     var el=document.getElementById(id);
-    if(s.eg[id]){el.setAttribute('stroke',s.eg[id]);el.setAttribute('stroke-width','2.5');}
+    if(s.eg[id]){
+      el.setAttribute('stroke',s.eg[id]);el.setAttribute('stroke-width','2.5');
+      el.setAttribute('marker-end', s.eg[id] === SK ? 'url(#ah-skip)' : 'url(#ah-active)');
+    }
     else{
       var def = '#555';
       var dw = '1.1';
       el.setAttribute('stroke',def);el.setAttribute('stroke-width',dw);
+      el.setAttribute('marker-end','url(#ah-default)');
     }
   });
 

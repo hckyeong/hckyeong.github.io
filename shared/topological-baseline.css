@@ -497,9 +497,9 @@ pre .line.active,
 
 #viewer-hotkeys .vh-nav-btn {
   flex: 1 1 0;
-  min-width: 72px;
-  height: 30px;
-  padding: 0 10px;
+  min-width: 58px;
+  height: 28px;
+  padding: 0 8px;
   font-size: 12px;
 }
 
@@ -644,9 +644,9 @@ pre .line.active,
   #viewer-hotkeys {
     right: 8px;
     bottom: 8px;
-    gap: 6px;
-    padding: 8px;
-    min-width: 176px;
+    gap: 4px;
+    padding: 6px;
+    min-width: 128px;
   }
 
   #viewer-hotkeys .vh-row {
@@ -654,13 +654,15 @@ pre .line.active,
   }
 
   #viewer-hotkeys .vh-nav-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 
   #viewer-hotkeys .vh-nav-btn {
-    height: 34px;
+    height: 28px;
     min-width: 0;
-    width: 100% !important;
+    width: auto !important;
+    padding: 0 6px;
+    font-size: 11px;
   }
 
   #viewer-hotkeys .vh-hint {

@@ -1,0 +1,13 @@
+{
+  "name": "data-structure-algorithm-visualization",
+  "private": true,
+  "scripts": {
+    "pw:install": "playwright install chromium webkit",
+    "review:html": "playwright test tests/render-html.spec.js",
+    "review:webkit": "playwright test tests/render-html.spec.js --project=webkit-desktop --project=webkit-iphone12",
+    "review:desktop": "playwright test tests/render-html.spec.js --project=chromium-desktop --project=webkit-desktop"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2"
+  }
+}

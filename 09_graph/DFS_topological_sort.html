@@ -66,8 +66,11 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
   <div id="graph-panel">
     <svg id="gsvg" viewBox="0 0 460 370">
       <defs>
-        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <marker id="arr-muted" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto" markerUnits="strokeWidth">
+          <path d="M1 1L9 5L1 9Z" fill="#585860"/>
+        </marker>
+        <marker id="arr-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto" markerUnits="strokeWidth">
+          <path d="M1 1L9 5L1 9Z" fill="#f0d87a"/>
         </marker>
       </defs>
       <g id="eg"></g>
@@ -270,7 +273,7 @@ function buildSVG() {
     ln.setAttribute('x1',x1); ln.setAttribute('y1',y1);
     ln.setAttribute('x2',x2); ln.setAttribute('y2',y2);
     ln.setAttribute('stroke-width','1.5');
-    ln.setAttribute('marker-end','url(#arr)');
+    ln.setAttribute('marker-end','url(#arr-muted)');
     ln.id='e'+idx;
     eg.appendChild(ln);
 
@@ -382,6 +385,7 @@ function render() {
       el.setAttribute('stroke', active ? '#f0d87a' : '#585860');
       el.setAttribute('stroke-width', active ? '2.2' : '1.5');
       el.setAttribute('opacity', active ? '1' : '0.4');
+      el.setAttribute('marker-end', active ? 'url(#arr-active)' : 'url(#arr-muted)');
     }
     if (ll) ll.setAttribute('fill', active ? '#f0d87a' : '#585860');
   });

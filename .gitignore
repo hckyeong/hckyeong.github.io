@@ -1,1 +1,4 @@
 notes/
+node_modules/
+playwright/.cache/
+temp/
