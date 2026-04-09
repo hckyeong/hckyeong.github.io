@@ -1,0 +1,236 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Connected Components DFS / 연결 요소 DFS 시각화</title>
+<link rel="stylesheet" href="../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:'Consolas','Courier New',monospace;font-size:13px;padding:16px}
+h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacing:.5px}
+#step-counter{font-size:11px;color:#858585}
+#step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:46px;line-height:1.6;padding:7px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}.leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
+#main-content{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px;margin:12px 0}
+#graph-panel{flex:1 1 760px;min-width:min(100%,760px);background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:8px}
+#graph-panel svg{width:100%;display:block}
+#right-panel{flex:1 1 420px;min-width:min(100%,420px);display:flex;flex-direction:column;gap:8px}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.meta-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.meta-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px}.meta-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}.meta-value{font-size:18px;font-weight:700;color:#dcdcaa}
+#visited-grid,#id-grid{display:flex;gap:6px;flex-wrap:wrap}.cell{display:flex;flex-direction:column;align-items:center;gap:3px}.clab{font-size:10px;color:#666}.cval{min-width:34px;height:28px;padding:0 6px;border-radius:4px;border:1px solid #3e3e42;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:#2d2d2d;color:#d4d4d4}.cval.vis{border-color:#4ec9b0;color:#4ec9b0;background:rgba(78,201,176,.1)}.cval.cur{border-color:#f7b267;color:#f7b267;background:rgba(247,178,103,.12)}.cval.idset{border-color:#9b9bea;color:#d5d5ff;background:rgba(155,155,234,.12)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;min-height:28px;align-items:center}.chip{padding:2px 8px;border-radius:3px;font-size:12px;font-weight:700}.chip-call{background:rgba(86,156,214,.12);border:1px solid #569cd6;color:#9cdcfe}.chip-cur{background:rgba(247,178,103,.14);border:1px solid #f7b267;color:#f7b267}.chip-comp{background:rgba(78,201,176,.12);border:1px solid #4ec9b0;color:#b9ffef}.chip-done{background:rgba(155,155,234,.12);border:1px solid #9b9bea;color:#d5d5ff}.chip-empty{color:#444;font-size:11px}
+#console-log{display:flex;flex-direction:column;gap:6px;font-size:12px;line-height:1.5;color:#d4d4d4}.logline{padding:6px 8px;border-radius:4px;background:#1f1f1f;border:1px solid #343434}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin-bottom:12px}.code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}#code-body{padding:6px 0}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent;transition:background .2s}.cline.hl{background:rgba(255,255,120,.08);border-left:2px solid #dcdcaa}.cline.hl .lnum{color:#858585;background:rgba(255,255,255,.02)}.cline.hl .lcode{background:rgba(255,255,255,.015)}
+.lnum{width:40px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre}.lcode::before{content:'';position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.id{color:#9cdcfe}.num{color:#b5cea8}.str{color:#ce9178}.cm{color:#6a9955;font-style:italic}
+#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px;flex-wrap:wrap}.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}.nbtn:hover:not(:disabled){background:#3e3e42}.nbtn:disabled{opacity:.3;cursor:default}
+#dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:520px;justify-content:center}.dot{width:6px;height:6px;border-radius:50%;background:#3e3e42;transition:background .2s}.dot.active{background:#858585}
+@media (max-width:980px){#main-content{flex-direction:column}#graph-panel,#right-panel{flex:1 1 auto}.meta-row{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.meta-row{grid-template-columns:1fr}.nbtn{padding:6px 16px}}
+</style>
+</head>
+<body>
+<h1>Connected Components DFS / 연결 요소 DFS 시각화</h1>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="legend">
+  <div class="leg"><div class="leg-c" style="background:rgba(60,60,60,.4);border-color:#555"></div>미방문 / Unvisited</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(78,201,176,.2);border-color:#4ec9b0"></div>방문됨 / Visited</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(247,178,103,.2);border-color:#f7b267"></div>현재 정점 / Current</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(155,155,234,.2);border-color:#9b9bea"></div>id 할당 / id assigned</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(86,156,214,.2);border-color:#569cd6"></div>활성 간선 / Active edge</div>
+</div>
+<div id="main-content">
+  <div id="graph-panel">
+    <svg id="gsvg" viewBox="0 0 760 500">
+      <g id="edge-group"></g>
+      <g id="node-group"></g>
+    </svg>
+  </div>
+  <div id="right-panel">
+    <div class="sbox">
+      <div class="slabel">Component State</div>
+      <div class="meta-row">
+        <div class="meta-card"><div class="meta-name">count / next component id</div><div class="meta-value" id="count-val">0</div></div>
+        <div class="meta-card"><div class="meta-name">current root</div><div class="meta-value" id="root-val">-</div></div>
+      </div>
+    </div>
+    <div class="sbox"><div class="slabel">Call Stack (bottom → top)</div><div class="chips" id="call-disp"></div></div>
+    <div class="sbox"><div class="slabel">visited</div><div id="visited-grid"></div></div>
+    <div class="sbox"><div class="slabel">id array (vertex → component id)</div><div id="id-grid"></div></div>
+    <div class="sbox"><div class="slabel">Console Output</div><div id="console-log"></div></div>
+  </div>
+</div>
+<div id="code-panel">
+  <div class="code-title">void DFS(Vertex* v) / void ConnectedComponents()</div>
+  <div id="code-body"></div>
+</div>
+<div id="nav">
+  <button class="nbtn" id="prev" onclick="go(-1)">← 이전</button>
+  <div id="dots"></div>
+  <button class="nbtn" id="next" onclick="go(1)">다음 →</button>
+</div>
+<script>
+const CODE = [
+  'void DFS(Vertex* v)',
+  '{',
+  '    v->visited = true;',
+  '    id[v->value] = count;',
+  '    for (auto* w : v->out_neighbors)',
+  '        if (!w->visited)',
+  '            DFS(w);',
+  '}',
+  '',
+  'void ConnectedComponents()',
+  '{',
+  '    count = 0;',
+  '    id.resize(vertices.size(), -1);',
+  '    for (auto* v : vertices)',
+  '    {',
+  '        if (!v->visited)',
+  '        {',
+  '            DFS(v);',
+  '            count++;',
+  '        }',
+  '    }',
+  '    vector<vector<int>> components(count);',
+  '    for (int s = 0; s < vertices.size(); s++)',
+  '        components[id[s]].push_back(s);',
+  '}'
+];
+const POS = {
+  0:{x:70,y:70},1:{x:180,y:190},2:{x:310,y:170},3:{x:180,y:350},4:{x:290,y:420},5:{x:70,y:420},6:{x:440,y:70},
+  7:{x:560,y:70},8:{x:680,y:70},9:{x:560,y:280},10:{x:680,y:280},11:{x:560,y:400},12:{x:680,y:400}
+};
+const EDGES = [[0,5],[4,3],[0,1],[9,12],[6,4],[5,4],[0,2],[11,12],[9,10],[0,6],[7,8],[9,11],[5,3]];
+const STEPS = [
+  {desc:'ConnectedComponents()가 시작된다. count를 0으로 놓고 id 배열을 모두 -1로 초기화한다.',hl:[10,11,12,13],visited:[],call:[],current:null,root:null,count:0,id:Array(13).fill(-1),working:[],done:[],console:['ConnectedComponents() start'],active:null},
+  {desc:'outer loop가 0번 정점을 만난다. 아직 방문하지 않았으므로 첫 번째 컴포넌트 탐색을 시작한다. 지금 count=0 이므로 이번 DFS가 찾는 정점들은 id 0을 받는다.',hl:[14,15,16,17,18],visited:[],call:[0],current:0,root:0,count:0,id:Array(13).fill(-1),working:[],done:[],console:['start DFS from 0 (component id = 0)'],active:null},
+  {desc:'DFS(0) 진입. visited[0]=true, id[0]=0 이 된다.',hl:[1,2,3,4],visited:[0],call:[0],current:0,root:0,count:0,id:[0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],working:[0],done:[],console:['visit 0, assign id[0] = 0'],active:null},
+  {desc:'0의 첫 미방문 이웃 5로 재귀 호출한다.',hl:[5,6,7],visited:[0],call:[0],current:0,root:0,count:0,id:[0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],working:[0],done:[],console:['0 -> 5'],active:[0,5]},
+  {desc:'DFS(5) 진입. visited[5]=true, id[5]=0 이 된다.',hl:[1,2,3,4],visited:[0,5],call:[0,5],current:5,root:0,count:0,id:[0,-1,-1,-1,-1,0,-1,-1,-1,-1,-1,-1,-1],working:[0,5],done:[],console:['visit 5, assign id[5] = 0'],active:null},
+  {desc:'5의 미방문 이웃 4로 내려간다.',hl:[5,6,7],visited:[0,5],call:[0,5],current:5,root:0,count:0,id:[0,-1,-1,-1,-1,0,-1,-1,-1,-1,-1,-1,-1],working:[0,5],done:[],console:['5 -> 4'],active:[5,4]},
+  {desc:'DFS(4) 진입. visited[4]=true, id[4]=0 이 된다.',hl:[1,2,3,4],visited:[0,5,4],call:[0,5,4],current:4,root:0,count:0,id:[0,-1,-1,-1,0,0,-1,-1,-1,-1,-1,-1,-1],working:[0,5,4],done:[],console:['visit 4, assign id[4] = 0'],active:null},
+  {desc:'4의 미방문 이웃 3으로 내려간다.',hl:[5,6,7],visited:[0,5,4],call:[0,5,4],current:4,root:0,count:0,id:[0,-1,-1,-1,0,0,-1,-1,-1,-1,-1,-1,-1],working:[0,5,4],done:[],console:['4 -> 3'],active:[4,3]},
+  {desc:'DFS(3) 진입. visited[3]=true, id[3]=0 이 된다. 3의 이웃은 모두 이미 방문된 정점이라 바로 복귀한다.',hl:[1,2,3,4,5,6],visited:[0,5,4,3],call:[0,5,4,3],current:3,root:0,count:0,id:[0,-1,-1,0,0,0,-1,-1,-1,-1,-1,-1,-1],working:[0,5,4,3],done:[],console:['visit 3, assign id[3] = 0','return from 3'],active:null},
+  {desc:'4로 돌아와서 다음 미방문 이웃 6을 방문한다.',hl:[5,6,7],visited:[0,5,4,3],call:[0,5,4],current:4,root:0,count:0,id:[0,-1,-1,0,0,0,-1,-1,-1,-1,-1,-1,-1],working:[0,5,4,3],done:[],console:['4 -> 6'],active:[4,6]},
+  {desc:'DFS(6) 진입. visited[6]=true, id[6]=0 이 된다. 6의 이웃도 모두 이미 방문되어 복귀한다.',hl:[1,2,3,4,5,6],visited:[0,5,4,3,6],call:[0,5,4,6],current:6,root:0,count:0,id:[0,-1,-1,0,0,0,0,-1,-1,-1,-1,-1,-1],working:[0,5,4,3,6],done:[],console:['visit 6, assign id[6] = 0','return from 6'],active:null},
+  {desc:'0으로 되돌아온 뒤 다음 미방문 이웃 1을 방문한다.',hl:[5,6,7],visited:[0,5,4,3,6],call:[0],current:0,root:0,count:0,id:[0,-1,-1,0,0,0,0,-1,-1,-1,-1,-1,-1],working:[0,5,4,3,6],done:[],console:['0 -> 1'],active:[0,1]},
+  {desc:'DFS(1) 진입. visited[1]=true, id[1]=0 이 된다. 1은 연결 요소 0에 속한다.',hl:[1,2,3,4],visited:[0,5,4,3,6,1],call:[0,1],current:1,root:0,count:0,id:[0,0,-1,0,0,0,0,-1,-1,-1,-1,-1,-1],working:[0,5,4,3,6,1],done:[],console:['visit 1, assign id[1] = 0'],active:null},
+  {desc:'마지막 미방문 이웃 2를 방문한다.',hl:[5,6,7],visited:[0,5,4,3,6,1],call:[0],current:0,root:0,count:0,id:[0,0,-1,0,0,0,0,-1,-1,-1,-1,-1,-1],working:[0,5,4,3,6,1],done:[],console:['0 -> 2'],active:[0,2]},
+  {desc:'DFS(2) 진입. visited[2]=true, id[2]=0 이 된다. 이제 0에서 출발한 DFS가 첫 번째 연결 요소 전체를 덮었다.',hl:[1,2,3,4],visited:[0,5,4,3,6,1,2],call:[0,2],current:2,root:0,count:0,id:[0,0,0,0,0,0,0,-1,-1,-1,-1,-1,-1],working:[0,5,4,3,6,1,2],done:[],console:['visit 2, assign id[2] = 0'],active:null},
+  {desc:'DFS(0)가 끝났으므로 count++를 실행한다. 첫 번째 연결 요소가 확정되고 다음 연결 요소 id는 1이 된다.',hl:[17,18,19],visited:[0,5,4,3,6,1,2],call:[],current:null,root:null,count:1,id:[0,0,0,0,0,0,0,-1,-1,-1,-1,-1,-1],working:[],done:[[0,1,2,3,4,5,6]],console:['component 0 complete','count becomes 1'],active:null},
+  {desc:'outer loop는 1~6을 건너뛰고 7에서 멈춘다. 7은 미방문이므로 두 번째 연결 요소 탐색을 시작한다.',hl:[14,15,16,17,18],visited:[0,5,4,3,6,1,2],call:[7],current:7,root:7,count:1,id:[0,0,0,0,0,0,0,-1,-1,-1,-1,-1,-1],working:[],done:[[0,1,2,3,4,5,6]],console:['start DFS from 7 (component id = 1)'],active:null},
+  {desc:'DFS(7)에서 7과 8을 차례로 방문한다. 둘 다 id 1을 받으므로 두 번째 연결 요소는 {7,8} 이다.',hl:[1,2,3,4,5,6,7],visited:[0,5,4,3,6,1,2,7,8],call:[7,8],current:8,root:7,count:1,id:[0,0,0,0,0,0,0,1,1,-1,-1,-1,-1],working:[7,8],done:[[0,1,2,3,4,5,6]],console:['visit 7, assign id[7] = 1','7 -> 8','visit 8, assign id[8] = 1'],active:[7,8]},
+  {desc:'두 번째 연결 요소 DFS가 끝났으므로 count++를 실행한다. 이제 count=2 이고, 완료된 연결 요소는 두 개다.',hl:[17,18,19],visited:[0,5,4,3,6,1,2,7,8],call:[],current:null,root:null,count:2,id:[0,0,0,0,0,0,0,1,1,-1,-1,-1,-1],working:[],done:[[0,1,2,3,4,5,6],[7,8]],console:['component 1 complete','count becomes 2'],active:null},
+  {desc:'outer loop가 9에서 세 번째 연결 요소를 시작한다.',hl:[14,15,16,17,18],visited:[0,5,4,3,6,1,2,7,8],call:[9],current:9,root:9,count:2,id:[0,0,0,0,0,0,0,1,1,-1,-1,-1,-1],working:[],done:[[0,1,2,3,4,5,6],[7,8]],console:['start DFS from 9 (component id = 2)'],active:null},
+  {desc:'DFS(9)에서 9를 방문하고, 인접 순서대로 12 → 11, 다시 돌아와 10을 방문한다. 그래서 9,10,11,12 모두 id 2를 받는다.',hl:[1,2,3,4,5,6,7],visited:[0,5,4,3,6,1,2,7,8,9,12,11,10],call:[9,12,11,10],current:10,root:9,count:2,id:[0,0,0,0,0,0,0,1,1,2,2,2,2],working:[9,12,11,10],done:[[0,1,2,3,4,5,6],[7,8]],console:['visit 9, assign id[9] = 2','9 -> 12','visit 12, assign id[12] = 2','12 -> 11','visit 11, assign id[11] = 2','9 -> 10','visit 10, assign id[10] = 2'],active:[9,10]},
+  {desc:'세 번째 연결 요소 DFS도 끝나서 count++를 실행한다. 이제 count=3 이고, 그래프 전체의 연결 요소 수가 3개라는 뜻이 된다.',hl:[17,18,19],visited:[0,5,4,3,6,1,2,7,8,9,12,11,10],call:[],current:null,root:null,count:3,id:[0,0,0,0,0,0,0,1,1,2,2,2,2],working:[],done:[[0,1,2,3,4,5,6],[7,8],[9,10,11,12]],console:['component 2 complete','count becomes 3'],active:null},
+  {desc:'마지막으로 id 배열을 바탕으로 components 벡터를 채운다. 출력 결과는 Component 1: 0 1 2 3 4 5 6, Component 2: 7 8, Component 3: 9 10 11 12 이다.',hl:[21,22,23,24,25],visited:[0,5,4,3,6,1,2,7,8,9,12,11,10],call:[],current:null,root:null,count:3,id:[0,0,0,0,0,0,0,1,1,2,2,2,2],working:[],done:[[0,1,2,3,4,5,6],[7,8],[9,10,11,12]],console:['3 components','Component 1: 0 1 2 3 4 5 6','Component 2: 7 8','Component 3: 9 10 11 12'],active:null}
+];
+let cur = 0;
+function escapeHtml(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function colorize(text){
+  return escapeHtml(text)
+    .replace(/"([^"]*)"/g,'<span class="str">"$1"</span>')
+    .replace(/\b(void|for|if|return)\b/g,'<span class="kw">$1</span>')
+    .replace(/\b(Vertex|Graph|vector|int|auto)\b/g,'<span class="tp">$1</span>')
+    .replace(/\b(DFS|ConnectedComponents|resize|push_back|size)\b/g,'<span class="fn">$1</span>')
+    .replace(/\b(vertices|visited|id|count|value|out_neighbors|components|v|w|s)\b/g,'<span class="id">$1</span>')
+    .replace(/\b(-?\d+)\b/g,'<span class="num">$1</span>');
+}
+function buildCode(){
+  const body=document.getElementById('code-body');
+  body.innerHTML = CODE.map((line,i)=>{
+    const indent=Math.floor((line.match(/^\s*/)[0].length)/4);
+    const trimmed=line.trimStart();
+    const html=trimmed.length?colorize(trimmed):'&nbsp;';
+    return `<div class="cline" id="cl-${i}"><div class="lnum">${i+1}</div><div class="lcode" style="--indent:${indent}">${html}</div></div>`;
+  }).join('');
+}
+function buildGraph(){
+  const SVG='http://www.w3.org/2000/svg';
+  const eg=document.getElementById('edge-group');
+  const ng=document.getElementById('node-group');
+  eg.innerHTML=''; ng.innerHTML='';
+  EDGES.forEach(([a,b],i)=>{
+    const p1=POS[a], p2=POS[b];
+    const line=document.createElementNS(SVG,'line');
+    line.id=`e-${i}`; line.setAttribute('x1',p1.x); line.setAttribute('y1',p1.y); line.setAttribute('x2',p2.x); line.setAttribute('y2',p2.y);
+    line.setAttribute('stroke','#555'); line.setAttribute('stroke-width','2'); line.setAttribute('opacity','0.55');
+    eg.appendChild(line);
+  });
+  Object.keys(POS).forEach((key)=>{
+    const id=Number(key); const p=POS[id];
+    const g=document.createElementNS(SVG,'g');
+    const c=document.createElementNS(SVG,'circle'); c.id=`n-${id}`; c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r','22');
+    const t=document.createElementNS(SVG,'text'); t.id=`t-${id}`; t.setAttribute('x',p.x); t.setAttribute('y',p.y); t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','central'); t.setAttribute('font-size','13'); t.setAttribute('font-weight','700'); t.textContent=id;
+    g.appendChild(c); g.appendChild(t); ng.appendChild(g);
+  });
+}
+function renderBoolGrid(targetId, count, activeList, current, idArrayMode){
+  const wrap=document.getElementById(targetId); wrap.innerHTML='';
+  for(let i=0;i<count;i++){
+    const cell=document.createElement('div'); cell.className='cell';
+    const lab=document.createElement('div'); lab.className='clab'; lab.textContent=i;
+    const val=document.createElement('div');
+    if(idArrayMode){
+      let cls='cval';
+      if(i===current) cls+=' cur';
+      else if(activeList[i] !== -1) cls+=' idset';
+      val.className=cls;
+      val.textContent=activeList[i] === -1 ? '·' : activeList[i];
+    } else {
+      let cls='cval';
+      if(i===current) cls+=' cur';
+      else if(activeList.includes(i)) cls+=' vis';
+      val.className=cls;
+      val.textContent=activeList.includes(i)?'T':'F';
+    }
+    cell.appendChild(lab); cell.appendChild(val); wrap.appendChild(cell);
+  }
+}
+function render(){
+  const step=STEPS[cur];
+  document.getElementById('step-counter').textContent=`step ${cur+1} / ${STEPS.length}`;
+  document.getElementById('step-desc').textContent=step.desc;
+  document.getElementById('count-val').textContent=step.count;
+  document.getElementById('root-val').textContent=step.root===null?'-':step.root;
+  document.querySelectorAll('.cline').forEach((el,i)=>el.classList.toggle('hl', step.hl.includes(i+1)));
+  renderBoolGrid('visited-grid', 13, step.visited, step.current, false);
+  renderBoolGrid('id-grid', 13, step.id, step.current, true);
+  document.getElementById('call-disp').innerHTML = step.call.length ? step.call.map((id,idx)=>`<span class="chip ${idx===step.call.length-1?'chip-cur':'chip-call'}">${id}</span>`).join('') : '<span class="chip-empty">empty</span>';
+  document.getElementById('console-log').innerHTML = step.console.map(line=>`<div class="logline">${escapeHtml(line)}</div>`).join('');
+  for(let i=0;i<13;i++){
+    const c=document.getElementById(`n-${i}`), t=document.getElementById(`t-${i}`);
+    let fill='rgba(55,55,55,.5)', stroke='#555', text='#777';
+    if(step.current===i){ fill='rgba(247,178,103,.18)'; stroke='#f7b267'; text='#f7b267'; }
+    else if(step.working.includes(i)){ fill='rgba(155,155,234,.16)'; stroke='#9b9bea'; text='#d5d5ff'; }
+    else if(step.visited.includes(i)){ fill='rgba(78,201,176,.15)'; stroke='#4ec9b0'; text='#4ec9b0'; }
+    c.setAttribute('fill',fill); c.setAttribute('stroke',stroke); c.setAttribute('stroke-width',step.current===i?'2.5':'1.5');
+    t.setAttribute('fill',text);
+  }
+  EDGES.forEach(([a,b],i)=>{
+    const line=document.getElementById(`e-${i}`);
+    const active = step.active && ((step.active[0]===a && step.active[1]===b) || (step.active[0]===b && step.active[1]===a));
+    const bothWorking = step.working.includes(a) && step.working.includes(b);
+    const color = active ? '#f7b267' : (bothWorking ? '#9b9bea' : '#585860');
+    const width = active ? '3' : (bothWorking ? '2.4' : '2');
+    const opacity = active || bothWorking ? '1' : '0.55';
+    line.setAttribute('stroke',color); line.setAttribute('stroke-width',width); line.setAttribute('opacity',opacity);
+  });
+  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active', i===cur));
+  document.getElementById('prev').disabled = cur===0;
+  document.getElementById('next').disabled = cur===STEPS.length-1;
+}
+function buildDots(){ document.getElementById('dots').innerHTML = STEPS.map((_,i)=>`<span class="dot ${i===0?'active':''}"></span>`).join(''); }
+function go(delta){ const next=Math.max(0,Math.min(STEPS.length-1,cur+delta)); if(next!==cur){ cur=next; render(); } }
+document.addEventListener('keydown',e=>{ if(e.key==='ArrowLeft'){e.preventDefault();go(-1);} else if(e.key==='ArrowRight'){e.preventDefault();go(1);} else if(e.key==='Home'){e.preventDefault();cur=0;render();} else if(e.key==='End'){e.preventDefault();cur=STEPS.length-1;render();} });
+buildCode(); buildGraph(); buildDots(); render();
+</script>
+<script src="../shared/viewer-controls.js"></script>
+</body>
+</html>

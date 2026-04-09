@@ -69,54 +69,35 @@ Additional rules for this project:
 18. Titles on index/navigation pages should be written in both English and Korean when appropriate.
 19. Actual file and folder paths should prefer English names for URL stability, even when visible labels are bilingual.
 
-## 6. Summary note rules
+## 6. Sub-agent role policy
 
-20. When the user asks for a summary note, create an HTML note file under `notes/` based on the code attached or provided by the user.
-21. If `notes/` does not exist, create it automatically before writing the note file.
-22. Summary notes must follow the style and structure baseline of the user's Notion reference page:
-   - `https://www.notion.so/Topological-Sort-Queue-33a426a1abfa8036bd1ed40f6264a802`
-23. For summary notes, prefer a Notion-like document structure such as:
-   - example code
-   - core concept
-   - required conditions
-   - key terms
-   - implementation method
-   - code analysis
-   - examples
-   - complexity
-   - checkpoints
-24. Summary notes must be based on the actual code provided by the user, not on generic textbook explanations.
+20. This project uses only two named sub-agent roles:
+   - `페페` / Pepe: visualization agent
+   - `로키` / Loki: review agent
+21. `페페` is the HTML visualization senior coder for this repository.
+   - responsibility: create and edit visualization HTML files
+   - focus: graph/state/code layout, interaction, responsive behavior, and project style conformance
+   - preferred model profile: `gpt-5.4` with low reasoning effort
+22. `로키` is the rendering/review agent for this repository.
+   - responsibility: review visualization results in `chromium-desktop`, `webkit-desktop`, and `webkit-iphone12`
+   - focus: layout regressions, Safari/iPhone 12 issues, broken Korean text, wrong edge direction, missing arrowheads, missing highlights, and interaction issues
+   - preferred model profile: `gpt-5.4` with low reasoning effort
+23. When the user asks for visualization material, automatically use `페페` by default.
+24. After `페페` finishes a visualization change, automatically use `로키` to review it when review is relevant.
+25. If `로키` finds issues, hand them back to `페페` for correction, then re-run `로키`.
+26. Do not introduce additional named sub-agent roles for this project unless the user explicitly changes this policy.
+27. General explanation, simple Q&A, and repository navigation can stay in the main agent unless delegation is clearly useful.
 
-## 7. Sub-agent role policy
+## 7. Working autonomy in this project
 
-25. When using sub-agents, split responsibilities by role:
-   - Answer agent: explanations, summaries, comparisons, concept clarification, and non-mutating guidance
-   - Coding agent: direct code edits, file creation, refactors, and implementation work
-   - Review agent: bug/risk/test-gap review without making changes unless explicitly requested
-   - Explorer agent: codebase search, structure discovery, and locating relevant files or symbols
-   - Notes agent: HTML study-note creation based on user code and user questions
-26. Prefer the answer agent for question-style requests, the coding agent for implementation requests, the review agent for review requests, the explorer agent for repository investigation, and the notes agent for note-generation requests.
-27. Sub-agents may use different models depending on task difficulty, latency needs, and whether the task is explanation-focused or implementation-focused.
-28. Preferred sub-agent definitions for this project:
-   - Answer agent: acts as an instructor who explains data structures and algorithms to a C++ beginner. Preferred model profile: `gpt-5.4` with low reasoning effort
-   - Coding agent: acts as a senior engineer who turns the given code into step-by-step HTML visualizations. Preferred model profile: `gpt-5.4` with low reasoning effort
-   - Notes agent: acts as an instructor who organizes the given code and the user's questions into HTML study material with visual aids and code explanations. Preferred model profile: `gpt-5.4` with low reasoning effort
-Additional rules for this project:
-- When the user asks for visualization material, automatically use the coding sub-agent by default.
-- When the visualization request also naturally needs a study note or the user asks for summary material, automatically use the notes sub-agent as well.
-Additional rule for this project:
-- When the user asks for visualization material, automatically use the relevant sub-agents instead of waiting for a separate delegation request.
+28. Within this repository, proceed without asking for confirmation for normal edits, verification steps, file creation, browser rendering checks, and layout/style adjustments.
+29. Only pause for confirmation when the action is destructive, has hidden external side effects, or the system requires an explicit permission approval dialog.
 
-## 8. Working autonomy in this project
+## 8. Commit and push hygiene
 
-29. Within this repository, proceed without asking for confirmation for normal edits, verification steps, file creation, browser rendering checks, and layout/style adjustments.
-30. Only pause for confirmation when the action is destructive, has hidden external side effects, or the system requires an explicit permission approval dialog.
-
-## 9. Commit and push hygiene
-
-31. When preparing commits or pushes, include only files that are functionally necessary for the feature, fix, or maintained review workflow.
-32. Do not commit or push generated, temporary, cache, local-environment, or review-output files unless the user explicitly asks for them.
-33. Exclude items such as:
+30. When preparing commits or pushes, include only files that are functionally necessary for the feature, fix, or maintained review workflow.
+31. Do not commit or push generated, temporary, cache, local-environment, or review-output files unless the user explicitly asks for them.
+32. Exclude items such as:
    - `node_modules/`
    - `.pw-shots/`
    - `.pw-report/`
@@ -127,20 +108,20 @@ Additional rule for this project:
 Additional rules for this project:
 - Prefer storing disposable screenshots, browser profiles, Playwright outputs, manual review captures, and similar non-functional artifacts under `temp/`.
 
-## 10. Playwright review workflow
+## 9. Playwright review workflow
 
-34. Prefer repository-local Playwright review before asking the user to manually test layout or rendering issues.
-35. Use the project's Playwright setup:
+33. Prefer repository-local Playwright review before asking the user to manually test layout or rendering issues.
+34. Use the project's Playwright setup:
    - `playwright.config.js`
    - `tests/render-html.spec.js`
    - `npm run review:webkit`
    - `npm run review:desktop`
    - `npm run review:html`
-36. The primary automatic review targets are:
+35. The primary automatic review targets are:
    - `webkit-desktop`
    - `webkit-iphone12`
    - `chromium-desktop`
-37. Treat Playwright WebKit as the default Safari-adjacent review environment, and only rely on the user's real iPhone/Safari check as a final confirmation step when needed.
+36. Treat Playwright WebKit as the default Safari-adjacent review environment, and only rely on the user's real iPhone/Safari check as a final confirmation step when needed.
 Additional review rules for this project:
 - For responsive/layout fixes, validate both desktop PC layout and iPhone 12-sized mobile layout.
 - On desktop, keep the intended horizontal composition when the screen is wide enough.
