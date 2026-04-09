@@ -1,4 +1,4 @@
-# Project Agent Rules
+﻿# Project Agent Rules
 
 These rules apply to this repository in all future sessions.
 
@@ -68,36 +68,52 @@ Additional rules for this project:
 17. Folder-inside-folder structures should also be represented as nested cards rather than plain lists when practical.
 18. Titles on index/navigation pages should be written in both English and Korean when appropriate.
 19. Actual file and folder paths should prefer English names for URL stability, even when visible labels are bilingual.
+20. Whenever a new visualization HTML file is created, automatically add its link to the appropriate chapter section in `index.html` unless the user explicitly asks not to.
 
 ## 6. Sub-agent role policy
 
-20. This project uses only two named sub-agent roles:
-   - `페페` / Pepe: visualization agent
-   - `로키` / Loki: review agent
-21. `페페` is the HTML visualization senior coder for this repository.
+21. This project uses three named sub-agent roles:
+   - `Pepe`: visualization agent
+   - `Loki`: review agent
+   - `Reporter`: report-writing agent
+22. `Pepe` is the HTML visualization senior coder for this repository.
    - responsibility: create and edit visualization HTML files
    - focus: graph/state/code layout, interaction, responsive behavior, and project style conformance
    - preferred model profile: `gpt-5.4` with low reasoning effort
-22. `로키` is the rendering/review agent for this repository.
+23. `Loki` is the rendering/review agent for this repository.
    - responsibility: review visualization results in `chromium-desktop`, `webkit-desktop`, and `webkit-iphone12`
    - focus: layout regressions, Safari/iPhone 12 issues, broken Korean text, wrong edge direction, missing arrowheads, missing highlights, and interaction issues
    - preferred model profile: `gpt-5.4` with low reasoning effort
-23. When the user asks for visualization material, automatically use `페페` by default.
-24. After `페페` finishes a visualization change, automatically use `로키` to review it when review is relevant.
-25. If `로키` finds issues, hand them back to `페페` for correction, then re-run `로키`.
-26. Do not introduce additional named sub-agent roles for this project unless the user explicitly changes this policy.
-27. General explanation, simple Q&A, and repository navigation can stay in the main agent unless delegation is clearly useful.
+24. `Reporter` is the report-writing agent for this repository.
+   - responsibility: write structured reports, review summaries, implementation summaries, comparison documents, and result write-ups when the user asks for a report
+   - focus: clear structure, accurate technical summary, issue lists, conclusions, and actionable next steps
+   - preferred model profile: `gpt-5.4` with low reasoning effort
+25. When the user asks for visualization material, use the following default workflow:
+   - `Reporter` first writes the implementation/report brief for the requested visualization
+   - pass that brief to `Pepe`
+   - `Pepe` creates or edits the visualization HTML
+   - `Loki` reviews the result in the repository review environments
+   - if `Loki` finds issues, send them back to `Pepe`
+   - `Pepe` corrects the issues
+   - `Loki` reviews again
+   - only the final result should be presented to the user
+26. After `Pepe` finishes a visualization change, automatically use `Loki` to review it when review is relevant.
+27. If `Loki` finds issues, hand them back to `Pepe` for correction, then re-run `Loki` until the visualization is in acceptable shape.
+28. When the user explicitly asks for a standalone report, automatically use `Reporter` when delegation is useful.
+29. Do not expose intermediate sub-agent churn to the user unless there is a blocker or a meaningful decision to surface.
+30. Do not introduce additional named sub-agent roles for this project unless the user explicitly changes this policy.
+31. General explanation, simple Q&A, and repository navigation can stay in the main agent unless delegation is clearly useful.
 
 ## 7. Working autonomy in this project
 
-28. Within this repository, proceed without asking for confirmation for normal edits, verification steps, file creation, browser rendering checks, and layout/style adjustments.
-29. Only pause for confirmation when the action is destructive, has hidden external side effects, or the system requires an explicit permission approval dialog.
+32. Within this repository, proceed without asking for confirmation for normal edits, verification steps, file creation, browser rendering checks, and layout/style adjustments.
+33. Only pause for confirmation when the action is destructive, has hidden external side effects, or the system requires an explicit permission approval dialog.
 
 ## 8. Commit and push hygiene
 
-30. When preparing commits or pushes, include only files that are functionally necessary for the feature, fix, or maintained review workflow.
-31. Do not commit or push generated, temporary, cache, local-environment, or review-output files unless the user explicitly asks for them.
-32. Exclude items such as:
+34. When preparing commits or pushes, include only files that are functionally necessary for the feature, fix, or maintained review workflow.
+35. Do not commit or push generated, temporary, cache, local-environment, or review-output files unless the user explicitly asks for them.
+36. Exclude items such as:
    - `node_modules/`
    - `.pw-shots/`
    - `.pw-report/`
@@ -110,18 +126,18 @@ Additional rules for this project:
 
 ## 9. Playwright review workflow
 
-33. Prefer repository-local Playwright review before asking the user to manually test layout or rendering issues.
-34. Use the project's Playwright setup:
+37. Prefer repository-local Playwright review before asking the user to manually test layout or rendering issues.
+38. Use the project's Playwright setup:
    - `playwright.config.js`
    - `tests/render-html.spec.js`
    - `npm run review:webkit`
    - `npm run review:desktop`
    - `npm run review:html`
-35. The primary automatic review targets are:
+39. The primary automatic review targets are:
    - `webkit-desktop`
    - `webkit-iphone12`
    - `chromium-desktop`
-36. Treat Playwright WebKit as the default Safari-adjacent review environment, and only rely on the user's real iPhone/Safari check as a final confirmation step when needed.
+40. Treat Playwright WebKit as the default Safari-adjacent review environment, and only rely on the user's real iPhone/Safari check as a final confirmation step when needed.
 Additional review rules for this project:
 - For responsive/layout fixes, validate both desktop PC layout and iPhone 12-sized mobile layout.
 - On desktop, keep the intended horizontal composition when the screen is wide enough.
