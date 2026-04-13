@@ -1,0 +1,5 @@
+# Project-local Codex options
+# Host/runtime policy can still override these settings.
+
+[windows]
+sandbox = "elevated"
