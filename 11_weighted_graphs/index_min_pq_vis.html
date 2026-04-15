@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IndexMinPQ / 인덱스 최소 우선순위 큐</title>
+<link rel="stylesheet" href="../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:'Consolas','Courier New',monospace;font-size:13px;padding:16px}
+h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacing:.5px}
+#step-counter{font-size:11px;color:#858585}
+#step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:58px;line-height:1.6;padding:8px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
+#main-content{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px;margin:12px 0}
+#left-panel{flex:1 1 730px;min-width:min(100%,730px);display:flex;flex-direction:column;gap:10px}
+#right-panel{flex:1 1 350px;min-width:min(100%,350px);display:flex;flex-direction:column;gap:10px}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+#heap-panel svg{width:100%;display:block}
+.graph-note{font-size:11px;color:#858585;margin-top:8px;line-height:1.55}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.meta-item{border:1px solid #343434;border-radius:6px;padding:8px 10px;background:#1f1f1f;min-height:62px}
+.meta-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.meta-value{font-size:17px;font-weight:700;color:#dcdcaa;line-height:1.35;word-break:break-word}
+.meta-sub{font-size:11px;color:#9cdcfe;line-height:1.5}
+.trace-line{padding:8px 10px;border-radius:4px;background:#1f1f1f;border:1px solid #343434;font-size:12px;line-height:1.6;color:#d4d4d4;word-break:break-word;min-height:54px}
+.status-line{padding:8px 10px;border-radius:4px;background:#1f1f1f;border:1px solid #343434;font-size:12px;line-height:1.55;color:#d4d4d4}
+.status-line.ok{border-color:#4ec9b0;background:rgba(78,201,176,.08);color:#cffff2}
+.status-line.warn{border-color:#f7b267;background:rgba(247,178,103,.08);color:#ffe4b8}
+.ops{display:flex;flex-direction:column;gap:7px}
+.op-row{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:6px;border:1px solid #343434;background:#1f1f1f;font-size:12px;line-height:1.55}
+.op-row.done{border-color:#4ec9b0;background:rgba(78,201,176,.07);color:#cffff2}
+.op-row.current{border-color:#f7b267;background:rgba(247,178,103,.08);color:#ffe4b8}
+.op-row.pending{color:#858585}
+.op-no{flex:0 0 auto;min-width:20px;color:#858585}
+.op-text{flex:1}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-height:28px}
+.chip{padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700;border:1px solid #3e3e42;background:#2d2d2d;color:#d4d4d4}
+.chip-empty{color:#555;font-size:11px}
+.chip.output{border-color:#4ec9b0;background:rgba(78,201,176,.12);color:#cffff2}
+.chip.current{border-color:#f7b267;background:rgba(247,178,103,.12);color:#ffe4b8}
+.arrays{display:flex;flex-wrap:wrap;gap:6px}
+.arr-cell{width:58px;min-height:60px;border:1px solid #3e3e42;border-radius:6px;background:#1f1f1f;padding:5px 4px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;transition:all .2s}
+.arr-label{font-size:10px;color:#666}
+.arr-main{font-size:13px;font-weight:700;color:#d4d4d4;line-height:1.25}
+.arr-sub{font-size:10px;color:#858585;line-height:1.2}
+.arr-cell.empty .arr-main,.arr-cell.empty .arr-sub{color:#555}
+.arr-cell.current{border-color:#f7b267;background:rgba(247,178,103,.1)}
+.arr-cell.compare{border-color:#8b7cff;background:rgba(139,124,255,.1)}
+.arr-cell.swap{border-color:#569cd6;background:rgba(86,156,214,.12)}
+.arr-cell.done{border-color:#4ec9b0;background:rgba(78,201,176,.1)}
+.arr-cell.removed{border-color:#777;background:rgba(255,255,255,.04);opacity:.72}
+.arr-cell.unused{border-color:#888;background:rgba(255,255,255,.045);border-style:dashed}
+.arr-cell.unused .arr-main{color:#f09595}
+.arr-cell.unused .arr-sub{color:#999}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin-bottom:12px}
+.code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent}
+.cline.hl{background:rgba(255,255,120,.08);border-left:2px solid #dcdcaa}
+.lnum{width:40px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre}
+.lcode::before{content:'';position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.id{color:#9cdcfe}.num{color:#b5cea8}.str{color:#ce9178}.cm{color:#6a9955;font-style:italic}
+#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px;flex-wrap:wrap}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#3e3e42}
+.nbtn:disabled{opacity:.3;cursor:default}
+#dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:680px;justify-content:center}
+.dot{width:6px;height:6px;border-radius:50%;background:#3e3e42}
+.dot.active{background:#858585}
+@media (max-width:980px){#main-content{flex-direction:column}#left-panel,#right-panel{flex:1 1 auto}}
+@media (max-width:760px){.grid-2,.meta-grid{grid-template-columns:1fr}}
+@media (max-width:560px){body{padding:12px}#step-desc{min-height:72px}.nbtn{padding:6px 16px}.arr-cell{width:54px}}
+</style>
+</head>
+<body>
+<h1>IndexMinPQ / 인덱스 최소 우선순위 큐</h1>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="legend">
+  <div class="leg"><div class="leg-c" style="background:rgba(86,156,214,.18);border-color:#569cd6"></div>기본 heap node / Default heap node</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(247,178,103,.18);border-color:#f7b267"></div>현재 위치 / Current position</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(139,124,255,.18);border-color:#8b7cff"></div>비교 중 / Comparing</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(86,156,214,.22);border-color:#569cd6"></div>교환 / Exchange</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(78,201,176,.18);border-color:#4ec9b0"></div>정착 완료 / Settled</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(255,255,255,.08);border-color:#777"></div>삭제됨 / Removed</div>
+</div>
+<div id="main-content">
+  <div id="left-panel">
+    <div class="sbox" id="heap-panel">
+      <div class="slabel">Binary Heap View (heap position -> external index, key)</div>
+      <svg id="heap-svg" viewBox="0 0 760 430" aria-label="IndexMinPQ heap tree">
+        <g id="heap-edge-group"></g>
+        <g id="heap-node-group"></g>
+      </svg>
+      <div class="graph-note">외부 인덱스는 0-based, 힙 위치는 1-based입니다. 특히 `pq[0]`은 쓰지 않고 비워 두며, 실제 힙은 `pq[1]`부터 시작합니다. `pq[h] = index`, `qp[index] = h`, `keys[index] = priority` 관계를 함께 보여줍니다.</div>
+    </div>
+    <div class="grid-2">
+      <div class="sbox">
+        <div class="slabel">pq 배열 (heap position -> index, h0 unused)</div>
+        <div id="pq-array" class="arrays"></div>
+      </div>
+      <div class="sbox">
+        <div class="slabel">Printed Output from DelMin()</div>
+        <div id="output-chips" class="chips"></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="sbox">
+        <div class="slabel">qp 배열 (index -> heap position)</div>
+        <div id="qp-array" class="arrays"></div>
+      </div>
+      <div class="sbox">
+        <div class="slabel">keys 배열 (index -> key)</div>
+        <div id="keys-array" class="arrays"></div>
+      </div>
+    </div>
+  </div>
+  <div id="right-panel">
+    <div class="sbox">
+      <div class="slabel">IndexMinPQ State</div>
+      <div class="meta-grid">
+        <div class="meta-item"><div class="meta-name">Current Operation</div><div class="meta-value" id="op-val">-</div></div>
+        <div class="meta-item"><div class="meta-name">Size / Capacity</div><div class="meta-value" id="size-val">0 / 10</div></div>
+        <div class="meta-item"><div class="meta-name">Current Pair</div><div class="meta-value" id="pair-val">-</div><div class="meta-sub" id="phase-val">build phase</div></div>
+        <div class="meta-item"><div class="meta-name">Current Min</div><div class="meta-value" id="min-val">-</div></div>
+      </div>
+    </div>
+    <div class="sbox"><div class="slabel">Scripted Operations from main()</div><div id="op-list" class="ops"></div></div>
+    <div class="sbox"><div class="slabel">Action Trace</div><div id="trace-box" class="trace-line"></div></div>
+    <div class="sbox"><div class="slabel">Heap Invariant</div><div id="heap-check" class="status-line"></div></div>
+  </div>
+</div>
+<div id="code-panel">
+  <div class="code-title">main() + Insert() + ChangeKey() + DelMin() + Swim() + Sink()</div>
+  <div id="code-body"></div>
+</div>
+<div id="nav">
+  <button class="nbtn" id="prev" onclick="go(-1)">← 이전</button>
+  <button class="nbtn" id="reset" onclick="goTo(0)">처음</button>
+  <div id="dots"></div>
+  <button class="nbtn" id="next" onclick="go(1)">다음 →</button>
+</div>
+<script>
+const CAPACITY = 10;
+const INPUT_PAIRS = [
+  { key: 3.5, index: 3 },
+  { key: 8.3, index: 1 },
+  { key: 1.5, index: 1 },
+  { key: 1.6, index: 3 },
+  { key: 0.5, index: 8 },
+  { key: 0.1, index: 5 }
+];
+
+const OPERATION_LIST = [
+  'pair {3.5, 3} -> Insert(3, 3.5)',
+  'pair {8.3, 1} -> Insert(1, 8.3)',
+  'pair {1.5, 1} -> ChangeKey(1, 1.5)',
+  'pair {1.6, 3} -> ChangeKey(3, 1.6)',
+  'pair {0.5, 8} -> Insert(8, 0.5)',
+  'pair {0.1, 5} -> Insert(5, 0.1)',
+  'while (!pq.Empty()) -> DelMin() 반복'
+];
+
+const CODE = [
+  'IndexMinPQ<double> pq(10);',
+  '',
+  'for (pair<double, int> p : vector<pair<double, int>>{',
+  '    {3.5, 3}, {8.3, 1}, {1.5, 1},',
+  '    {1.6, 3}, {0.5, 8}, {0.1, 5}',
+  '}) {',
+  '    if (!pq.Contains(p.second))',
+  '        pq.Insert(p.second, p.first);',
+  '    else',
+  '        pq.ChangeKey(p.second, p.first);',
+  '}',
+  '',
+  'while (!pq.Empty()) {',
+  '    cout << "(" << pq.MinKey() << ", " << pq.MinIndex() << ") ";',
+  '    pq.DelMin();',
+  '}',
+  '',
+  'void Insert(int i, Key key) {',
+  '    size += 1;',
+  '    qp[i] = size;',
+  '    pq[size] = i;',
+  '    keys[i] = key;',
+  '    Swim(size);',
+  '}',
+  '',
+  'void ChangeKey(int i, Key key) {',
+  '    keys[i] = key;',
+  '    Swim(qp[i]);',
+  '    Sink(qp[i]);',
+  '}',
+  '',
+  'int DelMin() {',
+  '    int m = pq[1];',
+  '    Exch(1, size--);',
+  '    Sink(1);',
+  '    qp[m] = -1;',
+  '    keys[m] = 0.0;',
+  '    pq[size + 1] = -1;',
+  '    return m;',
+  '}',
+  '',
+  'void Swim(int k) {',
+  '    while (k > 1 && Greater(k / 2, k)) {',
+  '        Exch(k / 2, k);',
+  '        k = k / 2;',
+  '    }',
+  '}',
+  '',
+  'void Sink(int k) {',
+  '    while (2 * k <= size) {',
+  '        int child = 2 * k;',
+  '        if (child + 1 <= size && Greater(child, child + 1))',
+  '            child = child + 1;',
+  '        if (!Greater(k, child)) break;',
+  '        Exch(k, child);',
+  '        k = child;',
+  '    }',
+  '}'
+];
+
+const HEAP_POS = {
+  1: { x: 380, y: 58 },
+  2: { x: 220, y: 148 },
+  3: { x: 540, y: 148 },
+  4: { x: 140, y: 252 },
+  5: { x: 300, y: 252 },
+  6: { x: 460, y: 252 },
+  7: { x: 620, y: 252 },
+  8: { x: 100, y: 356 },
+  9: { x: 180, y: 356 },
+  10: { x: 260, y: 356 }
+};
+
+const NODE_STYLE = {
+  default: { fill: 'rgba(86,156,214,.1)', stroke: '#569cd6', text: '#cfe8ff' },
+  current: { fill: 'rgba(247,178,103,.14)', stroke: '#f7b267', text: '#ffe4b8' },
+  compare: { fill: 'rgba(139,124,255,.14)', stroke: '#8b7cff', text: '#e0d8ff' },
+  swap: { fill: 'rgba(86,156,214,.18)', stroke: '#569cd6', text: '#d9ecff' },
+  done: { fill: 'rgba(78,201,176,.14)', stroke: '#4ec9b0', text: '#cffff2' },
+  removed: { fill: 'rgba(255,255,255,.04)', stroke: '#777', text: '#999' },
+  empty: { fill: 'rgba(255,255,255,.02)', stroke: '#3e3e42', text: '#555' }
+};
+
+let current = 0;
+const steps = [];
+
+const counter = document.getElementById('step-counter');
+const desc = document.getElementById('step-desc');
+const opVal = document.getElementById('op-val');
+const sizeVal = document.getElementById('size-val');
+const pairVal = document.getElementById('pair-val');
+const phaseVal = document.getElementById('phase-val');
+const minVal = document.getElementById('min-val');
+const traceBox = document.getElementById('trace-box');
+const heapCheck = document.getElementById('heap-check');
+const pqArray = document.getElementById('pq-array');
+const qpArray = document.getElementById('qp-array');
+const keysArray = document.getElementById('keys-array');
+const outputChips = document.getElementById('output-chips');
+const opList = document.getElementById('op-list');
+const codeBody = document.getElementById('code-body');
+const edgeGroup = document.getElementById('heap-edge-group');
+const nodeGroup = document.getElementById('heap-node-group');
+const dots = document.getElementById('dots');
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
+
+function formatKey(value) {
+  return value === null || value === undefined ? '-' : Number(value).toFixed(1);
+}
+
+function escapeHtml(text) {
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function syntaxHighlight(line) {
+  return escapeHtml(line)
+    .replace(/"([^"]*)"/g, '<span class="str">"$1"</span>')
+    .replace(/\b(for|while|if|else|return|break)\b/g, '<span class="kw">$1</span>')
+    .replace(/\b(IndexMinPQ|pair|vector|double|int|Key)\b/g, '<span class="tp">$1</span>')
+    .replace(/\b(Insert|Contains|ChangeKey|Empty|MinKey|MinIndex|DelMin|Swim|Sink|Exch|Greater)\b/g, '<span class="fn">$1</span>')
+    .replace(/\b(pq|qp|keys|size|child|key|index|m|p|cout)\b/g, '<span class="id">$1</span>')
+    .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="num">$1</span>');
+}
+
+function buildCode() {
+  codeBody.innerHTML = '';
+  CODE.forEach((line, idx) => {
+    const row = document.createElement('div');
+    row.className = 'cline';
+    row.dataset.line = String(idx + 1);
+    const indent = line.match(/^\s*/)[0].length / 4;
+    row.innerHTML = `<div class="lnum">${idx + 1}</div><div class="lcode" style="--indent:${indent}">${line ? syntaxHighlight(line.trimStart()) : '&nbsp;'}</div>`;
+    codeBody.appendChild(row);
+  });
+}
+
+function highlightCode(lines) {
+  document.querySelectorAll('.cline').forEach((row) => row.classList.remove('hl'));
+  lines.forEach((line) => {
+    const row = codeBody.querySelector(`.cline[data-line="${line}"]`);
+    if (row) row.classList.add('hl');
+  });
+}
+
+function clonePairs(list) {
+  return list.map((item) => ({ index: item.index, key: item.key }));
+}
+
+function createStep(state, extra) {
+  return {
+    size: state.size,
+    capacity: state.capacity,
+    pq: state.pq.slice(),
+    qp: state.qp.slice(),
+    keys: state.keys.slice(),
+    outputs: clonePairs(state.outputs),
+    opIndex: extra.opIndex,
+    opLabel: extra.opLabel || '',
+    currentPair: extra.currentPair || null,
+    phase: extra.phase || 'build',
+    desc: extra.desc || '',
+    action: extra.action || '',
+    code: extra.code || [],
+    focusHeap: extra.focusHeap || [],
+    compareHeap: extra.compareHeap || [],
+    swapHeap: extra.swapHeap || [],
+    doneHeap: extra.doneHeap || [],
+    removedHeap: extra.removedHeap || [],
+    touchIndices: extra.touchIndices || [],
+    removedIndices: extra.removedIndices || [],
+    activeLinks: extra.activeLinks || [],
+    emittedPair: extra.emittedPair || null
+  };
+}
+
+function buildSteps() {
+  const state = {
+    capacity: CAPACITY,
+    size: 0,
+    pq: Array(CAPACITY + 1).fill(-1),
+    qp: Array(CAPACITY).fill(-1),
+    keys: Array(CAPACITY).fill(null),
+    outputs: []
+  };
+
+  function pushStep(extra) {
+    steps.push(createStep(state, extra));
+  }
+
+  function contains(i) {
+    return state.qp[i] !== -1;
+  }
+
+  function greater(a, b) {
+    return state.keys[state.pq[a]] > state.keys[state.pq[b]];
+  }
+
+  function exch(a, b) {
+    const temp = state.pq[a];
+    state.pq[a] = state.pq[b];
+    state.pq[b] = temp;
+    if (state.pq[a] !== -1) state.qp[state.pq[a]] = a;
+    if (state.pq[b] !== -1) state.qp[state.pq[b]] = b;
+  }
+
+  function swim(k, meta) {
+    while (k > 1) {
+      const parent = Math.floor(k / 2);
+      const indices = [state.pq[parent], state.pq[k]].filter((v) => v !== -1);
+      pushStep({
+        ...meta,
+        desc: `Swim(${k})에서 부모 heap[${parent}]와 자식 heap[${k}]를 비교한다.`,
+        action: `Greater(${parent}, ${k}) 검사`,
+        code: [42, 43],
+        focusHeap: [k],
+        compareHeap: [parent],
+        activeLinks: [[parent, k, 'compare']],
+        touchIndices: indices
+      });
+
+      if (!greater(parent, k)) {
+        pushStep({
+          ...meta,
+          desc: `부모 키가 더 작거나 같으므로 Swim이 멈춘다. heap[${k}]가 제자리를 찾았다.`,
+          action: 'heap order 유지',
+          code: [42, 43, 46],
+          doneHeap: [parent, k],
+          activeLinks: [[parent, k, 'done']],
+          touchIndices: indices
+        });
+        return;
+      }
+
+      const touched = [state.pq[parent], state.pq[k]].filter((v) => v !== -1);
+      exch(parent, k);
+      pushStep({
+        ...meta,
+        desc: `부모 키가 더 크기 때문에 Exch(${parent}, ${k})를 수행한다. qp 매핑도 동시에 갱신된다.`,
+        action: `heap[${parent}] <-> heap[${k}]`,
+        code: [44, 45],
+        swapHeap: [parent, k],
+        activeLinks: [[parent, k, 'swap']],
+        touchIndices: touched
+      });
+      k = parent;
+    }
+
+    if (state.size > 0) {
+      pushStep({
+        ...meta,
+        desc: 'Swim이 루트까지 올라와 종료되었다.',
+        action: '최소 키가 위쪽으로 정착',
+        code: [42, 46],
+        doneHeap: [1],
+        touchIndices: [state.pq[1]].filter((v) => v !== -1)
+      });
+    }
+  }
+
+  function sink(k, meta) {
+    while (2 * k <= state.size) {
+      let child = 2 * k;
+      pushStep({
+        ...meta,
+        desc: `Sink(${k})에서 왼쪽 자식 heap[${child}]를 먼저 본다.`,
+        action: `child = 2 * ${k}`,
+        code: [49, 50, 51],
+        focusHeap: [k],
+        compareHeap: [child],
+        activeLinks: [[k, child, 'compare']],
+        touchIndices: [state.pq[k], state.pq[child]].filter((v) => v !== -1)
+      });
+
+      if (child + 1 <= state.size) {
+        pushStep({
+          ...meta,
+          desc: `오른쪽 자식 heap[${child + 1}]도 있으므로 더 작은 자식을 선택할지 비교한다.`,
+          action: `Greater(${child}, ${child + 1}) 검사`,
+          code: [51, 52, 53],
+          compareHeap: [child, child + 1],
+          activeLinks: [[k, child, 'compare'], [k, child + 1, 'compare']],
+          touchIndices: [state.pq[k], state.pq[child], state.pq[child + 1]].filter((v) => v !== -1)
+        });
+
+        if (greater(child, child + 1)) {
+          child = child + 1;
+          pushStep({
+            ...meta,
+            desc: `오른쪽 자식이 더 작으므로 child를 heap[${child}]로 바꾼다.`,
+            action: `child = ${child}`,
+            code: [52, 53],
+            focusHeap: [k],
+            compareHeap: [child],
+            activeLinks: [[k, child, 'compare']],
+            touchIndices: [state.pq[k], state.pq[child]].filter((v) => v !== -1)
+          });
+        }
+      }
+
+      pushStep({
+        ...meta,
+        desc: `이제 부모 heap[${k}]와 선택된 자식 heap[${child}]를 비교한다.`,
+        action: `Greater(${k}, ${child}) 검사`,
+        code: [54],
+        focusHeap: [k],
+        compareHeap: [child],
+        activeLinks: [[k, child, 'compare']],
+        touchIndices: [state.pq[k], state.pq[child]].filter((v) => v !== -1)
+      });
+
+      if (!greater(k, child)) {
+        pushStep({
+          ...meta,
+          desc: '부모 키가 이미 더 작거나 같으므로 Sink를 멈춘다.',
+          action: 'heap order 회복',
+          code: [54],
+          doneHeap: [k, child],
+          activeLinks: [[k, child, 'done']],
+          touchIndices: [state.pq[k], state.pq[child]].filter((v) => v !== -1)
+        });
+        return;
+      }
+
+      const touched = [state.pq[k], state.pq[child]].filter((v) => v !== -1);
+      exch(k, child);
+      pushStep({
+        ...meta,
+        desc: `부모 키가 더 크기 때문에 Exch(${k}, ${child})로 아래로 내린다.`,
+        action: `heap[${k}] <-> heap[${child}]`,
+        code: [55, 56],
+        swapHeap: [k, child],
+        activeLinks: [[k, child, 'swap']],
+        touchIndices: touched
+      });
+      k = child;
+    }
+
+    if (state.size > 0) {
+      pushStep({
+        ...meta,
+        desc: '더 내려갈 자식이 없어서 Sink가 종료되었다.',
+        action: '현재 위치에서 힙 조건 유지',
+        code: [49, 57],
+        doneHeap: [Math.min(k, state.size)],
+        touchIndices: [state.pq[Math.min(k, state.size)]].filter((v) => v !== -1)
+      });
+    }
+  }
+
+  function insert(i, key, opIndex) {
+    const meta = { opIndex, opLabel: `Insert(${i}, ${formatKey(key)})`, currentPair: { index: i, key }, phase: 'build' };
+    state.size += 1;
+    state.qp[i] = state.size;
+    state.pq[state.size] = i;
+    state.keys[i] = key;
+
+    pushStep({
+      ...meta,
+      desc: `새 인덱스 ${i}를 heap[${state.size}]에 넣고 keys[${i}] = ${formatKey(key)}로 저장한다.`,
+      action: `qp[${i}] = ${state.size}, pq[${state.size}] = ${i}`,
+      code: [18, 19, 20, 21, 22, 23],
+      focusHeap: [state.size],
+      touchIndices: [i]
+    });
+
+    swim(state.size, meta);
+
+    pushStep({
+      ...meta,
+      desc: `Insert(${i}, ${formatKey(key)})가 끝났다.`,
+      action: `size = ${state.size}`,
+      code: [18, 23],
+      doneHeap: [state.qp[i]],
+      touchIndices: [i]
+    });
+  }
+
+  function changeKey(i, key, opIndex) {
+    const oldKey = state.keys[i];
+    const meta = { opIndex, opLabel: `ChangeKey(${i}, ${formatKey(key)})`, currentPair: { index: i, key }, phase: 'build' };
+    state.keys[i] = key;
+
+    pushStep({
+      ...meta,
+      desc: `이미 들어 있는 인덱스 ${i}의 키를 ${formatKey(oldKey)}에서 ${formatKey(key)}로 바꾼다.`,
+      action: `keys[${i}] = ${formatKey(key)}`,
+      code: [26, 27, 28, 29],
+      focusHeap: [state.qp[i]],
+      touchIndices: [i]
+    });
+
+    swim(state.qp[i], meta);
+    sink(state.qp[i], meta);
+
+    pushStep({
+      ...meta,
+      desc: `ChangeKey(${i}, ${formatKey(key)})가 끝났다.`,
+      action: `새 heap position = ${state.qp[i]}`,
+      code: [26, 29],
+      doneHeap: [state.qp[i]],
+      touchIndices: [i]
+    });
+  }
+
+  function delMin(opIndex) {
+    const m = state.pq[1];
+    const minKey = state.keys[m];
+    const meta = { opIndex, opLabel: `DelMin() -> (${formatKey(minKey)}, ${m})`, currentPair: null, phase: 'drain' };
+
+    pushStep({
+      ...meta,
+      desc: `현재 최소 원소는 root의 (${formatKey(minKey)}, ${m})이다. main 루프가 이 값을 출력한다.`,
+      action: `MinKey() = ${formatKey(minKey)}, MinIndex() = ${m}`,
+      code: [13, 14, 15, 32, 33],
+      focusHeap: [1],
+      touchIndices: [m],
+      emittedPair: { index: m, key: minKey }
+    });
+
+    const oldSize = state.size;
+    exch(1, state.size);
+    state.size -= 1;
+
+    pushStep({
+      ...meta,
+      desc: `root와 마지막 원소를 교환한 뒤 size를 하나 줄인다. 이제 새 root를 Sink(1)로 내려야 한다.`,
+      action: `Exch(1, ${oldSize})`,
+      code: [34, 35],
+      swapHeap: oldSize === 1 ? [1] : [1, oldSize],
+      activeLinks: oldSize > 1 ? [[1, oldSize, 'swap']] : [],
+      touchIndices: [m, state.pq[1]].filter((v) => v !== -1)
+    });
+
+    if (state.size > 0) sink(1, meta);
+
+    state.qp[m] = -1;
+    state.keys[m] = null;
+    state.pq[state.size + 1] = -1;
+    state.outputs.push({ index: m, key: minKey });
+
+    pushStep({
+      ...meta,
+      desc: `삭제된 인덱스 ${m}의 qp, keys, pq 슬롯을 비우고 출력 목록에 (${formatKey(minKey)}, ${m})을 추가한다.`,
+      action: `qp[${m}] = -1`,
+      code: [36, 37, 38, 39],
+      removedHeap: [state.size + 1],
+      removedIndices: [m],
+      touchIndices: [m]
+    });
+  }
+
+  pushStep({ opIndex: 0, opLabel: '시작 상태', currentPair: null, phase: 'build', desc: '빈 IndexMinPQ에서 시작한다. 아직 pq, qp, keys가 모두 비어 있다.', action: 'size = 0', code: [1, 3, 7, 13] });
+
+  INPUT_PAIRS.forEach((pair, index) => {
+    const exists = contains(pair.index);
+    pushStep({
+      opIndex: index,
+      opLabel: exists ? `Contains(${pair.index}) -> ChangeKey` : `Contains(${pair.index}) -> Insert`,
+      currentPair: { index: pair.index, key: pair.key },
+      phase: 'build',
+      desc: `main()의 다음 pair는 {${formatKey(pair.key)}, ${pair.index}}이다. 먼저 Contains(${pair.index})를 확인한다.`,
+      action: exists ? '이미 존재하므로 ChangeKey 경로' : '없으므로 Insert 경로',
+      code: [3, 4, 5, 6, 7, 8, 9, 10],
+      touchIndices: [pair.index]
+    });
+    if (exists) changeKey(pair.index, pair.key, index);
+    else insert(pair.index, pair.key, index);
+  });
+
+  pushStep({ opIndex: 6, opLabel: 'while (!pq.Empty()) 시작', currentPair: null, phase: 'drain', desc: '이제 빌드가 끝났으므로 while (!pq.Empty()) 루프로 들어가 최소 원소를 하나씩 꺼낸다.', action: 'DelMin 반복 시작', code: [13, 14, 15] });
+  while (state.size > 0) delMin(6);
+  pushStep({ opIndex: 6, opLabel: '완료', currentPair: null, phase: 'drain', desc: 'priority queue가 비어서 모든 DelMin() 반복이 끝났다. 출력 순서는 key 기준 오름차순이다.', action: 'pq.Empty() == true', code: [13, 16] });
+}
+
+function buildDots() {
+  dots.innerHTML = '';
+  steps.forEach((_, index) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'dot';
+    dot.addEventListener('click', () => goTo(index));
+    dots.appendChild(dot);
+  });
+}
+
+function syncButtons() {
+  prevBtn.disabled = current === 0;
+  nextBtn.disabled = current === steps.length - 1;
+}
+
+function currentMin(step) {
+  if (step.size === 0 || step.pq[1] === -1) return null;
+  const index = step.pq[1];
+  return { index, key: step.keys[index] };
+}
+
+function heapSlotStatus(step, pos) {
+  if (step.removedHeap.includes(pos)) return 'removed';
+  if (step.swapHeap.includes(pos)) return 'swap';
+  if (step.focusHeap.includes(pos)) return 'current';
+  if (step.compareHeap.includes(pos)) return 'compare';
+  if (step.doneHeap.includes(pos)) return 'done';
+  if (step.pq[pos] === -1 || pos > step.size) return 'empty';
+  return 'default';
+}
+
+function indexCellStatus(step, index) {
+  if (step.removedIndices.includes(index)) return 'removed';
+  if (step.touchIndices.includes(index)) {
+    if (step.swapHeap.length) return 'swap';
+    if (step.compareHeap.length) return 'compare';
+    if (step.doneHeap.length) return 'done';
+    return 'current';
+  }
+  if (step.qp[index] === -1 && step.keys[index] === null) return 'empty';
+  return '';
+}
+
+function qpCellStatus(step, index) {
+  if (step.removedIndices.includes(index)) return 'removed';
+  if (step.touchIndices.includes(index)) {
+    if (step.swapHeap.length) return 'swap';
+    if (step.compareHeap.length) return 'compare';
+    if (step.doneHeap.length) return 'done';
+    return 'current';
+  }
+  return '';
+}
+
+function renderArray(container, values, labels, options, step) {
+  container.innerHTML = '';
+  values.forEach((value, idx) => {
+    const cell = document.createElement('div');
+    const realIndex = options.offset + idx;
+    const status = options.statusFn(step, realIndex);
+    cell.className = `arr-cell ${status}`.trim();
+    const label = document.createElement('div');
+    label.className = 'arr-label';
+    label.textContent = `${labels}${realIndex}`;
+    const main = document.createElement('div');
+    main.className = 'arr-main';
+    main.textContent = options.mainText(value, realIndex, step);
+    const sub = document.createElement('div');
+    sub.className = 'arr-sub';
+    sub.textContent = options.subText ? options.subText(value, realIndex, step) : '';
+    if (main.textContent === '-' && !sub.textContent) cell.classList.add('empty');
+    cell.appendChild(label);
+    cell.appendChild(main);
+    cell.appendChild(sub);
+    container.appendChild(cell);
+  });
+}
+
+function renderOutput(step) {
+  outputChips.innerHTML = '';
+  if (!step.outputs.length) {
+    outputChips.innerHTML = '<span class="chip-empty">empty</span>';
+    return;
+  }
+  step.outputs.forEach((pair) => {
+    const chip = document.createElement('span');
+    chip.className = 'chip output';
+    chip.textContent = `(${formatKey(pair.key)}, ${pair.index})`;
+    outputChips.appendChild(chip);
+  });
+  if (step.emittedPair) {
+    const chip = document.createElement('span');
+    chip.className = 'chip current';
+    chip.textContent = `emit (${formatKey(step.emittedPair.key)}, ${step.emittedPair.index})`;
+    outputChips.appendChild(chip);
+  }
+}
+
+function renderOperations(step) {
+  opList.innerHTML = '';
+  OPERATION_LIST.forEach((text, idx) => {
+    const row = document.createElement('div');
+    let cls = 'pending';
+    if (idx < step.opIndex) cls = 'done';
+    else if (idx === step.opIndex) cls = 'current';
+    row.className = `op-row ${cls}`;
+    row.innerHTML = `<div class="op-no">${idx + 1}</div><div class="op-text">${escapeHtml(text)}</div>`;
+    opList.appendChild(row);
+  });
+}
+
+function findHeapViolation(step) {
+  for (let pos = 2; pos <= step.size; pos++) {
+    const parent = Math.floor(pos / 2);
+    const parentIndex = step.pq[parent];
+    const childIndex = step.pq[pos];
+    if (parentIndex !== -1 && childIndex !== -1 && step.keys[parentIndex] > step.keys[childIndex]) {
+      return `heap[${parent}]의 key ${formatKey(step.keys[parentIndex])} > heap[${pos}]의 key ${formatKey(step.keys[childIndex])}`;
+    }
+  }
+  return null;
+}
+
+function renderHeapStatus(step) {
+  if (step.size === 0) {
+    heapCheck.className = 'status-line';
+    heapCheck.textContent = 'heap is empty';
+    return;
+  }
+  const violation = findHeapViolation(step);
+  if (violation) {
+    heapCheck.className = 'status-line warn';
+    heapCheck.textContent = `temporary violation: ${violation}`;
+    return;
+  }
+  heapCheck.className = 'status-line ok';
+  heapCheck.textContent = 'all parent keys <= child keys';
+}
+
+function edgeStyle(step, from, to) {
+  const used = from <= step.size && to <= step.size;
+  let status = used ? 'default' : 'empty';
+  step.activeLinks.forEach(([a, b, kind]) => {
+    if ((a === from && b === to) || (a === to && b === from)) status = kind;
+  });
+  if (status === 'compare') return { stroke: '#8b7cff', width: 3, opacity: 0.9 };
+  if (status === 'swap') return { stroke: '#569cd6', width: 3.4, opacity: 0.95 };
+  if (status === 'done') return { stroke: '#4ec9b0', width: 3, opacity: 0.9 };
+  if (used) return { stroke: 'rgba(140,140,140,.55)', width: 2.1, opacity: 1 };
+  return { stroke: 'rgba(90,90,90,.28)', width: 1.5, opacity: 1 };
+}
+
+function drawHeap(step) {
+  const SVG = 'http://www.w3.org/2000/svg';
+  edgeGroup.innerHTML = '';
+  nodeGroup.innerHTML = '';
+
+  for (let pos = 2; pos <= CAPACITY; pos++) {
+    const parent = Math.floor(pos / 2);
+    if (!HEAP_POS[parent] || !HEAP_POS[pos]) continue;
+    const line = document.createElementNS(SVG, 'line');
+    line.setAttribute('x1', HEAP_POS[parent].x);
+    line.setAttribute('y1', HEAP_POS[parent].y + 18);
+    line.setAttribute('x2', HEAP_POS[pos].x);
+    line.setAttribute('y2', HEAP_POS[pos].y - 22);
+    const style = edgeStyle(step, parent, pos);
+    line.setAttribute('stroke', style.stroke);
+    line.setAttribute('stroke-width', style.width);
+    line.setAttribute('opacity', style.opacity);
+    edgeGroup.appendChild(line);
+  }
+
+  for (let pos = 1; pos <= CAPACITY; pos++) {
+    const slot = HEAP_POS[pos];
+    if (!slot) continue;
+    const index = step.pq[pos];
+    const key = index >= 0 ? step.keys[index] : null;
+    const status = heapSlotStatus(step, pos);
+    const style = NODE_STYLE[status] || NODE_STYLE.default;
+    const group = document.createElementNS(SVG, 'g');
+    const rect = document.createElementNS(SVG, 'rect');
+    rect.setAttribute('x', slot.x - 44);
+    rect.setAttribute('y', slot.y - 22);
+    rect.setAttribute('width', 88);
+    rect.setAttribute('height', 46);
+    rect.setAttribute('rx', 8);
+    rect.setAttribute('fill', style.fill);
+    rect.setAttribute('stroke', style.stroke);
+    rect.setAttribute('stroke-width', status === 'empty' ? 1.6 : 2.4);
+    if (status === 'empty') rect.setAttribute('stroke-dasharray', '4 4');
+    group.appendChild(rect);
+
+    const posText = document.createElementNS(SVG, 'text');
+    posText.setAttribute('x', slot.x);
+    posText.setAttribute('y', slot.y - 7);
+    posText.setAttribute('text-anchor', 'middle');
+    posText.setAttribute('font-size', '10');
+    posText.setAttribute('fill', '#858585');
+    posText.textContent = `h${pos}`;
+    group.appendChild(posText);
+
+    const idxText = document.createElementNS(SVG, 'text');
+    idxText.setAttribute('x', slot.x);
+    idxText.setAttribute('y', slot.y + 7);
+    idxText.setAttribute('text-anchor', 'middle');
+    idxText.setAttribute('font-size', '17');
+    idxText.setAttribute('font-weight', '700');
+    idxText.setAttribute('fill', style.text);
+    idxText.textContent = index >= 0 ? `i=${index}` : '-';
+    group.appendChild(idxText);
+
+    const keyText = document.createElementNS(SVG, 'text');
+    keyText.setAttribute('x', slot.x);
+    keyText.setAttribute('y', slot.y + 19);
+    keyText.setAttribute('text-anchor', 'middle');
+    keyText.setAttribute('font-size', '10');
+    keyText.setAttribute('fill', index >= 0 ? '#dcdcaa' : '#555');
+    keyText.textContent = index >= 0 ? formatKey(key) : 'empty';
+    group.appendChild(keyText);
+    nodeGroup.appendChild(group);
+  }
+}
+
+function render(step) {
+  counter.textContent = `Step ${current + 1} / ${steps.length}`;
+  desc.textContent = step.desc;
+  opVal.textContent = step.opLabel || '-';
+  sizeVal.textContent = `${step.size} / ${step.capacity}`;
+  pairVal.textContent = step.currentPair ? `{${formatKey(step.currentPair.key)}, ${step.currentPair.index}}` : '-';
+  phaseVal.textContent = step.phase === 'build' ? 'build phase / 삽입-갱신' : 'drain phase / 최소 삭제';
+  const min = currentMin(step);
+  minVal.textContent = min ? `(${formatKey(min.key)}, ${min.index})` : '-';
+  traceBox.textContent = step.action || '대기 중';
+
+  renderOperations(step);
+  renderHeapStatus(step);
+  renderOutput(step);
+  drawHeap(step);
+
+  renderArray(
+    pqArray,
+    step.pq,
+    'h',
+    {
+      offset: 0,
+      statusFn: (data, pos) => pos === 0 ? 'unused' : heapSlotStatus(data, pos),
+      mainText: (value, pos, data) => pos === 0 ? '-' : (value === -1 || pos > data.size ? '-' : String(value)),
+      subText: (value, pos, data) => pos === 0 ? 'unused' : (value === -1 || pos > data.size ? '' : formatKey(data.keys[value]))
+    },
+    step
+  );
+
+  renderArray(
+    qpArray,
+    step.qp,
+    'i',
+    {
+      offset: 0,
+      statusFn: qpCellStatus,
+      mainText: (value) => String(value),
+      subText: () => ''
+    },
+    step
+  );
+
+  renderArray(
+    keysArray,
+    step.keys,
+    'i',
+    {
+      offset: 0,
+      statusFn: indexCellStatus,
+      mainText: (value) => value === null ? '-' : formatKey(value),
+      subText: (value, idx, data) => data.qp[idx] === -1 ? '' : `h${data.qp[idx]}`
+    },
+    step
+  );
+
+  highlightCode(step.code);
+  document.querySelectorAll('.dot').forEach((dot, idx) => dot.classList.toggle('active', idx === current));
+  syncButtons();
+}
+
+function go(delta) {
+  const next = current + delta;
+  if (next < 0 || next >= steps.length) return;
+  current = next;
+  render(steps[current]);
+}
+
+function goTo(index) {
+  current = Math.max(0, Math.min(steps.length - 1, index));
+  render(steps[current]);
+}
+
+document.addEventListener('keydown', (event) => {
+  const target = event.target;
+  const tag = (target && target.tagName ? target.tagName : '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || (target && target.isContentEditable)) return;
+  if (event.key === 'End') {
+    event.preventDefault();
+    goTo(steps.length - 1);
+  }
+});
+
+buildCode();
+buildSteps();
+buildDots();
+render(steps[current]);
+</script>
+<script src="../shared/viewer-controls.js"></script>
+</body>
+</html>
