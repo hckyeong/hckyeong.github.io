@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dijkstra Shortest Paths / 다익스트라 최단 경로</title>
+<link rel="stylesheet" href="../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:'Consolas','Courier New',monospace;font-size:13px;padding:16px}
+h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacing:.5px}
+#step-counter{font-size:11px;color:#858585}
+#step-desc{font-size:13px;color:#e0e0e0;margin-top:5px;min-height:60px;line-height:1.6;padding:8px 10px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0}
+#step-desc .desc-main{color:#e0e0e0}
+#step-desc .desc-codebox{margin-top:8px;border:1px solid #3e3e42;border-radius:4px;background:#1f1f1f;overflow:hidden}
+#step-desc .desc-codehead{padding:4px 8px;font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;background:#2a2a2a;border-bottom:1px solid #3e3e42}
+#step-desc .desc-codeline{display:flex;align-items:stretch;min-height:20px}
+#step-desc .desc-codelnum{width:34px;padding:3px 8px 3px 0;text-align:right;color:#666;font-size:10px;flex-shrink:0;user-select:none}
+#step-desc .desc-codetext{flex:1;padding:3px 10px;font-size:11px;line-height:1.45;color:#d4d4d4;white-space:pre-wrap;word-break:break-word}
+#step-desc .desc-codeempty{padding:6px 10px;font-size:11px;color:#777}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
+#main-content{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px;margin:12px 0}
+#graph-panel{flex:1 1 780px;min-width:min(100%,780px);background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:8px}
+#graph-panel svg{width:100%;display:block}
+#right-panel{flex:1 1 390px;min-width:min(100%,390px);display:flex;flex-direction:column;gap:10px}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.graph-note{font-size:11px;color:#858585;margin-top:8px;line-height:1.55}
+.meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.meta-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px;min-height:62px}
+.meta-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.meta-value{font-size:17px;font-weight:700;color:#dcdcaa;line-height:1.35;word-break:break-word}
+.meta-sub{font-size:11px;color:#9cdcfe}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-height:28px}
+.chip{padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700;border:1px solid #3e3e42;background:#2d2d2d;color:#d4d4d4}
+.chip.current{border-color:#f7b267;background:rgba(247,178,103,.12);color:#ffe4b8}
+.chip.done{border-color:#4ec9b0;background:rgba(78,201,176,.12);color:#cffff2}
+.chip.queue{border-color:#569cd6;background:rgba(86,156,214,.12);color:#d9ecff}
+.chip-empty{color:#555;font-size:11px}
+.array-grid{display:flex;gap:6px;flex-wrap:wrap}
+.arr-cell{width:62px;min-height:60px;border:1px solid #3e3e42;border-radius:6px;background:#1f1f1f;padding:5px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;justify-content:flex-start;transition:all .2s}
+.arr-label{font-size:10px;color:#666}
+.arr-main{font-size:13px;font-weight:700;color:#d4d4d4;line-height:1.25}
+.arr-sub{font-size:10px;color:#858585;line-height:1.2;text-align:center}
+#dist-grid,#prev-grid{gap:6px}
+#dist-grid .arr-cell,#prev-grid .arr-cell{width:50px;min-height:30px;padding:3px 8px;gap:1px;justify-content:center;border-radius:4px}
+#dist-grid .arr-label,#prev-grid .arr-label{font-size:9px;line-height:1}
+#dist-grid .arr-main,#prev-grid .arr-main{font-size:11px;line-height:1.05}
+#dist-grid .arr-sub,#prev-grid .arr-sub{display:none}
+.arr-cell.current{border-color:#f7b267;background:rgba(247,178,103,.1)}
+.arr-cell.updated{border-color:#c586c0;background:rgba(197,134,192,.12)}
+.arr-cell.queue{border-color:#569cd6;background:rgba(86,156,214,.12)}
+.arr-cell.done{border-color:#4ec9b0;background:rgba(78,201,176,.1)}
+.arr-cell.source{border-color:#9cdcfe;background:rgba(156,220,254,.1)}
+.arr-cell.idle .arr-main,.arr-cell.idle .arr-sub{color:#555}
+.trace-line{padding:8px 10px;border-radius:4px;background:#1f1f1f;border:1px solid #343434;font-size:12px;line-height:1.6;color:#d4d4d4;word-break:break-word;min-height:52px}
+.path-list{display:flex;flex-direction:column;gap:7px}
+.path-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px}
+.path-card.done{border-color:#4ec9b0;background:rgba(78,201,176,.08)}
+.path-head{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.path-body{font-size:12px;line-height:1.5;color:#d4d4d4}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin-bottom:12px}
+.code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent}
+.cline.hl{background:rgba(255,255,120,.08);border-left:2px solid #dcdcaa}
+.lnum{width:40px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre}
+.lcode::before{content:'';position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.id{color:#9cdcfe}.num{color:#b5cea8}.str{color:#ce9178}.cm{color:#6a9955;font-style:italic}
+#nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px;flex-wrap:wrap}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#3e3e42}
+.nbtn:disabled{opacity:.3;cursor:default}
+#dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:640px;justify-content:center}
+.dot{width:6px;height:6px;border-radius:50%;background:#3e3e42}
+.dot.active{background:#858585}
+@media (max-width:980px){#main-content{flex-direction:column}#graph-panel,#right-panel{flex:1 1 auto}}
+@media (max-width:760px){.meta-grid{grid-template-columns:1fr}}
+@media (max-width:560px){body{padding:12px}#step-desc{min-height:78px}.nbtn{padding:6px 16px}.arr-cell{width:56px}#dist-grid .arr-cell,#prev-grid .arr-cell{width:46px;min-height:28px;padding:3px 6px}}
+</style>
+</head>
+<body>
+<h1>Dijkstra Shortest Paths / 다익스트라 최단 경로</h1>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="legend">
+  <div class="leg"><div class="leg-c" style="background:rgba(55,55,55,.45);border-color:#555"></div>미도달 / Unreached</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(86,156,214,.18);border-color:#569cd6"></div>우선순위 큐 내부 / In IndexMinPQ</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(247,178,103,.18);border-color:#f7b267"></div>현재 Relax 정점 / Current vertex</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(197,134,192,.18);border-color:#c586c0"></div>방금 갱신 / Updated</div>
+  <div class="leg"><div class="leg-c" style="background:rgba(78,201,176,.18);border-color:#4ec9b0"></div>확정된 최단거리 / Settled</div>
+</div>
+<div id="main-content">
+  <div id="graph-panel">
+    <svg id="gsvg" viewBox="0 0 780 430" aria-label="Dijkstra weighted digraph">
+      <g id="edge-group"></g>
+      <g id="weight-group"></g>
+      <g id="node-group"></g>
+    </svg>
+    <div class="graph-note">CLRS p.621 예제 그래프를 사용합니다. source는 0이고, 간선 가중치와 방향을 그대로 표시합니다. `DelMin()`으로 꺼낸 정점이 초록색으로 확정되고, 완화에 성공한 간선은 보라색으로 강조됩니다.</div>
+  </div>
+  <div id="right-panel">
+    <div class="sbox">
+      <div class="slabel">Dijkstra State</div>
+      <div class="meta-grid">
+        <div class="meta-card"><div class="meta-name">Source</div><div class="meta-value" id="source-val">0</div><div class="meta-sub">dist[0] = 0.0</div></div>
+        <div class="meta-card"><div class="meta-name">Current Vertex</div><div class="meta-value" id="current-val">-</div><div class="meta-sub" id="phase-val">init</div></div>
+        <div class="meta-card"><div class="meta-name">PQ Minimum</div><div class="meta-value" id="pqmin-val">-</div></div>
+        <div class="meta-card"><div class="meta-name">Settled Count</div><div class="meta-value" id="settled-count">0 / 5</div></div>
+      </div>
+    </div>
+    <div class="sbox"><div class="slabel">Settled Order</div><div id="settled-chips" class="chips"></div></div>
+    <div class="sbox"><div class="slabel">IndexMinPQ Contents (min -> max)</div><div id="pq-chips" class="chips"></div></div>
+    <div class="sbox"><div class="slabel">dist 배열</div><div id="dist-grid" class="array-grid"></div></div>
+    <div class="sbox"><div class="slabel">prev 배열</div><div id="prev-grid" class="array-grid"></div></div>
+    <div class="sbox"><div class="slabel">Relax Formula</div><div id="formula-box" class="trace-line"></div></div>
+    <div class="sbox"><div class="slabel">Paths from source</div><div id="path-list" class="path-list"></div></div>
+  </div>
+</div>
+<div id="code-panel">
+  <div class="code-title">DijkstraShortestPaths() / Relax() / main()</div>
+  <div id="code-body"></div>
+</div>
+<div id="nav">
+  <button class="nbtn" id="prev" onclick="go(-1)">← 이전</button>
+  <button class="nbtn" id="reset" onclick="goTo(0)">처음</button>
+  <div id="dots"></div>
+  <button class="nbtn" id="next" onclick="go(1)">다음 →</button>
+</div>
+<script>
+const GRAPH = {
+  source: 0,
+  nodes: [0, 1, 2, 3, 4],
+  pos: {
+    0: { x: 96, y: 86 },
+    1: { x: 330, y: 72 },
+    2: { x: 648, y: 180 },
+    3: { x: 250, y: 222 },
+    4: { x: 438, y: 330 }
+  },
+  edges: [
+    { from: 0, to: 1, weight: 10.0 },
+    { from: 0, to: 3, weight: 5.0 },
+    { from: 1, to: 2, weight: 1.0 },
+    { from: 1, to: 3, weight: 2.0 },
+    { from: 2, to: 4, weight: 4.0 },
+    { from: 3, to: 1, weight: 3.0 },
+    { from: 3, to: 2, weight: 9.0 },
+    { from: 3, to: 4, weight: 2.0 },
+    { from: 4, to: 0, weight: 7.0 },
+    { from: 4, to: 2, weight: 6.0 }
+  ]
+};
+
+const OFFSETS = {
+  '1-3': 10,
+  '3-1': -10,
+  '2-4': 10,
+  '4-2': -10
+};
+
+const CURVES = {
+  '4-0': { cx: 180, cy: 386 }
+};
+
+const CODE = [
+  'DijkstraShortestPaths(EdgeWeightedDigraph& g, int s)',
+  '    : prev(g.num_vertices, -1),',
+  '      dist(g.num_vertices, infinity),',
+  '      pq(g.num_vertices)',
+  '{',
+  '    dist[s] = 0.0;',
+  '    pq.Insert(s, dist[s]);',
+  '    while (!pq.Empty())',
+  '        Relax(g, pq.DelMin());',
+  '    PrintPaths();',
+  '}',
+  '',
+  'void Relax(EdgeWeightedDigraph& g, int v)',
+  '{',
+  '    for (auto& e : g.adj[v]) {',
+  '        int w = e.To();',
+  '        double new_dist = dist[v] + e.Weight();',
+  '        if (new_dist < dist[w]) {',
+  '            dist[w] = new_dist;',
+  '            prev[w] = v;',
+  '            if (pq.Contains(w))',
+  '                pq.DecreaseKey(w, dist[w]);',
+  '            else',
+  '                pq.Insert(w, dist[w]);',
+  '        }',
+  '    }',
+  '}',
+  '',
+  'int main()',
+  '{',
+  '    vector<DirectedEdge> edges = {',
+  '        {0, 1, 10.0}, {0, 3, 5.0}, {1, 2, 1.0},',
+  '        {1, 3, 2.0}, {2, 4, 4.0}, {3, 1, 3.0},',
+  '        {3, 2, 9.0}, {3, 4, 2.0}, {4, 0, 7.0}, {4, 2, 6.0}',
+  '    };',
+  '    EdgeWeightedDigraph g(5);',
+  '    for (auto e : edges) g.AddEdge(e);',
+  '    DijkstraShortestPaths d(g, 0);',
+  '}'
+];
+
+const STEP_STATE = [];
+
+const counter = document.getElementById('step-counter');
+const desc = document.getElementById('step-desc');
+const currentVal = document.getElementById('current-val');
+const phaseVal = document.getElementById('phase-val');
+const pqMinVal = document.getElementById('pqmin-val');
+const settledCount = document.getElementById('settled-count');
+const settledChips = document.getElementById('settled-chips');
+const pqChips = document.getElementById('pq-chips');
+const distGrid = document.getElementById('dist-grid');
+const prevGrid = document.getElementById('prev-grid');
+const formulaBox = document.getElementById('formula-box');
+const pathList = document.getElementById('path-list');
+const codeBody = document.getElementById('code-body');
+const edgeGroup = document.getElementById('edge-group');
+const weightGroup = document.getElementById('weight-group');
+const nodeGroup = document.getElementById('node-group');
+const dots = document.getElementById('dots');
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
+
+let current = 0;
+
+function fmtDist(value) {
+  return Number.isFinite(value) ? value.toFixed(1) : '∞';
+}
+
+function esc(text) {
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function syntaxHighlight(line) {
+  return esc(line)
+    .replace(/\b(for|while|if|else|int|double|return)\b/g, '<span class="kw">$1</span>')
+    .replace(/\b(DijkstraShortestPaths|Relax|PrintPaths|Contains|DecreaseKey|Insert|DelMin|Empty|To|Weight|AddEdge)\b/g, '<span class="fn">$1</span>')
+    .replace(/\b(EdgeWeightedDigraph|DirectedEdge|vector)\b/g, '<span class="tp">$1</span>')
+    .replace(/\b(prev|dist|pq|g|s|v|w|e|new_dist|edges|infinity)\b/g, '<span class="id">$1</span>')
+    .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="num">$1</span>');
+}
+
+function renderHighlightedCode(lines) {
+  if (!lines || !lines.length) {
+    return '<div class="desc-codeempty">현재 단계에서 강조되는 코드가 없습니다.</div>';
+  }
+
+  return lines.map((lineNo) => {
+    const source = CODE[lineNo - 1] ?? '';
+    const html = source.trim().length ? syntaxHighlight(source.trimStart()) : '&nbsp;';
+    return `<div class="desc-codeline"><div class="desc-codelnum">${lineNo}</div><div class="desc-codetext">${html}</div></div>`;
+  }).join('');
+}
+
+function renderStepDesc(step) {
+  return `<div class="desc-main">${esc(step.desc)}</div><div class="desc-codebox"><div class="desc-codehead">Highlighted Code</div>${renderHighlightedCode(step.code)}</div>`;
+}
+
+function lockStepDescHeight() {
+  if (!STEP_STATE.length) return;
+
+  const probe = desc.cloneNode(false);
+  probe.removeAttribute('id');
+  probe.style.position = 'absolute';
+  probe.style.visibility = 'hidden';
+  probe.style.pointerEvents = 'none';
+  probe.style.left = '-99999px';
+  probe.style.top = '0';
+  probe.style.height = 'auto';
+  probe.style.minHeight = '0';
+  probe.style.maxHeight = 'none';
+  probe.style.width = `${desc.getBoundingClientRect().width}px`;
+  document.body.appendChild(probe);
+
+  let maxHeight = 0;
+  STEP_STATE.forEach((step) => {
+    probe.innerHTML = renderStepDesc(step);
+    maxHeight = Math.max(maxHeight, Math.ceil(probe.scrollHeight));
+  });
+
+  probe.remove();
+  if (maxHeight > 0) {
+    desc.style.height = `${maxHeight}px`;
+  }
+}
+
+function buildCode() {
+  codeBody.innerHTML = '';
+  CODE.forEach((line, idx) => {
+    const row = document.createElement('div');
+    row.className = 'cline';
+    row.dataset.line = String(idx + 1);
+    const indent = line.match(/^\s*/)[0].length / 4;
+    row.innerHTML = `<div class="lnum">${idx + 1}</div><div class="lcode" style="--indent:${indent}">${line ? syntaxHighlight(line.trimStart()) : '&nbsp;'}</div>`;
+    codeBody.appendChild(row);
+  });
+}
+
+function codeHighlight(lines) {
+  document.querySelectorAll('.cline').forEach((row) => row.classList.remove('hl'));
+  lines.forEach((line) => {
+    const row = codeBody.querySelector(`.cline[data-line="${line}"]`);
+    if (row) row.classList.add('hl');
+  });
+}
+
+function cloneState(state) {
+  return {
+    dist: state.dist.slice(),
+    prev: state.prev.slice(),
+    pqKeys: state.pqKeys.slice(),
+    settled: state.settled.slice(),
+    currentVertex: state.currentVertex,
+    activeEdge: state.activeEdge ? state.activeEdge.slice() : null,
+    improvedEdge: state.improvedEdge ? state.improvedEdge.slice() : null,
+    updatedVertices: state.updatedVertices.slice(),
+    desc: state.desc,
+    formula: state.formula,
+    code: state.code.slice(),
+    phase: state.phase
+  };
+}
+
+function pushStep(state, data) {
+  state.currentVertex = data.currentVertex === undefined ? state.currentVertex : data.currentVertex;
+  state.activeEdge = data.activeEdge || null;
+  state.improvedEdge = data.improvedEdge || null;
+  state.updatedVertices = data.updatedVertices || [];
+  state.desc = data.desc || '';
+  state.formula = data.formula || '';
+  state.code = data.code || [];
+  state.phase = data.phase || state.phase || 'build';
+  STEP_STATE.push(cloneState(state));
+}
+
+function sortedPq(pqKeys) {
+  return GRAPH.nodes
+    .filter((id) => pqKeys[id] !== null)
+    .sort((a, b) => pqKeys[a] - pqKeys[b] || a - b)
+    .map((id) => ({ index: id, key: pqKeys[id] }));
+}
+
+function buildSteps() {
+  const state = {
+    dist: Array(GRAPH.nodes.length).fill(Infinity),
+    prev: Array(GRAPH.nodes.length).fill(-1),
+    pqKeys: Array(GRAPH.nodes.length).fill(null),
+    settled: [],
+    currentVertex: null,
+    activeEdge: null,
+    improvedEdge: null,
+    updatedVertices: [],
+    desc: '',
+    formula: '',
+    code: [],
+    phase: 'init'
+  };
+
+  pushStep(state, {
+    desc: '그래프와 가중치가 준비된 초기 상태다. dist는 모두 무한대, prev는 모두 -1, IndexMinPQ는 비어 있다.',
+    formula: 'dist = [0 전까지 모두 ∞], prev = [-1, -1, -1, -1, -1]',
+    code: [29, 31, 32, 33, 35, 36, 37],
+    phase: 'init'
+  });
+
+  state.dist[GRAPH.source] = 0.0;
+  state.pqKeys[GRAPH.source] = 0.0;
+  pushStep(state, {
+    desc: `source ${GRAPH.source}의 거리를 0으로 두고 pq.Insert(${GRAPH.source}, 0.0)을 호출한다.`,
+    formula: `dist[${GRAPH.source}] = 0.0, pq = { ${GRAPH.source}:0.0 }`,
+    code: [6, 7],
+    updatedVertices: [GRAPH.source],
+    phase: 'build'
+  });
+
+  const adj = {};
+  GRAPH.nodes.forEach((v) => { adj[v] = []; });
+  GRAPH.edges.forEach((e) => adj[e.from].push(e));
+
+  while (sortedPq(state.pqKeys).length) {
+    const minEntry = sortedPq(state.pqKeys)[0];
+    const v = minEntry.index;
+    state.pqKeys[v] = null;
+    state.settled.push(v);
+
+    pushStep(state, {
+      currentVertex: v,
+      desc: `pq.DelMin()이 정점 ${v}를 꺼냈다. 이제 ${v}의 outgoing edge들을 Relax한다.`,
+      formula: `DelMin() -> ${v}, dist[${v}] = ${fmtDist(state.dist[v])}`,
+      code: [8, 9, 13],
+      updatedVertices: [v],
+      phase: 'relax'
+    });
+
+    adj[v].forEach((edge) => {
+      const w = edge.to;
+      const newDist = state.dist[v] + edge.weight;
+      const oldDist = state.dist[w];
+
+      if (newDist < oldDist) {
+        const hadInPq = state.pqKeys[w] !== null;
+        state.dist[w] = newDist;
+        state.prev[w] = v;
+        state.pqKeys[w] = newDist;
+
+        pushStep(state, {
+          currentVertex: v,
+          activeEdge: [v, w],
+          improvedEdge: [v, w],
+          updatedVertices: [w],
+          desc: `간선 ${v} -> ${w} (weight ${edge.weight.toFixed(1)})를 완화한다. 더 짧은 경로를 찾았으므로 dist[${w}]와 prev[${w}]를 갱신한다. ${hadInPq ? 'pq.DecreaseKey' : 'pq.Insert'}가 실행된다.`,
+          formula: `${fmtDist(state.dist[v])} + ${edge.weight.toFixed(1)} = ${fmtDist(newDist)} < ${fmtDist(oldDist)} -> dist[${w}] = ${fmtDist(newDist)}, prev[${w}] = ${v}`,
+          code: hadInPq ? [15, 16, 17, 18, 19, 20, 21, 22] : [15, 16, 17, 18, 19, 20, 23, 24],
+          phase: 'relax'
+        });
+      } else {
+        pushStep(state, {
+          currentVertex: v,
+          activeEdge: [v, w],
+          improvedEdge: null,
+          updatedVertices: [],
+          desc: `간선 ${v} -> ${w} (weight ${edge.weight.toFixed(1)})를 검사했지만 dist[${w}]가 더 짧으므로 갱신하지 않는다.`,
+          formula: `${fmtDist(state.dist[v])} + ${edge.weight.toFixed(1)} = ${fmtDist(newDist)} >= ${fmtDist(oldDist)} -> no change`,
+          code: [15, 16, 17, 18],
+          phase: 'relax'
+        });
+      }
+    });
+  }
+
+  pushStep(state, {
+    currentVertex: null,
+    activeEdge: null,
+    improvedEdge: null,
+    updatedVertices: [],
+    desc: 'priority queue가 비어서 알고리즘이 종료되었다. dist와 prev가 source 0 기준 최단 경로 트리를 완성한다.',
+    formula: 'PrintPaths() 단계에서 각 정점까지의 최단 경로를 prev를 따라 복원할 수 있다.',
+    code: [10],
+    phase: 'done'
+  });
+}
+
+function lineEndpoints(p0, p1, offset) {
+  const dx = p1.x - p0.x;
+  const dy = p1.y - p0.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+  const ox = -uy * (offset || 0);
+  const oy = ux * (offset || 0);
+  return {
+    sx: p0.x + ux * 30 + ox,
+    sy: p0.y + uy * 30 + oy,
+    ex: p1.x - ux * 30 + ox,
+    ey: p1.y - uy * 30 + oy,
+    mx: (p0.x + p1.x) / 2 + ox,
+    my: (p0.y + p1.y) / 2 + oy,
+    angle: Math.atan2(dy, dx)
+  };
+}
+
+function curveEndpoints(p0, c, p1) {
+  const sdx = c.x - p0.x;
+  const sdy = c.y - p0.y;
+  const slen = Math.hypot(sdx, sdy) || 1;
+  const edx = c.x - p1.x;
+  const edy = c.y - p1.y;
+  const elen = Math.hypot(edx, edy) || 1;
+  const sx = p0.x + (sdx / slen) * 30;
+  const sy = p0.y + (sdy / slen) * 30;
+  const ex = p1.x + (edx / elen) * 30;
+  const ey = p1.y + (edy / elen) * 30;
+  const mx = 0.25 * p0.x + 0.5 * c.x + 0.25 * p1.x;
+  const my = 0.25 * p0.y + 0.5 * c.y + 0.25 * p1.y;
+  const deriv = { x: 2 * (p1.x - c.x), y: 2 * (p1.y - c.y) };
+  return { sx, sy, ex, ey, mx, my, angle: Math.atan2(deriv.y, deriv.x) };
+}
+
+function arrowPolygon(x, y, angle, size) {
+  const backX = x - Math.cos(angle) * size;
+  const backY = y - Math.sin(angle) * size;
+  const leftX = backX + Math.cos(angle + Math.PI / 2) * size * 0.55;
+  const leftY = backY + Math.sin(angle + Math.PI / 2) * size * 0.55;
+  const rightX = backX + Math.cos(angle - Math.PI / 2) * size * 0.55;
+  const rightY = backY + Math.sin(angle - Math.PI / 2) * size * 0.55;
+  return `${x},${y} ${leftX},${leftY} ${rightX},${rightY}`;
+}
+
+function nodeState(step, id) {
+  if (step.currentVertex === id) return 'current';
+  if (step.updatedVertices.includes(id)) return 'updated';
+  if (step.settled.includes(id)) return 'done';
+  if (step.pqKeys[id] !== null) return 'queue';
+  if (id === GRAPH.source) return 'source';
+  if (Number.isFinite(step.dist[id])) return 'updated';
+  return 'idle';
+}
+
+function renderArrayGrid(container, values, formatter, stateClassFn) {
+  container.innerHTML = '';
+  GRAPH.nodes.forEach((id) => {
+    const cell = document.createElement('div');
+    cell.className = `arr-cell ${stateClassFn(id)}`;
+    cell.innerHTML = `<div class="arr-label">${id}</div><div class="arr-main">${formatter(values[id], id)}</div><div class="arr-sub"></div>`;
+    container.appendChild(cell);
+  });
+}
+
+function pathFor(step, target) {
+  if (!Number.isFinite(step.dist[target])) return null;
+  const path = [];
+  const seen = new Set();
+  let cur = target;
+  while (cur !== -1 && !seen.has(cur)) {
+    path.push(cur);
+    seen.add(cur);
+    cur = step.prev[cur];
+  }
+  return path.reverse();
+}
+
+function drawGraph(step) {
+  const SVG = 'http://www.w3.org/2000/svg';
+  edgeGroup.innerHTML = '';
+  weightGroup.innerHTML = '';
+  nodeGroup.innerHTML = '';
+
+  GRAPH.edges.forEach((edge) => {
+    const from = edge.from;
+    const to = edge.to;
+    const route = CURVES[`${from}-${to}`];
+    const p0 = GRAPH.pos[from];
+    const p1 = GRAPH.pos[to];
+    const tentativeTree = step.prev[to] === from;
+    const settledTree = tentativeTree && step.settled.includes(to);
+    const active = step.activeEdge && step.activeEdge[0] === from && step.activeEdge[1] === to;
+    const improved = step.improvedEdge && step.improvedEdge[0] === from && step.improvedEdge[1] === to;
+
+    let stroke = 'rgba(130,130,130,.42)';
+    let width = 2.1;
+    if (tentativeTree) { stroke = '#569cd6'; width = 2.5; }
+    if (settledTree) { stroke = '#4ec9b0'; width = 2.9; }
+    if (active) { stroke = '#f7b267'; width = 3.3; }
+    if (improved) { stroke = '#c586c0'; width = 3.3; }
+
+    let geom;
+    let d;
+    if (route) {
+      geom = curveEndpoints(p0, route, p1);
+      d = `M ${geom.sx} ${geom.sy} Q ${route.cx} ${route.cy} ${geom.ex} ${geom.ey}`;
+    } else {
+      geom = lineEndpoints(p0, p1, OFFSETS[`${from}-${to}`] || 0);
+      d = `M ${geom.sx} ${geom.sy} L ${geom.ex} ${geom.ey}`;
+    }
+
+    const path = document.createElementNS(SVG, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', stroke);
+    path.setAttribute('stroke-width', width);
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    edgeGroup.appendChild(path);
+
+    const arrow = document.createElementNS(SVG, 'polygon');
+    arrow.setAttribute('points', arrowPolygon(geom.ex, geom.ey, geom.angle, active || improved ? 11 : 9.5));
+    arrow.setAttribute('fill', stroke);
+    edgeGroup.appendChild(arrow);
+
+    const label = document.createElementNS(SVG, 'text');
+    label.setAttribute('x', geom.mx);
+    label.setAttribute('y', geom.my - 6);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('font-size', '12');
+    label.setAttribute('font-weight', '700');
+    label.setAttribute('fill', active || improved ? stroke : '#dcdcaa');
+    label.textContent = edge.weight.toFixed(1);
+    weightGroup.appendChild(label);
+  });
+
+  GRAPH.nodes.forEach((id) => {
+    const p = GRAPH.pos[id];
+    const state = nodeState(step, id);
+    let fill = 'rgba(55,55,55,.5)';
+    let stroke = '#555';
+    let text = '#777';
+    if (state === 'source') { fill = 'rgba(156,220,254,.1)'; stroke = '#9cdcfe'; text = '#d9f4ff'; }
+    if (state === 'queue') { fill = 'rgba(86,156,214,.12)'; stroke = '#569cd6'; text = '#d9ecff'; }
+    if (state === 'updated') { fill = 'rgba(197,134,192,.12)'; stroke = '#c586c0'; text = '#f4d7f0'; }
+    if (state === 'done') { fill = 'rgba(78,201,176,.12)'; stroke = '#4ec9b0'; text = '#cffff2'; }
+    if (state === 'current') { fill = 'rgba(247,178,103,.14)'; stroke = '#f7b267'; text = '#ffe4b8'; }
+
+    const circle = document.createElementNS(SVG, 'circle');
+    circle.setAttribute('cx', p.x);
+    circle.setAttribute('cy', p.y);
+    circle.setAttribute('r', 30);
+    circle.setAttribute('fill', fill);
+    circle.setAttribute('stroke', stroke);
+    circle.setAttribute('stroke-width', state === 'current' ? 3.3 : 2.5);
+    nodeGroup.appendChild(circle);
+
+    const label = document.createElementNS(SVG, 'text');
+    label.setAttribute('x', p.x);
+    label.setAttribute('y', p.y + 10);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('font-size', '30');
+    label.setAttribute('font-family', 'Consolas, monospace');
+    label.setAttribute('fill', text);
+    label.textContent = String(id);
+    nodeGroup.appendChild(label);
+  });
+}
+
+function renderPq(step) {
+  pqChips.innerHTML = '';
+  const entries = sortedPq(step.pqKeys);
+  if (!entries.length) {
+    pqChips.innerHTML = '<span class="chip-empty">empty</span>';
+    return;
+  }
+  entries.forEach((entry, index) => {
+    const chip = document.createElement('span');
+    chip.className = `chip ${index === 0 ? 'current' : 'queue'}`.trim();
+    chip.textContent = `${entry.index}:${fmtDist(entry.key)}`;
+    pqChips.appendChild(chip);
+  });
+}
+
+function renderSettled(step) {
+  settledChips.innerHTML = '';
+  if (!step.settled.length) {
+    settledChips.innerHTML = '<span class="chip-empty">empty</span>';
+    return;
+  }
+  step.settled.forEach((id) => {
+    const chip = document.createElement('span');
+    chip.className = 'chip done';
+    chip.textContent = String(id);
+    settledChips.appendChild(chip);
+  });
+}
+
+function renderPaths(step) {
+  pathList.innerHTML = '';
+  GRAPH.nodes.forEach((id) => {
+    const card = document.createElement('div');
+    card.className = `path-card ${step.settled.includes(id) ? 'done' : ''}`.trim();
+    const path = pathFor(step, id);
+    const body = !path ? 'unreached' : `${path.join(' -> ')}  |  dist = ${fmtDist(step.dist[id])}`;
+    card.innerHTML = `<div class="path-head">vertex ${id}</div><div class="path-body">${body}</div>`;
+    pathList.appendChild(card);
+  });
+}
+
+function buildDots() {
+  dots.innerHTML = '';
+  STEP_STATE.forEach((_, index) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'dot';
+    dot.addEventListener('click', () => goTo(index));
+    dots.appendChild(dot);
+  });
+}
+
+function syncButtons() {
+  prevBtn.disabled = current === 0;
+  nextBtn.disabled = current === STEP_STATE.length - 1;
+}
+
+function render(step) {
+  counter.textContent = `Step ${current + 1} / ${STEP_STATE.length}`;
+  desc.innerHTML = renderStepDesc(step);
+  currentVal.textContent = step.currentVertex === null ? '-' : String(step.currentVertex);
+  phaseVal.textContent = step.phase;
+  const pq = sortedPq(step.pqKeys);
+  pqMinVal.textContent = pq.length ? `${pq[0].index}:${fmtDist(pq[0].key)}` : '-';
+  settledCount.textContent = `${step.settled.length} / ${GRAPH.nodes.length}`;
+  formulaBox.textContent = step.formula || '-';
+
+  renderSettled(step);
+  renderPq(step);
+  renderArrayGrid(distGrid, step.dist, (value) => fmtDist(value), (id) => nodeState(step, id));
+  renderArrayGrid(prevGrid, step.prev, (value, id) => id === GRAPH.source ? '-1' : String(value), (id) => nodeState(step, id));
+  renderPaths(step);
+  drawGraph(step);
+  codeHighlight(step.code);
+  document.querySelectorAll('.dot').forEach((dot, idx) => dot.classList.toggle('active', idx === current));
+  syncButtons();
+}
+
+function go(delta) {
+  const next = current + delta;
+  if (next < 0 || next >= STEP_STATE.length) return;
+  current = next;
+  render(STEP_STATE[current]);
+}
+
+function goTo(index) {
+  current = Math.max(0, Math.min(STEP_STATE.length - 1, index));
+  render(STEP_STATE[current]);
+}
+
+document.addEventListener('keydown', (event) => {
+  const target = event.target;
+  const tag = (target && target.tagName ? target.tagName : '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || (target && target.isContentEditable)) return;
+  if (event.key === 'End') {
+    event.preventDefault();
+    goTo(STEP_STATE.length - 1);
+  }
+});
+
+buildCode();
+buildSteps();
+buildDots();
+lockStepDescHeight();
+render(STEP_STATE[current]);
+
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  window.clearTimeout(resizeTimer);
+  resizeTimer = window.setTimeout(() => {
+    lockStepDescHeight();
+    render(STEP_STATE[current]);
+  }, 80);
+});
+</script>
+<script src="../shared/viewer-controls.js"></script>
+</body>
+</html>
