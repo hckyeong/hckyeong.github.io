@@ -71,6 +71,20 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 .lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre}
 .lcode::before{content:'';position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
 .kw{color:#569cd6}.fn{color:#dcdcaa}.tp{color:#4ec9b0}.id{color:#9cdcfe}.num{color:#b5cea8}.str{color:#ce9178}.cm{color:#6a9955;font-style:italic}
+#flow-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:12px}
+.flow-card{background:#252526;border:1px solid #3e3e42;border-radius:6px;overflow:hidden}
+.flow-title{background:#2d2d2d;padding:5px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+.flow-body{padding:10px}
+.flowchart{display:flex;flex-direction:column;align-items:center;gap:6px}
+.flow-node{width:min(100%,250px);padding:7px 10px;border:1px solid #3e3e42;border-radius:6px;background:#1f1f1f;color:#d4d4d4;font-size:11px;line-height:1.45;text-align:center;transition:all .2s}
+.flow-node.decision{border-style:dashed}
+.flow-node.active{border-color:#f7b267;background:rgba(247,178,103,.12);color:#ffe4b8}
+.flow-node.done{border-color:#4ec9b0;background:rgba(78,201,176,.1);color:#cffff2}
+.flow-arrow{font-size:16px;line-height:1;color:#666}
+.flow-branch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;align-items:start}
+.flow-branch-col{display:flex;flex-direction:column;align-items:center;gap:6px}
+.flow-branch-label{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px}
+.flow-loop{font-size:10px;color:#858585;line-height:1.45;text-align:center}
 #nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:4px;flex-wrap:wrap}
 .nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
 .nbtn:hover:not(:disabled){background:#3e3e42}
@@ -78,9 +92,9 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 #dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:640px;justify-content:center}
 .dot{width:6px;height:6px;border-radius:50%;background:#3e3e42}
 .dot.active{background:#858585}
-@media (max-width:980px){#main-content{flex-direction:column}#graph-panel,#right-panel{flex:1 1 auto}}
+@media (max-width:980px){#main-content{flex-direction:column}#graph-panel,#right-panel{flex:1 1 auto}#flow-panels{grid-template-columns:1fr}}
 @media (max-width:760px){.meta-grid{grid-template-columns:1fr}}
-@media (max-width:560px){body{padding:12px}#step-desc{min-height:78px}.nbtn{padding:6px 16px}.arr-cell{width:56px}#dist-grid .arr-cell,#prev-grid .arr-cell{width:46px;min-height:28px;padding:3px 6px}}
+@media (max-width:560px){body{padding:12px}#step-desc{min-height:78px}.nbtn{padding:6px 16px}.arr-cell{width:56px}#dist-grid .arr-cell,#prev-grid .arr-cell{width:46px;min-height:28px;padding:3px 6px}.flow-node{width:100%;font-size:10px}.flow-branch{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -124,6 +138,80 @@ h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:10px;letter-spacin
 <div id="code-panel">
   <div class="code-title">DijkstraShortestPaths() / Relax() / main()</div>
   <div id="code-body"></div>
+</div>
+<div id="flow-panels">
+  <div class="flow-card">
+    <div class="flow-title">전체 알고리듬 순서도</div>
+    <div class="flow-body">
+      <div class="flowchart">
+        <div class="flow-node" data-flow="overall" data-node="prepare">입력 그래프와 가중치 정보를 준비한다</div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-node" data-flow="overall" data-node="init">prev, dist, 우선순위 큐를 초기 상태로 만든다</div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-node" data-flow="overall" data-node="seed">시작 정점의 거리를 0으로 두고 우선순위 큐에 넣는다</div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-node decision" data-flow="overall" data-node="check">우선순위 큐가 비었는지 확인한다</div>
+        <div class="flow-branch">
+          <div class="flow-branch-col">
+            <div class="flow-branch-label">아니오</div>
+            <div class="flow-node" data-flow="overall" data-node="delmin">가장 가까운 정점을 우선순위 큐에서 꺼낸다</div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-node" data-flow="overall" data-node="relax">꺼낸 정점의 인접 간선을 차례대로 완화한다</div>
+            <div class="flow-loop">다시 우선순위 큐가 비었는지 확인한다</div>
+          </div>
+          <div class="flow-branch-col">
+            <div class="flow-branch-label">예</div>
+            <div class="flow-node" data-flow="overall" data-node="finish">최단 경로 결과를 출력하고 알고리듬을 끝낸다</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="flow-card">
+    <div class="flow-title">Relax 함수 순서도</div>
+    <div class="flow-body">
+      <div class="flowchart">
+        <div class="flow-node" data-flow="relax" data-node="enter">현재 정점에 대해 Relax 함수를 시작한다</div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-node decision" data-flow="relax" data-node="edge-check">아직 확인할 인접 간선이 남아 있는지 본다</div>
+        <div class="flow-branch">
+          <div class="flow-branch-col">
+            <div class="flow-branch-label">예</div>
+            <div class="flow-node" data-flow="relax" data-node="compute">도착 정점을 읽고 새 후보 거리를 계산한다</div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-node decision" data-flow="relax" data-node="compare">새 후보 거리가 기존 기록보다 더 짧은지 비교한다</div>
+            <div class="flow-branch">
+              <div class="flow-branch-col">
+                <div class="flow-branch-label">아니오</div>
+                <div class="flow-node" data-flow="relax" data-node="skip">기존 거리를 유지하고 다음 간선으로 넘어간다</div>
+              </div>
+              <div class="flow-branch-col">
+                <div class="flow-branch-label">예</div>
+                <div class="flow-node" data-flow="relax" data-node="update">dist와 prev를 새 최단 경로 기준으로 갱신한다</div>
+                <div class="flow-arrow">↓</div>
+                <div class="flow-node decision" data-flow="relax" data-node="contains">그 정점이 이미 우선순위 큐에 있는지 확인한다</div>
+                <div class="flow-branch">
+                  <div class="flow-branch-col">
+                    <div class="flow-branch-label">예</div>
+                    <div class="flow-node" data-flow="relax" data-node="decrease">우선순위 큐 안의 거리 값을 더 작게 갱신한다</div>
+                  </div>
+                  <div class="flow-branch-col">
+                    <div class="flow-branch-label">아니오</div>
+                    <div class="flow-node" data-flow="relax" data-node="insert">우선순위 큐에 그 정점을 새로 넣는다</div>
+                  </div>
+                </div>
+                <div class="flow-loop">이어서 다음 인접 간선을 처리한다</div>
+              </div>
+            </div>
+          </div>
+          <div class="flow-branch-col">
+            <div class="flow-branch-label">아니오</div>
+            <div class="flow-node" data-flow="relax" data-node="return">남은 간선이 없으면 바깥 while 반복으로 돌아간다</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 <div id="nav">
   <button class="nbtn" id="prev" onclick="go(-1)">← 이전</button>
@@ -662,6 +750,85 @@ function renderPaths(step) {
   });
 }
 
+function setFlowNodes(flowName, activeNodes, doneNodes) {
+  const active = new Set(activeNodes);
+  const done = new Set(doneNodes);
+  document.querySelectorAll(`.flow-node[data-flow="${flowName}"]`).forEach((node) => {
+    const id = node.dataset.node;
+    node.classList.toggle('active', active.has(id));
+    node.classList.toggle('done', !active.has(id) && done.has(id));
+  });
+}
+
+function overallFlowState(step) {
+  if (step.phase === 'init') {
+    return { active: ['prepare', 'init'], done: [] };
+  }
+
+  if (step.phase === 'build') {
+    return { active: ['seed'], done: ['prepare', 'init'] };
+  }
+
+  if (step.phase === 'relax') {
+    if (step.code.includes(8) || step.code.includes(9)) {
+      return { active: ['check', 'delmin', 'relax'], done: ['prepare', 'init', 'seed'] };
+    }
+    return { active: ['relax'], done: ['prepare', 'init', 'seed', 'check', 'delmin'] };
+  }
+
+  if (step.phase === 'done') {
+    return { active: ['finish'], done: ['prepare', 'init', 'seed', 'check', 'delmin', 'relax'] };
+  }
+
+  return { active: ['prepare'], done: [] };
+}
+
+function relaxFlowState(step) {
+  if (step.phase !== 'relax') {
+    return { active: [], done: [] };
+  }
+
+  if (step.code.includes(13) && !step.code.includes(15)) {
+    return { active: ['enter'], done: [] };
+  }
+
+  const done = ['enter'];
+  const active = ['edge-check', 'compute', 'compare'];
+
+  if (step.code.includes(19) || step.code.includes(20)) {
+    done.push('edge-check', 'compute', 'compare');
+    active.push('update');
+
+    if (step.code.includes(21) || step.code.includes(22) || step.code.includes(23) || step.code.includes(24)) {
+      done.push('update');
+      active.push('contains');
+    }
+
+    if (step.code.includes(21) || step.code.includes(22)) {
+      done.push('contains');
+      active.push('decrease');
+    }
+
+    if (step.code.includes(23) || step.code.includes(24)) {
+      done.push('contains');
+      active.push('insert');
+    }
+
+    return { active, done };
+  }
+
+  done.push('edge-check', 'compute', 'compare');
+  active.push('skip');
+  return { active, done };
+}
+
+function renderFlowcharts(step) {
+  const overall = overallFlowState(step);
+  const relax = relaxFlowState(step);
+  setFlowNodes('overall', overall.active, overall.done);
+  setFlowNodes('relax', relax.active, relax.done);
+}
+
 function buildDots() {
   dots.innerHTML = '';
   STEP_STATE.forEach((_, index) => {
@@ -695,6 +862,7 @@ function render(step) {
   renderPaths(step);
   drawGraph(step);
   codeHighlight(step.code);
+  renderFlowcharts(step);
   document.querySelectorAll('.dot').forEach((dot, idx) => dot.classList.toggle('active', idx === current));
   syncButtons();
 }
