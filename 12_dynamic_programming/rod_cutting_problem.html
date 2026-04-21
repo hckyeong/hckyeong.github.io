@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rod Cutting / 철근 잘라서 팔기 문제</title>
+<link rel="stylesheet" href="../shared/topological-baseline.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100vh}
+body{background:#1e1e1e;color:#d4d4d4;font-family:'Consolas','Courier New',monospace;font-size:13px;padding:16px}
+h1{font-size:14px;font-weight:400;color:#858585;margin-bottom:8px;letter-spacing:.5px}
+.subhead{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.badge{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:6px;background:#2d2d2d;border:1px solid #3e3e42;color:#569cd6;font-size:11px;font-weight:700}
+#page-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 10px}
+.tab-btn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:7px 12px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px;line-height:1.3}
+.tab-btn:hover{background:#343434}
+.tab-btn.active{background:rgba(86,156,214,.12);border-color:#569cd6;color:#9cdcfe}
+#page-counter{font-size:11px;color:#858585}
+#page-title{margin-top:4px;font-size:13px;color:#dcdcaa}
+#page-note{margin-top:4px;font-size:12px;line-height:1.6;color:#c9c9c9}
+#step-counter{margin-top:10px;font-size:11px;color:#858585}
+#step-desc{margin-top:5px;padding:10px 12px 12px;background:#252526;border-left:3px solid #569cd6;border-radius:0 4px 4px 0;line-height:1.7;display:flex;flex-direction:column;gap:8px;min-height:74px}
+.desc-main{font-size:13px;color:#e0e0e0}
+.desc-formula{margin-top:0;font-size:12px;color:#dcdcaa}
+#legend{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0 12px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#858585}
+.leg-c{width:10px;height:10px;border-radius:50%;border:1.5px solid}
+#main-content{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px;margin:12px 0}
+#left-panel{flex:1 1 600px;min-width:min(100%,600px);display:flex;flex-direction:column;gap:8px}
+#right-panel{flex:1 1 420px;min-width:min(100%,420px);display:flex;flex-direction:column;gap:8px}
+.sbox{background:#252526;border:1px solid #3e3e42;border-radius:6px;padding:9px 11px}
+.slabel{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.box-body{min-height:32px}
+.meta-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.meta-card{background:#1f1f1f;border:1px solid #343434;border-radius:6px;padding:8px 10px;min-height:76px}
+.meta-name{font-size:10px;color:#858585;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.meta-value{font-size:20px;font-weight:700;color:#dcdcaa;min-height:22px}
+.meta-sub{margin-top:4px;font-size:11px;line-height:1.4;color:#858585}
+.rod-preview{display:flex;gap:6px;min-height:40px}
+.rod-block{min-width:0;flex-basis:0;display:flex;align-items:center;justify-content:center;height:40px;border-radius:6px;border:1px solid #3e3e42;background:#2d2d2d;font-size:12px;font-weight:700;color:#9a9a9a}
+.rod-block.cut{background:rgba(247,178,103,.16);border-color:#f7b267;color:#f7b267}
+.rod-block.rest{background:rgba(86,156,214,.14);border-color:#569cd6;color:#9cdcfe}
+.rod-block.best{background:rgba(220,220,170,.14);border-color:#dcdcaa;color:#dcdcaa}
+.rod-block.final{background:rgba(220,220,170,.14);border-color:#dcdcaa;color:#dcdcaa}
+.rod-units{display:grid;gap:4px;margin-top:8px}
+.rod-units-label{margin-top:8px;font-size:11px;line-height:1.5;color:#858585}
+.rod-unit{height:24px;border-radius:4px;border:1px solid #3e3e42;background:#2d2d2d;display:flex;align-items:center;justify-content:center;font-size:11px;color:#777}
+.rod-unit.cut{background:rgba(247,178,103,.16);border-color:#f7b267;color:#f7b267}
+.rod-unit.rest{background:rgba(86,156,214,.14);border-color:#569cd6;color:#9cdcfe}
+.rod-unit.best{background:rgba(220,220,170,.14);border-color:#dcdcaa;color:#dcdcaa}
+.rod-unit.final{background:rgba(220,220,170,.14);border-color:#dcdcaa;color:#dcdcaa}
+.rod-caption{margin-top:8px;font-size:12px;line-height:1.6;color:#c9c9c9}
+.split-options{display:flex;flex-direction:column;gap:8px}
+.split-option{padding:8px;border-radius:6px;border:1px solid #343434;background:#1f1f1f;display:flex;flex-direction:column;gap:6px}
+.split-option.active{border-color:#f7b267;background:rgba(247,178,103,.12)}
+.split-option.best{border-color:#dcdcaa;background:rgba(220,220,170,.12)}
+.split-option.helper-active{border-color:#4ec9b0;background:rgba(78,201,176,.1)}
+.split-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.split-name{font-size:12px;font-weight:700;color:#d4d4d4}
+.split-state{font-size:11px;color:#858585}
+.split-bar{display:flex;gap:6px;align-items:stretch}
+.split-segment{min-width:52px;height:34px;border-radius:6px;border:1px solid #3e3e42;background:#2d2d2d;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.split-segment.cut{background:rgba(247,178,103,.16);border-color:#f7b267;color:#f7b267;flex-basis:0}
+.split-segment.rest{background:rgba(86,156,214,.14);border-color:#569cd6;color:#9cdcfe;flex-basis:0}
+.split-segment.zero{background:rgba(86,156,214,.08);border-color:#3e3e42;color:#858585;flex:0 0 56px}
+.split-segment.helper-cut{background:rgba(78,201,176,.14);border-color:#4ec9b0;color:#4ec9b0;flex-basis:0}
+.split-segment.helper-rest{background:rgba(86,156,214,.14);border-color:#569cd6;color:#9cdcfe;flex-basis:0}
+.split-formula{font-size:11px;line-height:1.5;color:#c9c9c9}
+.split-summary{font-size:11px;line-height:1.5;color:#858585}
+.candidate-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:6px}
+.candidate-card{min-height:78px;padding:8px;border-radius:6px;border:1px solid #343434;background:#1f1f1f;display:flex;flex-direction:column;gap:5px}
+.candidate-card.pending{opacity:.66}
+.candidate-card.active{border-color:#f7b267;background:rgba(247,178,103,.12)}
+.candidate-card.best{border-color:#dcdcaa;background:rgba(220,220,170,.12)}
+.candidate-card.done{border-color:#4ec9b0;background:rgba(78,201,176,.08)}
+.cand-head{font-size:11px;color:#858585}
+.cand-value{font-size:13px;font-weight:700;color:#d4d4d4}
+.cand-detail{font-size:11px;line-height:1.5;color:#c1c1c1}
+.array-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.array-cell{min-height:58px;padding:7px 6px;border-radius:6px;border:1px solid #343434;background:#1f1f1f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center}
+.array-cell.done{border-color:#4ec9b0;background:rgba(78,201,176,.08)}
+.array-cell.current{border-color:#f7b267;background:rgba(247,178,103,.12)}
+.array-cell.remainder{border-color:#569cd6;background:rgba(86,156,214,.12)}
+.array-cell.update{border-color:#dcdcaa;background:rgba(220,220,170,.12)}
+.array-cell.final{border-color:#dcdcaa;background:rgba(220,220,170,.12)}
+.array-cell.cache{border-color:#4fc1ff;background:rgba(79,193,255,.12)}
+.array-cell.helper-current{border-color:#4ec9b0;background:rgba(78,201,176,.12)}
+.array-cell.helper-reference{border-color:#569cd6;background:rgba(86,156,214,.12)}
+.array-lab{font-size:10px;color:#858585}
+.array-val{font-size:16px;font-weight:700;color:#d4d4d4}
+.array-sub{font-size:10px;color:#777}
+.chips{display:flex;flex-wrap:wrap;gap:4px;min-height:28px;align-items:center}
+.chip{padding:3px 8px;border-radius:4px;border:1px solid #3e3e42;background:#2d2d2d;font-size:12px;font-weight:700}
+.chip-active{border-color:#f7b267;color:#f7b267;background:rgba(247,178,103,.12)}
+.chip-done{border-color:#4ec9b0;color:#4ec9b0;background:rgba(78,201,176,.1)}
+.chip-cache{border-color:#4fc1ff;color:#4fc1ff;background:rgba(79,193,255,.12)}
+.chip-best{border-color:#dcdcaa;color:#dcdcaa;background:rgba(220,220,170,.12)}
+.chip-final{border-color:#dcdcaa;color:#dcdcaa;background:rgba(220,220,170,.12)}
+.chip-sep{font-size:12px;color:#666}
+.chip-empty{font-size:11px;color:#444}
+.log-list{display:flex;flex-direction:column;gap:6px}
+.log-line{padding:6px 8px;border-radius:4px;background:#1f1f1f;border:1px solid #343434;font-size:12px;line-height:1.5;color:#d4d4d4}
+.formula-box{min-height:72px;padding:9px 10px;border-radius:6px;border:1px solid #343434;background:#1f1f1f;font-size:12px;line-height:1.7;color:#d4d4d4}
+.formula-line{color:#dcdcaa}
+.phase-line{margin-top:4px;color:#858585}
+.tree-list{display:flex;flex-direction:column;gap:6px}
+.tree-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:7px 8px;border-radius:6px;border:1px solid #343434;background:#1f1f1f}
+.tree-row.active{border-color:#f7b267;background:rgba(247,178,103,.12)}
+.tree-row.returned{border-color:#4ec9b0;background:rgba(78,201,176,.08)}
+.tree-row.base{border-color:#569cd6;background:rgba(86,156,214,.1)}
+.tree-row.cache{border-color:#4fc1ff;background:rgba(79,193,255,.12)}
+.tree-row.helper-active{border-color:#4ec9b0;background:rgba(78,201,176,.1)}
+.tree-row.helper-cache{border-color:#569cd6;background:rgba(86,156,214,.12)}
+.tree-main{min-width:0;display:flex;align-items:center;gap:8px;overflow-wrap:anywhere}
+.tree-name{font-size:12px;font-weight:700;color:#d4d4d4}
+.tree-state{font-size:11px;color:#858585}
+.tree-side{flex:0 0 auto;font-size:11px;color:#bdbdbd;text-align:right}
+.flow-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.flow-card{min-height:78px;padding:8px;border-radius:6px;border:1px solid #343434;background:#1f1f1f;display:flex;flex-direction:column;justify-content:space-between;gap:6px}
+.flow-card.active{border-color:#f7b267;background:rgba(247,178,103,.12)}
+.flow-card.done{border-color:#4ec9b0;background:rgba(78,201,176,.08)}
+.flow-head{font-size:11px;color:#858585}
+.flow-text{font-size:12px;line-height:1.5;color:#d4d4d4}
+.result-list{display:flex;flex-direction:column;gap:6px}
+.result-row{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:center;padding:7px 8px;border-radius:6px;border:1px solid #343434;background:#1f1f1f}
+.result-row.target{border-color:#dcdcaa}
+.result-label{font-size:11px;line-height:1.4;color:#858585}
+#code-panel{background:#1e1e1e;border:1px solid #3e3e42;border-radius:6px;overflow:hidden;margin-bottom:12px}
+#code-title{background:#2d2d2d;padding:4px 12px;font-size:11px;color:#858585;border-bottom:1px solid #3e3e42}
+#code-body{padding:6px 0}
+.cline{display:flex;align-items:stretch;min-height:22px;border-left:2px solid transparent;transition:background .2s}
+.cline.hl{background:rgba(255,255,120,.08);border-left:2px solid #dcdcaa}
+.cline.hl .lnum{color:#858585;background:rgba(255,255,255,.02)}
+.cline.hl .lcode{background:rgba(255,255,255,.015)}
+.lnum{width:40px;text-align:right;padding:3px 12px 3px 0;color:#444;font-size:11px;user-select:none;flex-shrink:0}
+.lcode{position:relative;flex:1;font-size:12px;line-height:1.6;color:#d4d4d4;padding:3px 12px 3px calc(var(--indent,0) * 18px + 14px);white-space:pre}
+.lcode::before{content:'';position:absolute;left:14px;top:0;bottom:0;width:calc(var(--indent,0) * 18px);background-image:repeating-linear-gradient(to right,transparent 0 13px,rgba(255,255,255,.11) 13px 14px,transparent 14px 18px);pointer-events:none}
+.kw{color:#569cd6}
+.fn{color:#dcdcaa}
+.tp{color:#4ec9b0}
+.id{color:#9cdcfe}
+.num{color:#b5cea8}
+.str{color:#ce9178}
+#nav{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:4px}
+.progress{width:min(100%,560px);height:8px;border-radius:999px;border:1px solid #3e3e42;background:#2d2d2d;overflow:hidden}
+.progress-bar{height:100%;width:0;background:#569cd6}
+.nbtn{background:#2d2d2d;border:1px solid #3e3e42;color:#d4d4d4;padding:7px 18px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px}
+.nbtn:hover:not(:disabled){background:#3e3e42}
+.nbtn:disabled{opacity:.3;cursor:default}
+.help{font-size:11px;color:#858585;text-align:center}
+.control-targets{position:absolute;left:-99999px;top:auto;width:1px;height:1px;overflow:hidden}
+[hidden]{display:none!important}
+@media (max-width:980px){
+  #main-content{flex-direction:column}
+  #left-panel,#right-panel{flex:1 1 auto}
+  .meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:640px){
+  body{padding:12px}
+  .meta-grid{grid-template-columns:1fr 1fr}
+  .array-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .result-row{grid-template-columns:1fr}
+  .flow-grid{grid-template-columns:1fr}
+}
+@media (max-width:480px){
+  .meta-grid{grid-template-columns:1fr}
+  .candidate-grid{grid-template-columns:1fr 1fr}
+  .array-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+</style>
+</head>
+<body>
+<h1>Rod Cutting / 철근 잘라서 팔기 문제</h1>
+<div class="subhead">
+  <span class="badge">CLRS 14.1</span>
+  <span class="badge">Single HTML</span>
+  <span class="badge">Function Pages</span>
+</div>
+
+<div id="page-tabs"></div>
+<div id="page-counter"></div>
+<div id="page-title"></div>
+<div id="page-note"></div>
+
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="legend"></div>
+
+<div id="main-content">
+  <div id="left-panel">
+    <div class="sbox">
+      <div class="slabel">Current State</div>
+      <div class="meta-grid">
+        <div class="meta-card"><div class="meta-name" id="meta-name-0"></div><div class="meta-value" id="meta-value-0"></div><div class="meta-sub" id="meta-sub-0"></div></div>
+        <div class="meta-card"><div class="meta-name" id="meta-name-1"></div><div class="meta-value" id="meta-value-1"></div><div class="meta-sub" id="meta-sub-1"></div></div>
+        <div class="meta-card"><div class="meta-name" id="meta-name-2"></div><div class="meta-value" id="meta-value-2"></div><div class="meta-sub" id="meta-sub-2"></div></div>
+        <div class="meta-card"><div class="meta-name" id="meta-name-3"></div><div class="meta-value" id="meta-value-3"></div><div class="meta-sub" id="meta-sub-3"></div></div>
+      </div>
+    </div>
+
+    <div class="sbox" id="box-left-0"><div class="slabel" id="box-left-0-title"></div><div class="box-body" id="box-left-0-body"></div></div>
+    <div class="sbox" id="box-left-1"><div class="slabel" id="box-left-1-title"></div><div class="box-body" id="box-left-1-body"></div></div>
+    <div class="sbox" id="box-left-2"><div class="slabel" id="box-left-2-title"></div><div class="box-body" id="box-left-2-body"></div></div>
+  </div>
+
+  <div id="right-panel">
+    <div class="sbox" id="box-right-0"><div class="slabel" id="box-right-0-title"></div><div class="box-body" id="box-right-0-body"></div></div>
+    <div class="sbox" id="box-right-1"><div class="slabel" id="box-right-1-title"></div><div class="box-body" id="box-right-1-body"></div></div>
+    <div class="sbox" id="box-right-2"><div class="slabel" id="box-right-2-title"></div><div class="box-body" id="box-right-2-body"></div></div>
+    <div class="sbox" id="box-right-3"><div class="slabel" id="box-right-3-title"></div><div class="box-body" id="box-right-3-body"></div></div>
+  </div>
+</div>
+
+<div id="code-panel">
+  <div id="code-title"></div>
+  <div id="code-body"></div>
+</div>
+
+<div id="nav">
+  <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+  <div class="help">ArrowLeft / ArrowRight / Home / End / Space / PageUp / PageDown</div>
+</div>
+
+<div class="control-targets" aria-hidden="true">
+  <button class="nbtn" id="prev" type="button" onclick="go(-1)">Prev Step</button>
+  <button class="nbtn" id="next" type="button" onclick="go(1)">Next Step</button>
+  <button class="nbtn" id="reset" type="button" onclick="jump(0)">Home</button>
+  <button class="nbtn" id="auto-btn" type="button" onclick="toggleAuto()">Play</button>
+  <button class="nbtn" id="last" type="button" onclick="jump(currentPageSteps().length - 1)">End</button>
+</div>
+
+<script>
+const PRICES = [0, 1, 5, 8, 9, 10, 17, 17, 20, 24, 30];
+const FULL_TARGET = PRICES.length - 1;
+
+function esc(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function syntaxHighlight(text) {
+  return esc(text)
+    .replace(/"([^"]*)"/g, '<span class="str">"$1"</span>')
+    .replace(/\b(int|const|for|if|while|return)\b/g, '<span class="kw">$1</span>')
+    .replace(/\b(vector|numeric_limits)\b/g, '<span class="tp">$1</span>')
+    .replace(/\b(RecurCutRod|MemoizedCutRodHelper|MemoizedCutRod|BottomUpCutRod|ExtendedBottomUpCutRod|max|back|cout)\b/g, '<span class="fn">$1</span>')
+    .replace(/\b(prices|length|memo|table|split|max_price|j|i)\b/g, '<span class="id">$1</span>')
+    .replace(/\b(-?\d+)\b/g, '<span class="num">$1</span>');
+}
+
+function cloneNodes(nodes) {
+  return nodes.map((node) => ({ ...node }));
+}
+
+function computeTables(limit) {
+  const table = Array(limit + 1).fill(0);
+  const split = Array(limit + 1).fill(0);
+
+  for (let j = 1; j <= limit; j += 1) {
+    let best = Number.NEGATIVE_INFINITY;
+    let bestCut = 0;
+    for (let i = 1; i <= j; i += 1) {
+      const candidate = PRICES[i] + table[j - i];
+      if (candidate > best) {
+        best = candidate;
+        bestCut = i;
+      }
+    }
+    table[j] = best;
+    split[j] = bestCut;
+  }
+
+  return { table, split };
+}
+
+function reconstructCuts(split, length) {
+  if (length === 0) return [];
+  const cuts = [];
+  let remain = length;
+  let guard = 0;
+  while (remain > 0 && guard < 32) {
+    const first = split[remain];
+    if (!first) return [];
+    cuts.push(first);
+    remain -= first;
+    guard += 1;
+  }
+  return remain === 0 ? cuts : [];
+}
+
+function formatValue(value, empty = '-') {
+  return value === null || value === undefined ? empty : String(value);
+}
+
+function countCacheHits(nodes) {
+  return nodes.filter((node) => node.cacheHit).length;
+}
+
+function renderLegend(items) {
+  document.getElementById('legend').innerHTML = items.map((item) => `
+    <div class="leg">
+      <div class="leg-c" style="background:${item.fill};border-color:${item.stroke}"></div>${esc(item.label)}
+    </div>
+  `).join('');
+}
+
+function renderMeta(cards) {
+  for (let i = 0; i < 4; i += 1) {
+    const card = cards[i] || { label: '', value: '', sub: '' };
+    document.getElementById(`meta-name-${i}`).textContent = card.label;
+    document.getElementById(`meta-value-${i}`).textContent = card.value;
+    document.getElementById(`meta-sub-${i}`).textContent = card.sub;
+  }
+}
+
+function setBox(side, index, box) {
+  const wrap = document.getElementById(`box-${side}-${index}`);
+  if (!box) {
+    wrap.hidden = true;
+    return;
+  }
+  wrap.hidden = false;
+  document.getElementById(`box-${side}-${index}-title`).textContent = box.title;
+  document.getElementById(`box-${side}-${index}-body`).innerHTML = box.html;
+}
+
+function renderCode(lines, title) {
+  document.getElementById('code-title').textContent = title;
+  document.getElementById('code-body').innerHTML = lines.map((line, index) => {
+    const indent = line.match(/^\s*/)[0].length / 4;
+    const trimmed = line.trimStart();
+    return `<div class="cline" data-line="${index + 1}"><div class="lnum">${index + 1}</div><div class="lcode" style="--indent:${indent}">${trimmed ? syntaxHighlight(trimmed) : '&nbsp;'}</div></div>`;
+  }).join('');
+}
+
+function highlightCode(lines) {
+  document.querySelectorAll('.cline').forEach((row) => row.classList.remove('hl'));
+  lines.forEach((lineNo) => {
+    const row = document.querySelector(`.cline[data-line="${lineNo}"]`);
+    if (row) row.classList.add('hl');
+  });
+}
+
+function renderPriceGrid(activeCut, bestCut, limit = FULL_TARGET, options = {}) {
+  const {
+    activeClass = 'current',
+    bestClass = 'update'
+  } = options;
+  return `<div class="array-grid">${PRICES.slice(0, limit + 1).map((price, index) => {
+    const classes = ['array-cell'];
+    if (index === activeCut) classes.push(activeClass);
+    if (index === bestCut && bestCut) classes.push(bestClass);
+    return `<div class="${classes.join(' ')}">
+      <div class="array-lab">p[${index}]</div>
+      <div class="array-val">${price}</div>
+      <div class="array-sub">${index === 0 ? 'base' : 'price'}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderRevenueGrid(table, currentLen, remain, phase) {
+  return `<div class="array-grid">${table.map((value, index) => {
+    const classes = ['array-cell'];
+    if (value >= 0) classes.push('done');
+    if (index === currentLen && (phase === 'start' || phase === 'candidate')) classes.push('current');
+    if (index === currentLen && (phase === 'commit' || phase === 'final' || phase === 'return')) classes.push('final');
+    if (remain !== null && remain !== undefined && index === remain) classes.push('remainder');
+    return `<div class="${classes.join(' ')}">
+      <div class="array-lab">r[${index}]</div>
+      <div class="array-val">${value >= 0 ? value : '·'}</div>
+      <div class="array-sub">${value >= 0 ? 'fixed' : 'pending'}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderSplitGrid(split, currentLen, remain, bestCut, phase) {
+  return `<div class="array-grid">${split.map((value, index) => {
+    const classes = ['array-cell'];
+    if (index === 0 || value > 0) classes.push('done');
+    if (index === currentLen && (phase === 'start' || phase === 'candidate')) classes.push('current');
+    if (index === currentLen && bestCut) classes.push('update');
+    if (index === currentLen && (phase === 'commit' || phase === 'final')) classes.push('final');
+    if (remain !== null && remain !== undefined && index === remain) classes.push('remainder');
+    return `<div class="${classes.join(' ')}">
+      <div class="array-lab">s[${index}]</div>
+      <div class="array-val">${index === 0 ? '0' : (value || '·')}</div>
+      <div class="array-sub">${index === 0 ? 'base' : 'first cut'}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderMemoGrid(memo, currentLen, remain, phase, options = {}) {
+  const {
+    currentClass = 'current',
+    remainClass = 'remainder',
+    cacheClass = 'cache',
+    storeClass = 'update',
+    returnClass = 'final',
+    highlightCurrent = true,
+    highlightFilled = true,
+    filledClass = 'done'
+  } = options;
+  return `<div class="array-grid">${memo.map((value, index) => {
+    const classes = ['array-cell'];
+    if (highlightFilled && value >= 0 && filledClass) classes.push(filledClass);
+    if (highlightCurrent && index === currentLen) classes.push(currentClass);
+    if (remain !== null && remain !== undefined && index === remain) classes.push(remainClass);
+    if (phase === 'cache' && index === currentLen && cacheClass) classes.push(cacheClass);
+    if (phase === 'store' && index === currentLen && storeClass) classes.push(storeClass);
+    if (phase === 'return' && index === currentLen && returnClass) classes.push(returnClass);
+    return `<div class="${classes.join(' ')}">
+      <div class="array-lab">memo[${index}]</div>
+      <div class="array-val">${value >= 0 ? value : '·'}</div>
+      <div class="array-sub">${index === 0 ? 'base' : (value >= 0 ? 'cached' : 'empty')}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderCandidateGrid(currentLen, evaluated, currentCut, bestCut, phase) {
+  const cards = [];
+  for (let i = 1; i <= currentLen; i += 1) {
+    const item = evaluated.find((entry) => entry.cut === i);
+    let stateClass = 'pending';
+    if (item) {
+      stateClass = 'done';
+      if (bestCut === i && (phase === 'candidate' || phase === 'start')) stateClass = 'best';
+      if (currentCut === i && phase === 'candidate') stateClass = 'active';
+      if (bestCut === i && (phase === 'commit' || phase === 'final')) stateClass = 'done';
+    }
+    cards.push(item
+      ? `<div class="candidate-card ${stateClass}">
+           <div class="cand-head">cut ${i} | rest ${item.remain}</div>
+           <div class="cand-value">${item.candidate}</div>
+           <div class="cand-detail">p[${i}] = ${item.price}, rest = ${item.restRevenue}</div>
+         </div>`
+      : `<div class="candidate-card pending">
+           <div class="cand-head">cut ${i} | rest ${currentLen - i}</div>
+           <div class="cand-value">waiting</div>
+           <div class="cand-detail">아직 평가하지 않은 후보</div>
+         </div>`);
+  }
+  return `<div class="candidate-grid">${cards.join('')}</div>`;
+}
+
+function renderRod(segments, displayLen, currentCut, phase, caption) {
+  const normalizedLen = displayLen ?? 0;
+  if (normalizedLen <= 0) {
+    return `<div class="rod-caption">길이 0이라 표시할 막대가 없습니다.</div><div class="rod-caption">${esc(caption)}</div>`;
+  }
+
+  const rodPreview = `<div class="rod-preview">${segments.length ? segments.map((segment) => {
+    return `<div class="rod-block ${segment.cls}" style="flex-grow:${segment.size}">${segment.label}</div>`;
+  }).join('') : '<div class="rod-block" style="flex-grow:1">-</div>'}</div>`;
+
+  const units = [];
+  for (let i = 0; i < normalizedLen; i += 1) {
+    let cls = 'rod-unit';
+    if (phase === 'final') cls += ' final';
+    else if (currentCut !== null && currentCut !== undefined && i < currentCut) cls += ' cut';
+    else if (currentCut !== null && currentCut !== undefined && i < normalizedLen) cls += ' rest';
+    units.push(`<div class="${cls}">${i + 1}</div>`);
+  }
+  return `${rodPreview}<div class="rod-units-label">아래 숫자는 별도 막대가 아니라, 위 막대를 왼쪽부터 1칸씩 나눈 단위 칸 번호입니다.</div><div class="rod-units" style="grid-template-columns:repeat(${normalizedLen}, minmax(0, 1fr))">${units.join('')}</div><div class="rod-caption">${esc(caption)}</div>`;
+}
+
+function renderSplitOptions(currentLen, options = {}) {
+  const normalizedLen = currentLen ?? 0;
+  if (normalizedLen <= 0) {
+    return '<div class="log-line">길이 0은 더 이상 자를 후보가 없습니다. base case 입니다.</div>';
+  }
+
+  const {
+    activeCut = null,
+    bestCut = null,
+    bestRevenue = null,
+    activeOptionClass = 'active',
+    bestOptionClass = 'best',
+    cutSegmentClass = 'cut',
+    restSegmentClass = 'rest',
+    highlightBest = true,
+    subproblemLabel = (remain) => `R(${remain})`,
+    formulaLabel = (cut, remain) => `p[${cut}] + ${subproblemLabel(remain)}`,
+    summaryLabel = null
+  } = options;
+
+  const rows = [];
+  for (let cut = 1; cut <= normalizedLen; cut += 1) {
+    const remain = normalizedLen - cut;
+    const rowClass = [
+      'split-option',
+      activeCut === cut ? activeOptionClass : '',
+      highlightBest && activeCut !== cut && bestCut === cut ? bestOptionClass : ''
+    ].filter(Boolean).join(' ');
+
+    const status = activeCut === cut
+      ? '현재 검토 중'
+      : (bestCut === cut ? '현재 최고 후보' : '가능한 다른 후보');
+
+    const summary = summaryLabel ? summaryLabel(cut, remain) : '';
+
+    rows.push(`<div class="${rowClass}">
+      <div class="split-head">
+        <div class="split-name">cut ${cut} | rest ${remain}</div>
+        <div class="split-state">${status}</div>
+      </div>
+      <div class="split-bar">
+        <div class="split-segment ${cutSegmentClass}" style="flex-grow:${cut}">${cut}</div>
+        ${remain > 0
+          ? `<div class="split-segment ${restSegmentClass}" style="flex-grow:${remain}">${remain}</div>`
+          : '<div class="split-segment zero">0</div>'}
+      </div>
+      <div class="split-formula">${esc(formulaLabel(cut, remain))}</div>
+      ${summary ? `<div class="split-summary">${esc(summary)}</div>` : ''}
+    </div>`);
+  }
+
+  const bestText = bestCut ? `현재까지 최고 후보는 cut ${bestCut}${bestRevenue !== null ? `, revenue ${bestRevenue}` : ''} 입니다.` : '아직 최고 후보가 정해지지 않았습니다.';
+  return `<div class="split-options"><div class="split-summary">현재 길이 ${normalizedLen} 에서 가능한 1차 절단을 모두 표시합니다. ${bestText}</div>${rows.join('')}</div>`;
+}
+
+function renderLog(log) {
+  return `<div class="log-list">${(log.length ? log : ['no events']).map((line) => `<div class="log-line">${esc(line)}</div>`).join('')}</div>`;
+}
+
+function renderFormula(lines) {
+  return `<div class="formula-box">${lines.map((line, index) => `<div class="${index === 0 ? 'formula-line' : 'phase-line'}">${esc(line)}</div>`).join('')}</div>`;
+}
+
+function renderCallStack(stack, nodes, labelFn = (length) => `R(${length})`, options = {}) {
+  const {
+    activeClass = 'chip-active',
+    inactiveClass = 'chip-best'
+  } = options;
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  return `<div class="chips">${stack.length ? stack.map((id, index) => {
+    const node = byId.get(id);
+    const label = node ? labelFn(node.length) : `#${id}`;
+    return `<span class="chip ${index === stack.length - 1 ? activeClass : inactiveClass}">${label}</span>`;
+  }).join('') : '<span class="chip-empty">empty</span>'}</div>`;
+}
+
+function renderCallTree(nodes, activeId, labelFn = (length) => `R(${length})`, options = {}) {
+  const {
+    activeClass = 'active',
+    returnedClass = 'returned',
+    baseClass = 'base',
+    cacheClass = 'cache'
+  } = options;
+  return `<div class="tree-list">${nodes.length ? nodes.map((node) => {
+    let cls = 'tree-row';
+    let status = 'active';
+    if (node.cacheHit) {
+      cls += ` ${cacheClass}`;
+      status = 'cache hit';
+    } else if (node.status === 'base') {
+      cls += ` ${baseClass}`;
+      status = 'base';
+    } else if (node.status === 'returned') {
+      cls += ` ${returnedClass}`;
+      status = 'returned';
+    } else if (node.id === activeId) {
+      cls += ` ${activeClass}`;
+      status = 'active';
+    }
+    if (node.id === activeId && !cls.includes(activeClass)) cls += ` ${activeClass}`;
+    return `<div class="${cls}">
+      <div class="tree-main" style="padding-left:${8 + node.depth * 18}px">
+        <span class="tree-name">#${node.id} ${labelFn(node.length)}</span>
+        <span class="tree-state">${status}</span>
+      </div>
+      <div class="tree-side">best ${formatValue(node.best, '·')} | ret ${formatValue(node.returnValue, '·')}</div>
+    </div>`;
+  }).join('') : '<div class="log-line">no calls yet</div>'}</div>`;
+}
+
+function renderResultRows(table, split, target) {
+  const rows = [];
+  const last = table.reduce((acc, value, index) => (value >= 0 ? index : acc), 0);
+  for (let length = 1; length <= last; length += 1) {
+    const cuts = split ? reconstructCuts(split, length) : [];
+    rows.push(`<div class="result-row ${length === target && last === target ? 'target' : ''}">
+      <div class="result-label">r[${length}] = ${table[length]}</div>
+      <div class="chips">${cuts.length ? cuts.map((cut, index) => `<span class="chip chip-done">${cut}</span>${index < cuts.length - 1 ? '<span class="chip-sep">+</span>' : ''}`).join('') : '<span class="chip-empty">cut info 없음</span>'}</div>
+    </div>`);
+  }
+  return `<div class="result-list">${rows.length ? rows.join('') : '<div class="log-line">아직 확정된 값이 없습니다.</div>'}</div>`;
+}
+
+function renderWrapperFlow(phase) {
+  const steps = [
+    { key: 'enter', title: '1. enter', text: 'MemoizedCutRod 호출 시작' },
+    { key: 'allocate', title: '2. allocate', text: 'memo 벡터를 -1로 생성' },
+    { key: 'base', title: '3. base case', text: 'memo[0] = 0 설정' },
+    { key: 'call', title: '4. helper', text: 'MemoizedCutRodHelper 호출' },
+    { key: 'return', title: '5. return', text: 'helper 결과를 그대로 반환' }
+  ];
+
+  const activeIndex = phase === 'resolved' ? 3 : steps.findIndex((item) => item.key === phase);
+  return `<div class="flow-grid">${steps.map((item, index) => {
+    const cls = [
+      'flow-card',
+      index < activeIndex ? 'done' : '',
+      index === activeIndex ? 'active' : ''
+    ].filter(Boolean).join(' ');
+    return `<div class="${cls}">
+      <div class="flow-head">${item.title}</div>
+      <div class="flow-text">${item.text}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function buildRecurSteps(target) {
+  const steps = [];
+  const state = { nodes: [], stack: [], log: [], activeId: null };
+  let nextId = 1;
+
+  function push(step) {
+    steps.push({
+      phase: step.phase,
+      desc: step.desc,
+      formula: step.formula,
+      hl: step.hl.slice(),
+      currentLen: step.currentLen,
+      currentCut: step.currentCut ?? null,
+      candidateRevenue: step.candidateRevenue ?? null,
+      bestRevenue: step.bestRevenue ?? null,
+      bestCut: step.bestCut ?? null,
+      nodes: cloneNodes(state.nodes),
+      stack: state.stack.slice(),
+      log: state.log.slice(-7),
+      activeId: step.activeId ?? state.activeId,
+      finalRevenue: step.finalRevenue ?? null
+    });
+  }
+
+  function call(length, parentId, depth) {
+    const node = {
+      id: nextId++,
+      parentId,
+      depth,
+      length,
+      status: 'active',
+      best: null,
+      bestCut: null,
+      returnValue: null,
+      cacheHit: false
+    };
+
+    state.nodes.push(node);
+    state.stack.push(node.id);
+    state.activeId = node.id;
+    state.log.push(`call R(${length})`);
+
+    push({
+      phase: 'enter',
+      desc: `RecurCutRod(prices, ${length}) 호출이 스택에 올라간다.`,
+      formula: `length = ${length}`,
+      hl: [1, 2],
+      currentLen: length
+    });
+
+    if (length === 0) {
+      node.status = 'base';
+      node.best = 0;
+      node.returnValue = 0;
+      state.log.push('base case -> return 0');
+
+      push({
+        phase: 'base',
+        desc: '길이 0이면 더 자를 것이 없으므로 0을 바로 반환한다.',
+        formula: 'return 0',
+        hl: [3, 4],
+        currentLen: 0,
+        bestRevenue: 0
+      });
+
+      node.status = 'returned';
+      state.stack.pop();
+      state.activeId = state.stack[state.stack.length - 1] || null;
+      return 0;
+    }
+
+    let best = Number.NEGATIVE_INFINITY;
+
+    for (let i = 1; i <= length; i += 1) {
+      state.log.push(`R(${length}) tries cut ${i}`);
+
+      push({
+        phase: 'candidate',
+        desc: `현재 호출 R(${length}) 에서 첫 절단 i = ${i} 를 시도한다.`,
+        formula: `candidate = p[${i}] + R(${length - i})`,
+        hl: [6, 7, 8],
+        currentLen: length,
+        currentCut: i,
+        bestRevenue: Number.isFinite(best) ? best : null,
+        bestCut: node.bestCut
+      });
+
+      const subRevenue = call(length - i, node.id, depth + 1);
+      const candidate = PRICES[i] + subRevenue;
+
+      if (candidate > best) {
+        best = candidate;
+        node.best = best;
+        node.bestCut = i;
+        state.log.push(`update R(${length}) -> ${best}`);
+
+        push({
+          phase: 'candidate',
+          desc: `i = ${i} 결과 ${candidate} 가 현재 최고값이므로 max_price 를 갱신한다.`,
+          formula: `max(${Number.isFinite(best) ? best : 'min'}, ${candidate}) = ${candidate}`,
+          hl: [8],
+          currentLen: length,
+          currentCut: i,
+          candidateRevenue: candidate,
+          bestRevenue: best,
+          bestCut: i
+        });
+      } else {
+        node.best = best;
+        state.log.push(`keep R(${length}) = ${best}`);
+
+        push({
+          phase: 'candidate',
+          desc: `i = ${i} 결과 ${candidate} 는 현재 최고값 ${best} 를 넘지 못한다.`,
+          formula: `max(${best}, ${candidate}) = ${best}`,
+          hl: [8],
+          currentLen: length,
+          currentCut: i,
+          candidateRevenue: candidate,
+          bestRevenue: best,
+          bestCut: node.bestCut
+        });
+      }
+    }
+
+    node.status = 'returned';
+    node.best = best;
+    node.returnValue = best;
+    state.log.push(`return R(${length}) = ${best}`);
+
+    push({
+      phase: 'return',
+      desc: `R(${length}) 는 최적 수익 ${best} 를 반환한다.`,
+      formula: `return ${best}`,
+      hl: [10],
+      currentLen: length,
+      currentCut: node.bestCut,
+      candidateRevenue: best,
+      bestRevenue: best,
+      bestCut: node.bestCut
+    });
+
+    state.stack.pop();
+    state.activeId = state.stack[state.stack.length - 1] || null;
+    return best;
+  }
+
+  const result = call(target, null, 0);
+  const root = state.nodes.find((node) => node.parentId === null);
+  state.log.push(`done -> R(${target}) = ${result}`);
+
+  push({
+    phase: 'final',
+    desc: `순수 재귀 호출이 모두 끝났다. 중복 부분 문제가 많아서 같은 길이를 여러 번 다시 계산했다.`,
+    formula: `R(${target}) = ${result}`,
+    hl: [10],
+    currentLen: target,
+    currentCut: root ? root.bestCut : null,
+    bestRevenue: result,
+    bestCut: root ? root.bestCut : null,
+    finalRevenue: result,
+    activeId: null
+  });
+
+  return steps;
+}
+
+function buildMemoHelperSteps(target) {
+  const steps = [];
+  const state = {
+    nodes: [],
+    stack: [],
+    log: [],
+    activeId: null,
+    memo: Array(target + 1).fill(-1),
+    cacheHits: 0
+  };
+  state.memo[0] = 0;
+  let nextId = 1;
+
+  function push(step) {
+    steps.push({
+      phase: step.phase,
+      desc: step.desc,
+      formula: step.formula,
+      hl: step.hl.slice(),
+      currentLen: step.currentLen,
+      currentCut: step.currentCut ?? null,
+      candidateRevenue: step.candidateRevenue ?? null,
+      bestRevenue: step.bestRevenue ?? null,
+      bestCut: step.bestCut ?? null,
+      nodes: cloneNodes(state.nodes),
+      stack: state.stack.slice(),
+      log: state.log.slice(-7),
+      memo: state.memo.slice(),
+      cacheHits: step.cacheHits ?? state.cacheHits,
+      activeId: step.activeId ?? state.activeId
+    });
+  }
+
+  push({
+    phase: 'prepared',
+    desc: `MemoizedCutRod 가 memo[0] = 0 을 준비해 두었다고 가정하고, helper(${target}) 만 따로 추적한다.`,
+    formula: `memo = [0, -1, ..., -1]`,
+    hl: [1],
+    currentLen: target
+  });
+
+  function call(length, parentId, depth) {
+    const node = {
+      id: nextId++,
+      parentId,
+      depth,
+      length,
+      status: 'active',
+      best: null,
+      bestCut: null,
+      returnValue: null,
+      cacheHit: false
+    };
+    state.nodes.push(node);
+    state.stack.push(node.id);
+    state.activeId = node.id;
+    state.log.push(`call H(${length})`);
+
+    push({
+      phase: 'enter',
+      desc: `MemoizedCutRodHelper(prices, ${length}, memo) 호출 시작.`,
+      formula: `length = ${length}`,
+      hl: [1, 2],
+      currentLen: length
+    });
+
+    if (state.memo[length] >= 0) {
+      state.cacheHits += 1;
+      node.status = 'returned';
+      node.best = state.memo[length];
+      node.bestCut = null;
+      node.returnValue = state.memo[length];
+      node.cacheHit = true;
+      state.log.push(`memo hit for ${length} -> ${state.memo[length]}`);
+
+      push({
+        phase: 'cache',
+        desc: `memo[${length}] 에 값이 있으므로 재귀를 내려가지 않고 즉시 반환한다.`,
+        formula: `return memo[${length}] = ${state.memo[length]}`,
+        hl: [3, 4],
+        currentLen: length,
+        bestRevenue: state.memo[length]
+      });
+
+      state.stack.pop();
+      state.activeId = state.stack[state.stack.length - 1] || null;
+      return state.memo[length];
+    }
+
+    state.log.push(`memo miss for ${length}`);
+    push({
+      phase: 'start',
+      desc: `memo[${length}] 가 비어 있으므로 직접 계산을 시작한다.`,
+      formula: `memo[${length}] = -1`,
+      hl: [5],
+      currentLen: length
+    });
+
+    let best = Number.NEGATIVE_INFINITY;
+
+    for (let i = 1; i <= length; i += 1) {
+      const remain = length - i;
+      state.log.push(`H(${length}) tries cut ${i}`);
+
+      push({
+        phase: 'candidate',
+        desc: `길이 ${length} 에서 첫 절단 i = ${i} 를 시도한다.`,
+        formula: `candidate = p[${i}] + H(${remain})`,
+        hl: [6, 7, 8],
+        currentLen: length,
+        currentCut: i,
+        bestRevenue: Number.isFinite(best) ? best : null,
+        bestCut: node.bestCut
+      });
+
+      let subRevenue;
+      if (state.memo[remain] >= 0) {
+        state.cacheHits += 1;
+        state.log.push(`memo hit for ${remain} -> ${state.memo[remain]}`);
+        subRevenue = state.memo[remain];
+      } else {
+        subRevenue = call(remain, node.id, depth + 1);
+      }
+      const candidate = PRICES[i] + subRevenue;
+
+      if (candidate > best) {
+        best = candidate;
+        node.best = best;
+        node.bestCut = i;
+        state.log.push(`update best of H(${length}) -> ${best}`);
+
+        push({
+          phase: 'candidate',
+          desc: `i = ${i} 결과 ${candidate} 가 최고값이어서 현재 최적 수익을 갱신한다.`,
+          formula: `max = ${candidate}`,
+          hl: [8],
+          currentLen: length,
+          currentCut: i,
+          candidateRevenue: candidate,
+          bestRevenue: best,
+          bestCut: i
+        });
+      } else {
+        node.best = best;
+        state.log.push(`keep best of H(${length}) = ${best}`);
+
+        push({
+          phase: 'candidate',
+          desc: `i = ${i} 결과 ${candidate} 는 최고값 ${best} 보다 작거나 같다.`,
+          formula: `keep ${best}`,
+          hl: [8],
+          currentLen: length,
+          currentCut: i,
+          candidateRevenue: candidate,
+          bestRevenue: best,
+          bestCut: node.bestCut
+        });
+      }
+    }
+
+    state.memo[length] = best;
+    node.best = best;
+    state.log.push(`memo[${length}] = ${best}`);
+
+    push({
+      phase: 'store',
+      desc: `계산이 끝났으므로 memo[${length}] = ${best} 로 저장한다.`,
+      formula: `memo[${length}] = ${best}`,
+      hl: [10],
+      currentLen: length,
+      bestRevenue: best,
+      bestCut: node.bestCut
+    });
+
+    node.status = 'returned';
+    node.returnValue = best;
+    state.log.push(`return memo[${length}]`);
+
+    push({
+      phase: 'return',
+      desc: `helper(${length}) 는 memo[${length}] 값을 반환한다.`,
+      formula: `return memo[${length}] = ${best}`,
+      hl: [11],
+      currentLen: length,
+      currentCut: node.bestCut,
+      candidateRevenue: best,
+      bestRevenue: best,
+      bestCut: node.bestCut
+    });
+
+    state.stack.pop();
+    state.activeId = state.stack[state.stack.length - 1] || null;
+    return best;
+  }
+
+  const result = call(target, null, 0);
+  state.log.push(`done -> helper(${target}) = ${result}`);
+
+  push({
+    phase: 'final',
+    desc: `top-down 계산이 끝났다. memo 배열 덕분에 이미 계산된 길이는 cache hit 로 재사용된다.`,
+    formula: `memo[${target}] = ${result}`,
+    hl: [11],
+    currentLen: target,
+    bestRevenue: result,
+    bestCut: state.memo[target] >= 0 ? null : null,
+    activeId: null
+  });
+
+  return steps;
+}
+
+function buildMemoWrapperSteps(target) {
+  const finalTable = computeTables(target).table;
+  const emptyMemo = Array(target + 1).fill(-1);
+  const baseMemo = emptyMemo.slice();
+  baseMemo[0] = 0;
+
+  return [
+    {
+      phase: 'enter',
+      desc: `MemoizedCutRod(prices, ${target}) 가 호출된다.`,
+      formula: `length = ${target}`,
+      hl: [1, 2],
+      memo: null,
+      result: null
+    },
+    {
+      phase: 'allocate',
+      desc: `memo 벡터를 길이 ${target + 1} 로 만들고 모두 -1 로 채운다.`,
+      formula: `vector<int> memo(length + 1, -1)`,
+      hl: [3],
+      memo: emptyMemo,
+      result: null
+    },
+    {
+      phase: 'base',
+      desc: 'base case 를 위해 memo[0] = 0 을 넣는다.',
+      formula: `memo[0] = 0`,
+      hl: [4],
+      memo: baseMemo,
+      result: null
+    },
+    {
+      phase: 'call',
+      desc: '이제 helper 에게 실제 top-down 계산을 맡긴다.',
+      formula: `MemoizedCutRodHelper(prices, length, memo)`,
+      hl: [5],
+      memo: baseMemo,
+      result: null
+    },
+    {
+      phase: 'resolved',
+      desc: `helper 가 모든 필요한 하위 문제를 채우고 ${finalTable[target]} 을 돌려주었다.`,
+      formula: `helper result = ${finalTable[target]}`,
+      hl: [5],
+      memo: finalTable,
+      result: finalTable[target]
+    },
+    {
+      phase: 'return',
+      desc: `wrapper 는 helper 결과 ${finalTable[target]} 를 그대로 반환한다.`,
+      formula: `return ${finalTable[target]}`,
+      hl: [5],
+      memo: finalTable,
+      result: finalTable[target]
+    }
+  ];
+}
+
+function buildBottomUpSteps(target) {
+  const steps = [];
+  const table = Array(target + 1).fill(-1);
+  table[0] = 0;
+
+  function push(step) {
+    steps.push({
+      phase: step.phase,
+      desc: step.desc,
+      formula: step.formula,
+      hl: step.hl.slice(),
+      currentLen: step.currentLen,
+      currentCut: step.currentCut ?? null,
+      candidateRevenue: step.candidateRevenue ?? null,
+      bestRevenue: step.bestRevenue ?? null,
+      bestCut: step.bestCut ?? null,
+      table: table.slice(),
+      evaluated: (step.evaluated || []).map((item) => ({ ...item }))
+    });
+  }
+
+  push({
+    phase: 'init',
+    desc: 'table[0] = 0 을 놓고, 길이 1부터 차례로 최적 수익을 채운다.',
+    formula: 'r[0] = 0',
+    hl: [3, 4],
+    currentLen: 0
+  });
+
+  for (let j = 1; j <= target; j += 1) {
+    let best = Number.NEGATIVE_INFINITY;
+    let bestCut = 0;
+    const evaluated = [];
+
+    push({
+      phase: 'start',
+      desc: `길이 ${j} 의 막대에 대한 최적 수익 r[${j}] 를 계산한다.`,
+      formula: `r[${j}] = max(p[i] + r[${j} - i])`,
+      hl: [6, 7, 8],
+      currentLen: j,
+      bestRevenue: null,
+      bestCut: 0,
+      evaluated
+    });
+
+    for (let i = 1; i <= j; i += 1) {
+      const remain = j - i;
+      const candidate = PRICES[i] + table[remain];
+      const better = candidate > best;
+      if (better) {
+        best = candidate;
+        bestCut = i;
+      }
+      evaluated.push({ cut: i, remain, price: PRICES[i], restRevenue: table[remain], candidate });
+
+      push({
+        phase: 'candidate',
+        desc: better
+          ? `i = ${i} 이면 ${PRICES[i]} + ${table[remain]} = ${candidate}. 현재 최고값을 갱신한다.`
+          : `i = ${i} 결과 ${candidate} 는 현재 최고값 ${best} 보다 작거나 같다.`,
+        formula: `p[${i}] + r[${remain}] = ${candidate}`,
+        hl: [9, 10, 11, 12],
+        currentLen: j,
+        currentCut: i,
+        candidateRevenue: candidate,
+        bestRevenue: best,
+        bestCut,
+        evaluated
+      });
+    }
+
+    table[j] = best;
+
+    push({
+      phase: 'commit',
+      desc: `길이 ${j} 계산이 끝났다. r[${j}] = ${best} 로 확정한다.`,
+      formula: `table[${j}] = ${best}`,
+      hl: [14],
+      currentLen: j,
+      currentCut: bestCut,
+      candidateRevenue: best,
+      bestRevenue: best,
+      bestCut,
+      evaluated
+    });
+  }
+
+  push({
+    phase: 'final',
+    desc: `BottomUpCutRod 는 table[${target}] = ${table[target]} 을 반환한다.`,
+    formula: `return ${table[target]}`,
+    hl: [16],
+    currentLen: target,
+    bestRevenue: table[target],
+    bestCut: null,
+    table: table.slice(),
+    evaluated: []
+  });
+
+  return steps;
+}
+
+function buildExtendedSteps(target) {
+  const steps = [];
+  const table = Array(target + 1).fill(-1);
+  const split = Array(target + 1).fill(0);
+  table[0] = 0;
+
+  function push(step) {
+    steps.push({
+      phase: step.phase,
+      desc: step.desc,
+      formula: step.formula,
+      hl: step.hl.slice(),
+      currentLen: step.currentLen,
+      currentCut: step.currentCut ?? null,
+      candidateRevenue: step.candidateRevenue ?? null,
+      bestRevenue: step.bestRevenue ?? null,
+      bestCut: step.bestCut ?? null,
+      table: table.slice(),
+      split: split.slice(),
+      evaluated: (step.evaluated || []).map((item) => ({ ...item }))
+    });
+  }
+
+  push({
+    phase: 'init',
+    desc: 'table 과 split 을 준비하고 길이 1부터 차례로 채운다.',
+    formula: 'r[0] = 0, s[0] = 0',
+    hl: [3, 4, 5],
+    currentLen: 0
+  });
+
+  for (let j = 1; j <= target; j += 1) {
+    let best = Number.NEGATIVE_INFINITY;
+    let bestCut = 0;
+    const evaluated = [];
+
+    push({
+      phase: 'start',
+      desc: `길이 ${j} 의 최적 수익과 첫 절단 위치를 동시에 계산한다.`,
+      formula: `r[${j}] = max(p[i] + r[${j} - i])`,
+      hl: [7, 8, 9, 11],
+      currentLen: j,
+      evaluated
+    });
+
+    for (let i = 1; i <= j; i += 1) {
+      const remain = j - i;
+      const candidate = PRICES[i] + table[remain];
+      const better = candidate > best;
+
+      if (better) {
+        best = candidate;
+        bestCut = i;
+        split[j] = i;
+      }
+
+      evaluated.push({ cut: i, remain, price: PRICES[i], restRevenue: table[remain], candidate });
+
+      push({
+        phase: 'candidate',
+        desc: better
+          ? `i = ${i} 결과 ${candidate} 가 최고값이므로 split[${j}] = ${i} 로 기록한다.`
+          : `i = ${i} 결과 ${candidate} 는 현재 최고값 ${best} 를 바꾸지 못한다.`,
+        formula: `p[${i}] + r[${remain}] = ${candidate}`,
+        hl: better ? [11, 12, 13, 14, 15, 16] : [11, 12, 13],
+        currentLen: j,
+        currentCut: i,
+        candidateRevenue: candidate,
+        bestRevenue: best,
+        bestCut,
+        evaluated
+      });
+    }
+
+    table[j] = best;
+
+    push({
+      phase: 'commit',
+      desc: `길이 ${j} 계산 완료: r[${j}] = ${best}, s[${j}] = ${bestCut}.`,
+      formula: `table[${j}] = ${best}, split[${j}] = ${bestCut}`,
+      hl: [19],
+      currentLen: j,
+      currentCut: bestCut,
+      candidateRevenue: best,
+      bestRevenue: best,
+      bestCut,
+      evaluated
+    });
+  }
+
+  const cuts = reconstructCuts(split, target);
+
+  push({
+    phase: 'final',
+    desc: `split 배열을 따라가면 길이 ${target} 의 최적 절단은 ${cuts.join(' + ')} 이고 수익은 ${table[target]} 이다.`,
+    formula: `${target} -> ${cuts.join(' + ')} / revenue = ${table[target]}`,
+    hl: [22, 23, 24, 25, 28],
+    currentLen: target,
+    currentCut: split[target],
+    candidateRevenue: table[target],
+    bestRevenue: table[target],
+    bestCut: split[target],
+    evaluated: []
+  });
+
+  return steps;
+}
+
+const RECUR_CODE = [
+  'int RecurCutRod(const vector<int>& prices, int length)',
+  '{',
+  '    if (length == 0)',
+  '        return 0;',
+  '    int max_price = numeric_limits<int>::min();',
+  '    for (int i = 1; i <= length; i++)',
+  '    {',
+  '        max_price = std::max(max_price, prices[i] + RecurCutRod(prices, length - i));',
+  '    }',
+  '    return max_price;',
+  '}'
+];
+
+const MEMO_HELPER_CODE = [
+  'int MemoizedCutRodHelper(const vector<int>& prices, int length, vector<int>& memo)',
+  '{',
+  '    if (memo[length] >= 0)',
+  '        return memo[length];',
+  '    int max_price = numeric_limits<int>::min();',
+  '    for (int i = 1; i <= length; i++)',
+  '    {',
+  '        max_price = std::max(max_price, prices[i] + MemoizedCutRodHelper(prices, length - i, memo));',
+  '    }',
+  '    memo[length] = max_price;',
+  '    return memo[length];',
+  '}'
+];
+
+const MEMO_WRAPPER_CODE = [
+  'int MemoizedCutRod(const vector<int>& prices, int length)',
+  '{',
+  '    vector<int> memo(length + 1, -1);',
+  '    memo[0] = 0;',
+  '    return MemoizedCutRodHelper(prices, length, memo);',
+  '}'
+];
+
+const BOTTOM_UP_CODE = [
+  'int BottomUpCutRod(const vector<int>& prices, int length)',
+  '{',
+  '    vector<int> table(length + 1, -1);',
+  '    table[0] = 0;',
+  '    for (int j = 1; j <= length; j++)',
+  '    {',
+  '        int max_price = numeric_limits<int>::min();',
+  '        for (int i = 1; i <= j; i++)',
+  '        {',
+  '            max_price = std::max(max_price, prices[i] + table[j - i]);',
+  '        }',
+  '        table[j] = max_price;',
+  '    }',
+  '    return table[length];',
+  '}'
+];
+
+const EXTENDED_CODE = [
+  'int ExtendedBottomUpCutRod(const vector<int>& prices, int length)',
+  '{',
+  '    vector<int> table(length + 1, -1);',
+  '    table[0] = 0;',
+  '    vector<int> split(length + 1, 0);',
+  '    for (int j = 1; j <= length; j++)',
+  '    {',
+  '        int max_price = numeric_limits<int>::min();',
+  '        for (int i = 1; i <= j; i++)',
+  '        {',
+  '            if (max_price < prices[i] + table[j - i])',
+  '            {',
+  '                max_price = prices[i] + table[j - i];',
+  '                split[j] = i;',
+  '            }',
+  '        }',
+  '        table[j] = max_price;',
+  '    }',
+  '    while (length > 0)',
+  '    {',
+  '        cout << split[length] << " ";',
+  '        length = length - split[length];',
+  '    }',
+  '    return table.back();',
+  '}'
+];
+
+function buildPages() {
+  const recurSteps = buildRecurSteps(4);
+  const memoHelperSteps = buildMemoHelperSteps(5);
+  const memoWrapperSteps = buildMemoWrapperSteps(10);
+  const bottomUpSteps = buildBottomUpSteps(10);
+  const extendedSteps = buildExtendedSteps(10);
+
+  return [
+    {
+      id: 'recur',
+      label: 'RecurCutRod',
+      note: '데모 길이 4를 사용해 순수 재귀 호출 트리를 읽기 쉬운 크기로 유지했습니다.',
+      codeTitle: 'int RecurCutRod(const vector<int>& prices, int length)',
+      codeLines: RECUR_CODE,
+      steps: recurSteps,
+      legends: [
+        { label: '활성 호출', fill: 'rgba(247,178,103,.22)', stroke: '#f7b267' },
+        { label: 'base case', fill: 'rgba(86,156,214,.2)', stroke: '#569cd6' },
+        { label: '반환 완료', fill: 'rgba(78,201,176,.2)', stroke: '#4ec9b0' },
+        { label: '현재 절단', fill: 'rgba(220,220,170,.2)', stroke: '#dcdcaa' }
+      ],
+      render(step) {
+        const activeNode = step.nodes.find((node) => node.id === step.activeId) || null;
+        const displayLen = step.currentLen ?? 4;
+
+        return {
+          meta: [
+            { label: 'demo target', value: '4', sub: '순수 재귀 예시' },
+            { label: 'active call', value: activeNode ? `R(${activeNode.length})` : '-', sub: `stack depth = ${step.stack.length}` },
+            { label: 'candidate revenue', value: formatValue(step.candidateRevenue), sub: step.currentCut ? `cut ${step.currentCut}` : 'no candidate' },
+            { label: 'best in call', value: formatValue(step.bestRevenue), sub: step.bestCut ? `best cut = ${step.bestCut}` : 'best cut = -' }
+          ],
+          boxes: {
+            left: [
+              {
+                title: 'All Candidate Splits',
+                html: renderSplitOptions(displayLen, {
+                  activeCut: step.currentCut,
+                  bestCut: step.bestCut,
+                  bestRevenue: step.bestRevenue,
+                  subproblemLabel: (remain) => `R(${remain})`,
+                  formulaLabel: (cut, remain) => `candidate ${cut}: p[${cut}] + R(${remain})`,
+                  summaryLabel: (cut, remain) => remain === 0
+                    ? `길이 ${displayLen} 에서 cut ${cut} 를 고르면 바로 base case R(0) 으로 내려갑니다.`
+                    : `길이 ${displayLen} 에서 cut ${cut} 를 고르면 나머지 길이 ${remain} 을 R(${remain}) 로 다시 풉니다.`
+                })
+              },
+              { title: 'Event Log', html: renderLog(step.log) },
+              {
+                title: 'Current Formula',
+                html: renderFormula([
+                  step.formula,
+                  step.currentCut ? `현재 pair: (i = ${step.currentCut}, remainder = ${step.currentLen - step.currentCut})` : '현재 pair: -',
+                  `phase: ${step.phase}`
+                ])
+              }
+            ],
+            right: [
+              { title: 'Price Table', html: renderPriceGrid(step.currentCut, null, 4) },
+              { title: 'Call Stack', html: renderCallStack(step.stack, step.nodes, (length) => `R(${length})`) },
+              { title: 'Call Tree', html: renderCallTree(step.nodes, step.activeId, (length) => `R(${length})`) }
+            ]
+          }
+        };
+      }
+    },
+    {
+      id: 'memo-helper',
+      label: 'MemoizedCutRodHelper',
+      note: '데모 길이 5를 사용합니다. memo[0] = 0 은 wrapper 에서 이미 준비된 상태로 시작합니다.',
+      codeTitle: 'int MemoizedCutRodHelper(const vector<int>& prices, int length, vector<int>& memo)',
+      codeLines: MEMO_HELPER_CODE,
+      steps: memoHelperSteps,
+      legends: [
+        { label: '현재 계산 / p[i]', fill: 'rgba(78,201,176,.2)', stroke: '#4ec9b0' },
+        { label: 'memo 참조 / cache hit', fill: 'rgba(86,156,214,.2)', stroke: '#569cd6' }
+      ],
+      render(step) {
+        const activeNode = step.nodes.find((node) => node.id === step.activeId) || null;
+        const displayLen = step.currentLen ?? 5;
+        const helperIsCandidate = step.phase === 'candidate';
+        const helperPriceCut = helperIsCandidate ? step.currentCut : null;
+        const helperMemoIndex = helperIsCandidate && step.currentCut !== null
+          ? step.currentLen - step.currentCut
+          : (['cache', 'store', 'return', 'final'].includes(step.phase) ? step.currentLen : null);
+        const helperBestCut = helperIsCandidate ? step.bestCut : step.bestCut;
+        const helperPairText = helperIsCandidate && step.currentCut
+          ? `현재 pair: (i = ${step.currentCut}, remainder = ${step.currentLen - step.currentCut})`
+          : (step.bestCut ? `best pair: (i = ${step.bestCut}, remainder = ${step.currentLen - step.bestCut})` : '현재 pair: -');
+
+        return {
+          meta: [
+            { label: 'demo target', value: '5', sub: 'top-down helper 예시' },
+            { label: 'active call', value: activeNode ? `H(${activeNode.length})` : '-', sub: `stack depth = ${step.stack.length}` },
+            { label: 'cache hits', value: String(step.cacheHits ?? countCacheHits(step.nodes)), sub: 'memo 재사용 횟수' },
+            { label: 'best in call', value: formatValue(step.bestRevenue), sub: step.currentCut ? `cut ${step.currentCut}` : 'no active cut' }
+          ],
+          boxes: {
+            left: [
+              {
+                title: step.phase === 'cache' ? 'Cache Hit' : 'All Candidate Splits',
+                html: step.phase === 'cache'
+                  ? renderFormula([
+                      `memo[${step.currentLen}] = ${step.memo[step.currentLen]}`,
+                      '이미 계산된 길이라서 후보 절단을 다시 펼치지 않습니다.',
+                      `즉시 return memo[${step.currentLen}]`
+                    ])
+                  : renderSplitOptions(displayLen, {
+                      activeCut: helperIsCandidate ? step.currentCut : null,
+                      bestCut: helperBestCut,
+                      bestRevenue: step.bestRevenue,
+                      activeOptionClass: 'helper-active',
+                      bestOptionClass: 'helper-active',
+                      cutSegmentClass: 'helper-cut',
+                      restSegmentClass: 'helper-rest',
+                      highlightBest: !helperIsCandidate,
+                      subproblemLabel: (remain) => `H(${remain})`,
+                      formulaLabel: (cut, remain) => `candidate ${cut}: p[${cut}] + H(${remain})`,
+                      summaryLabel: (cut, remain) => remain === 0
+                        ? `cut ${cut} 를 고르면 helper 는 즉시 H(0) / memo[0] 으로 닿습니다.`
+                        : `cut ${cut} 를 고르면 나머지 길이 ${remain} 은 H(${remain}) 또는 memo[${remain}] 로 처리됩니다.`
+                    })
+              },
+              { title: 'Event Log', html: renderLog(step.log) },
+              {
+                title: 'Current Formula',
+                html: renderFormula([
+                  step.formula,
+                  helperPairText,
+                  `phase: ${step.phase}`
+                ])
+              }
+            ],
+            right: [
+              { title: 'Price Table', html: renderPriceGrid(helperPriceCut, null, 5, { activeClass: 'helper-current' }) },
+              {
+                title: 'Memo Array',
+                html: renderMemoGrid(
+                  step.memo,
+                  step.currentLen,
+                  helperMemoIndex,
+                  step.phase,
+                  {
+                    currentClass: 'helper-current',
+                    remainClass: 'helper-reference',
+                    cacheClass: '',
+                    storeClass: '',
+                    returnClass: '',
+                    highlightCurrent: false,
+                    highlightFilled: false
+                  }
+                )
+              },
+              {
+                title: 'Call Stack',
+                html: renderCallStack(step.stack, step.nodes, (length) => `H(${length})`, {
+                  activeClass: 'chip-done',
+                  inactiveClass: ''
+                })
+              },
+              {
+                title: 'Call Tree',
+                html: renderCallTree(step.nodes, step.activeId, (length) => `H(${length})`, {
+                  activeClass: 'helper-active',
+                  returnedClass: 'helper-active',
+                  baseClass: 'helper-cache',
+                  cacheClass: 'helper-cache'
+                })
+              }
+            ]
+          }
+        };
+      }
+    },
+    {
+      id: 'memo-wrapper',
+      label: 'MemoizedCutRod',
+      note: 'wrapper 함수는 memo 벡터를 만들고 base case 를 넣은 뒤 helper 로 제어를 넘깁니다.',
+      codeTitle: 'int MemoizedCutRod(const vector<int>& prices, int length)',
+      codeLines: MEMO_WRAPPER_CODE,
+      steps: memoWrapperSteps,
+      legends: [
+        { label: '현재 단계', fill: 'rgba(247,178,103,.22)', stroke: '#f7b267' },
+        { label: '준비 완료', fill: 'rgba(78,201,176,.2)', stroke: '#4ec9b0' },
+        { label: 'helper 위임', fill: 'rgba(220,220,170,.2)', stroke: '#dcdcaa' },
+        { label: 'memo 값', fill: 'rgba(86,156,214,.2)', stroke: '#569cd6' }
+      ],
+      render(step) {
+        const helperDone = step.phase === 'resolved' || step.phase === 'return';
+        return {
+          meta: [
+            { label: 'target length', value: '10', sub: 'wrapper 입력' },
+            { label: 'memo size', value: '11', sub: '0..10 저장' },
+            { label: 'helper status', value: helperDone ? 'done' : (step.phase === 'call' ? 'running' : 'waiting'), sub: 'MemoizedCutRodHelper' },
+            { label: 'returned revenue', value: formatValue(step.result), sub: helperDone ? 'final result' : 'not returned yet' }
+          ],
+          boxes: {
+            left: [
+              { title: 'Wrapper Flow', html: renderWrapperFlow(step.phase) },
+              {
+                title: 'Event Log',
+                html: renderLog([
+                  '1. call MemoizedCutRod',
+                  '2. allocate memo with -1',
+                  '3. set memo[0] = 0',
+                  '4. call MemoizedCutRodHelper',
+                  '5. return helper result'
+                ])
+              },
+              {
+                title: 'Helper Summary',
+                html: renderFormula([
+                  step.phase === 'call' ? 'helper is running' : (helperDone ? `helper result = ${step.result}` : 'helper not called yet'),
+                  helperDone ? 'memo 배열이 계산 결과로 채워졌다.' : 'wrapper 는 계산 준비만 담당한다.',
+                  `phase: ${step.phase}`
+                ])
+              }
+            ],
+            right: [
+              { title: 'Price Table', html: renderPriceGrid(null, null, 10) },
+              { title: 'Memo Array', html: renderMemoGrid(step.memo || Array(11).fill(-1), null, null, helperDone ? 'return' : step.phase) },
+              { title: 'Optimal Revenues', html: renderResultRows(step.memo || Array(11).fill(-1), null, 10) }
+            ]
+          }
+        };
+      }
+    },
+    {
+      id: 'bottom-up',
+      label: 'BottomUpCutRod',
+      note: '길이 10 전체를 사용합니다. split 없이 revenue table 만 채우는 버전입니다.',
+      codeTitle: 'int BottomUpCutRod(const vector<int>& prices, int length)',
+      codeLines: BOTTOM_UP_CODE,
+      steps: bottomUpSteps,
+      legends: [
+        { label: '현재 절단', fill: 'rgba(247,178,103,.22)', stroke: '#f7b267' },
+        { label: '남은 길이', fill: 'rgba(86,156,214,.2)', stroke: '#569cd6' },
+        { label: '최고값 갱신', fill: 'rgba(220,220,170,.2)', stroke: '#dcdcaa' },
+        { label: '확정 값', fill: 'rgba(78,201,176,.2)', stroke: '#4ec9b0' }
+      ],
+      render(step) {
+        const segments = step.currentCut
+          ? [
+              { size: step.currentCut, label: step.currentCut, cls: 'cut' },
+              ...(step.currentLen - step.currentCut > 0 ? [{ size: step.currentLen - step.currentCut, label: step.currentLen - step.currentCut, cls: 'rest' }] : [])
+            ]
+          : [{ size: Math.max(step.currentLen || 10, 1), label: step.currentLen || 10, cls: step.phase === 'final' ? 'final' : 'best' }];
+
+        return {
+          meta: [
+            { label: 'current length j', value: step.phase === 'init' ? '10' : String(step.currentLen), sub: step.phase === 'init' ? 'target length' : `phase = ${step.phase}` },
+            { label: 'active cut i', value: formatValue(step.currentCut), sub: step.currentCut !== null ? `remainder = ${step.currentLen - step.currentCut}` : 'remainder = -' },
+            { label: 'candidate revenue', value: formatValue(step.candidateRevenue), sub: step.currentCut !== null ? `p[${step.currentCut}] + r[${step.currentLen - step.currentCut}]` : 'no candidate' },
+            { label: 'best so far', value: formatValue(step.bestRevenue), sub: step.bestCut ? `best cut = ${step.bestCut}` : 'best cut = -' }
+          ],
+          boxes: {
+            left: [
+              {
+                title: 'Rod Preview',
+                html: renderRod(
+                  segments,
+                  Math.max(step.currentLen || 10, 1),
+                  step.currentCut,
+                  step.phase,
+                  step.phase === 'final'
+                    ? `table[10] = ${step.bestRevenue} 가 최종 반환값이다.`
+                    : (step.currentCut ? `길이 ${step.currentLen} 에서 cut ${step.currentCut} 를 비교 중이다.` : '현재 j 값에 대한 막대 상태.')
+                )
+              },
+              { title: 'Candidate Evaluations', html: step.phase === 'init' ? '<div class="log-line">j = 1 부터 후보 비교를 시작합니다.</div>' : renderCandidateGrid(step.currentLen, step.evaluated, step.currentCut, step.bestCut, step.phase) },
+              { title: 'Committed Revenues', html: renderResultRows(step.table, null, 10) }
+            ],
+            right: [
+              { title: 'Price Table', html: renderPriceGrid(step.currentCut, step.bestCut, 10) },
+              { title: 'Revenue Table', html: renderRevenueGrid(step.table, step.currentLen, step.currentCut !== null ? step.currentLen - step.currentCut : null, step.phase) },
+              {
+                title: 'Current Formula',
+                html: renderFormula([
+                  step.formula,
+                  step.currentCut !== null ? `현재 pair: (i = ${step.currentCut}, remainder = ${step.currentLen - step.currentCut})` : '현재 pair: -',
+                  `phase: ${step.phase}`
+                ])
+              }
+            ]
+          }
+        };
+      }
+    },
+    {
+      id: 'extended',
+      label: 'ExtendedBottomUpCutRod',
+      note: '길이 10 전체를 사용합니다. revenue table 과 split table 을 함께 채우고 마지막 절단을 복원합니다.',
+      codeTitle: 'int ExtendedBottomUpCutRod(const vector<int>& prices, int length)',
+      codeLines: EXTENDED_CODE,
+      steps: extendedSteps,
+      legends: [
+        { label: '현재 절단', fill: 'rgba(247,178,103,.22)', stroke: '#f7b267' },
+        { label: '남은 길이', fill: 'rgba(86,156,214,.2)', stroke: '#569cd6' },
+        { label: 'split 갱신', fill: 'rgba(220,220,170,.2)', stroke: '#dcdcaa' },
+        { label: '확정 값', fill: 'rgba(78,201,176,.2)', stroke: '#4ec9b0' },
+        { label: '최종 절단', fill: 'rgba(220,220,170,.2)', stroke: '#dcdcaa' }
+      ],
+      render(step) {
+        const previewCuts = step.phase === 'final'
+          ? reconstructCuts(step.split, 10)
+          : (step.bestCut ? [step.bestCut].concat(reconstructCuts(step.split, step.currentLen - step.bestCut)) : [Math.max(step.currentLen || 10, 1)]);
+        const segments = previewCuts.map((cut, index) => ({
+          size: cut,
+          label: cut,
+          cls: step.phase === 'final' ? 'final' : (index === 0 ? 'cut' : 'best')
+        }));
+
+        return {
+          meta: [
+            { label: 'current length j', value: step.phase === 'init' ? '10' : String(step.currentLen), sub: step.phase === 'init' ? 'target length' : `phase = ${step.phase}` },
+            { label: 'active cut i', value: formatValue(step.currentCut), sub: step.currentCut !== null ? `remainder = ${step.currentLen - step.currentCut}` : 'remainder = -' },
+            { label: 'candidate revenue', value: formatValue(step.candidateRevenue), sub: step.currentCut !== null ? `p[${step.currentCut}] + r[${step.currentLen - step.currentCut}]` : 'no candidate' },
+            { label: 'best plan head', value: formatValue(step.bestCut), sub: step.bestCut ? `split[${step.currentLen}] = ${step.bestCut}` : 'split = -' }
+          ],
+          boxes: {
+            left: [
+              {
+                title: 'Rod Preview',
+                html: renderRod(
+                  segments,
+                  Math.max(step.currentLen || 10, 1),
+                  step.currentCut,
+                  step.phase === 'final' ? 'final' : step.phase,
+                  step.phase === 'final'
+                    ? `복원된 절단은 ${previewCuts.join(' + ')} 이고 수익은 ${step.bestRevenue} 이다.`
+                    : (step.currentCut ? `길이 ${step.currentLen} 에서 cut ${step.currentCut} 를 비교 중이다.` : '현재 j 값에 대한 split 후보를 본다.')
+                )
+              },
+              { title: 'Candidate Evaluations', html: step.phase === 'init' ? '<div class="log-line">j = 1 부터 split 후보를 함께 계산합니다.</div>' : renderCandidateGrid(step.currentLen, step.evaluated, step.currentCut, step.bestCut, step.phase) },
+              {
+                title: 'Best Plan And Reconstruction',
+                html: `
+                  ${renderFormula([
+                    step.phase === 'final' ? `final cuts = ${previewCuts.join(' + ')}` : `preview cuts = ${previewCuts.join(' + ')}`,
+                    step.bestRevenue !== null ? `best revenue = ${step.bestRevenue}` : 'best revenue = -',
+                    `phase: ${step.phase}`
+                  ])}
+                  <div style="margin-top:10px">${renderResultRows(step.table, step.split, 10)}</div>
+                `
+              }
+            ],
+            right: [
+              { title: 'Price Table', html: renderPriceGrid(step.currentCut, step.bestCut, 10) },
+              { title: 'Revenue Table', html: renderRevenueGrid(step.table, step.currentLen, step.currentCut !== null ? step.currentLen - step.currentCut : null, step.phase) },
+              { title: 'Split Table', html: renderSplitGrid(step.split, step.currentLen, step.currentCut !== null ? step.currentLen - step.currentCut : null, step.bestCut, step.phase) }
+            ]
+          }
+        };
+      }
+    }
+  ];
+}
+
+const PAGES = buildPages();
+let currentPage = 0;
+const stepIndexByPage = Array(PAGES.length).fill(0);
+let autoplay = null;
+let lastRenderedPage = -1;
+
+function currentPageDef() {
+  return PAGES[currentPage];
+}
+
+function currentPageSteps() {
+  return currentPageDef().steps;
+}
+
+function currentStepIndex() {
+  return stepIndexByPage[currentPage];
+}
+
+function currentStep() {
+  return currentPageSteps()[currentStepIndex()];
+}
+
+function buildTabs() {
+  const wrap = document.getElementById('page-tabs');
+  wrap.innerHTML = PAGES.map((page, index) => {
+    return `<button type="button" class="tab-btn${index === currentPage ? ' active' : ''}" data-page="${index}">${esc(page.label)}</button>`;
+  }).join('');
+
+  wrap.querySelectorAll('.tab-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      const nextPage = Number(button.getAttribute('data-page'));
+      switchPage(nextPage);
+    });
+  });
+}
+
+function lockStepDescHeight() {
+  const desc = document.getElementById('step-desc');
+  const steps = currentPageSteps();
+  const probe = desc.cloneNode(false);
+  probe.removeAttribute('id');
+  probe.style.position = 'absolute';
+  probe.style.visibility = 'hidden';
+  probe.style.pointerEvents = 'none';
+  probe.style.left = '-99999px';
+  probe.style.top = '0';
+  probe.style.height = 'auto';
+  probe.style.minHeight = '0';
+  probe.style.maxHeight = 'none';
+  probe.style.width = `${desc.getBoundingClientRect().width}px`;
+  document.body.appendChild(probe);
+
+  let maxHeight = 0;
+  steps.forEach((step) => {
+    probe.innerHTML = `<div class="desc-main">${esc(step.desc)}</div><div class="desc-formula">${esc(step.formula)}</div>`;
+    maxHeight = Math.max(maxHeight, Math.ceil(probe.scrollHeight));
+  });
+
+  probe.remove();
+  desc.style.height = 'auto';
+  if (maxHeight > 0) desc.style.minHeight = `${maxHeight}px`;
+}
+
+function stopAuto() {
+  if (autoplay) {
+    window.clearInterval(autoplay);
+    autoplay = null;
+  }
+}
+
+function toggleAuto() {
+  if (autoplay) {
+    stopAuto();
+    render();
+    return;
+  }
+
+  autoplay = window.setInterval(() => {
+    if (currentStepIndex() >= currentPageSteps().length - 1) {
+      stopAuto();
+      render();
+      return;
+    }
+    stepIndexByPage[currentPage] += 1;
+    render();
+  }, 950);
+
+  render();
+}
+
+function jump(index) {
+  stopAuto();
+  const steps = currentPageSteps();
+  stepIndexByPage[currentPage] = Math.max(0, Math.min(steps.length - 1, index));
+  render();
+}
+
+function go(delta) {
+  jump(currentStepIndex() + delta);
+}
+
+function switchPage(index) {
+  stopAuto();
+  currentPage = Math.max(0, Math.min(PAGES.length - 1, index));
+  buildTabs();
+  lockStepDescHeight();
+  render();
+}
+
+function render() {
+  const page = currentPageDef();
+  const step = currentStep();
+  const view = page.render(step);
+
+  if (lastRenderedPage !== currentPage) {
+    renderCode(page.codeLines, page.codeTitle);
+    lastRenderedPage = currentPage;
+  }
+
+  document.getElementById('page-counter').textContent = `page ${currentPage + 1} / ${PAGES.length}`;
+  document.getElementById('page-title').textContent = page.label;
+  document.getElementById('page-note').textContent = page.note;
+  document.getElementById('step-counter').textContent = `step ${currentStepIndex() + 1} / ${page.steps.length}`;
+  document.getElementById('step-desc').innerHTML = `<div class="desc-main">${esc(step.desc)}</div><div class="desc-formula">${esc(step.formula)}</div>`;
+  document.getElementById('progress-bar').style.width = `${(currentStepIndex() / Math.max(page.steps.length - 1, 1)) * 100}%`;
+
+  renderLegend(page.legends);
+  renderMeta(view.meta);
+  setBox('left', 0, view.boxes.left[0] || null);
+  setBox('left', 1, view.boxes.left[1] || null);
+  setBox('left', 2, view.boxes.left[2] || null);
+  setBox('right', 0, view.boxes.right[0] || null);
+  setBox('right', 1, view.boxes.right[1] || null);
+  setBox('right', 2, view.boxes.right[2] || null);
+  setBox('right', 3, view.boxes.right[3] || null);
+  highlightCode(step.hl);
+
+  document.getElementById('prev').disabled = currentStepIndex() === 0;
+  document.getElementById('next').disabled = currentStepIndex() === page.steps.length - 1;
+  document.getElementById('reset').disabled = currentStepIndex() === 0;
+  document.getElementById('last').disabled = currentStepIndex() === page.steps.length - 1;
+  document.getElementById('auto-btn').textContent = autoplay ? 'Pause' : 'Play';
+}
+
+document.addEventListener('keydown', (event) => {
+  const tag = (event.target && event.target.tagName || '').toLowerCase();
+  const editable = tag === 'input' || tag === 'textarea' || tag === 'select' || (event.target && event.target.isContentEditable);
+  if (editable || event.altKey || event.metaKey) return;
+
+  if (event.key === 'End') {
+    jump(currentPageSteps().length - 1);
+    event.preventDefault();
+    return;
+  }
+
+  if (event.key === 'PageDown') {
+    switchPage(currentPage + 1);
+    event.preventDefault();
+    return;
+  }
+
+  if (event.key === 'PageUp') {
+    switchPage(currentPage - 1);
+    event.preventDefault();
+  }
+});
+
+buildTabs();
+renderCode(PAGES[0].codeLines, PAGES[0].codeTitle);
+render();
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', lockStepDescHeight);
+} else {
+  lockStepDescHeight();
+}
+
+window.addEventListener('resize', lockStepDescHeight);
+</script>
+<script src="../shared/viewer-controls.js"></script>
+</body>
+</html>
