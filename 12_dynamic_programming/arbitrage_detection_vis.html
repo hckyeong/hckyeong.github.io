@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arbitrage Detection / 차익 거래 탐지</title>
+<link rel="stylesheet" href="../shared/topological-baseline.css">
+<link rel="stylesheet" href="../shared/bellman-ford-base.css">
+<style>
+.matrix-wrap{overflow:auto}
+.matrix-grid{
+  display:grid;
+  grid-template-columns:96px repeat(5,minmax(72px,1fr));
+  gap:6px;
+  min-width:520px
+}
+.mcell{
+  min-height:48px;
+  border:1px solid #343434;
+  border-radius:6px;
+  background:#1f1f1f;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  padding:6px 8px;
+  text-align:center;
+  transition:all .2s
+}
+.mcell.header{
+  background:#2a2a2a;
+  border-color:#3e3e42;
+  color:#9cdcfe;
+  font-weight:700
+}
+.mcell.diag{
+  color:#666;
+  background:#181818
+}
+.mcell.active{
+  border-color:#f7b267;
+  background:rgba(247,178,103,.12)
+}
+.mcell.row-focus{
+  border-color:#569cd6;
+  background:rgba(86,156,214,.12)
+}
+.mcell.cycle{
+  border-color:#4ec9b0;
+  background:rgba(78,201,176,.12)
+}
+.mcell.danger{
+  border-color:#f44747;
+  background:rgba(244,71,71,.11)
+}
+.mcell .m-main{
+  font-size:13px;
+  font-weight:700;
+  color:#d4d4d4;
+  line-height:1.25
+}
+.mcell .m-sub{
+  font-size:10px;
+  color:#858585;
+  line-height:1.2
+}
+.matrix-note{
+  margin-top:8px;
+  font-size:11px;
+  line-height:1.55;
+  color:#858585
+}
+.edge-list{
+  max-height:420px;
+  overflow:auto;
+  padding-right:2px
+}
+.edge-item{
+  grid-template-columns:58px 1fr 62px
+}
+.edge-main small{
+  color:#858585;
+  font-size:10px;
+  font-weight:400
+}
+.graph-legend-note{
+  color:#858585
+}
+.arr-cell.prev-focus{
+  border-color:#569cd6;
+  background:rgba(86,156,214,.12)
+}
+.arr-cell.cycle{
+  border-color:#4ec9b0;
+  background:rgba(78,201,176,.1)
+}
+.arr-cell.danger{
+  border-color:#f44747;
+  background:rgba(244,71,71,.1)
+}
+.path-card.witness{
+  border-color:#569cd6;
+  background:rgba(86,156,214,.08)
+}
+.path-card.replay{
+  border-color:#4ec9b0;
+  background:rgba(78,201,176,.08)
+}
+.path-card.invalid{
+  border-color:#f44747;
+  background:rgba(244,71,71,.1)
+}
+.trace-line ul{
+  margin:0;
+  padding-left:16px
+}
+.trace-line li+li{
+  margin-top:4px
+}
+.code-note{
+  font-size:11px;
+  color:#858585;
+  margin-top:4px
+}
+@media (max-width:720px){
+  .matrix-grid{
+    grid-template-columns:76px repeat(5,minmax(66px,1fr));
+    min-width:460px
+  }
+}
+</style>
+</head>
+<body>
+<h1>Arbitrage Detection / 차익 거래 탐지</h1>
+<div class="subhead">
+  <span class="badge">Single HTML</span>
+  <span class="badge">Code vs Corrected</span>
+  <span class="badge">Rates Matrix + Directed Graph</span>
+</div>
+
+<div id="page-tabs"></div>
+<div id="page-title"></div>
+<div id="page-note"></div>
+<div id="step-counter"></div>
+<div id="step-desc"></div>
+<div id="legend"></div>
+
+<div id="main-content">
+  <div id="left-panel">
+    <div id="graph-panel">
+      <svg id="gsvg" viewBox="0 0 780 450" aria-label="Arbitrage graph">
+        <g id="edge-group"></g>
+        <g id="weight-group"></g>
+        <g id="node-group"></g>
+        <g id="dist-label-group"></g>
+      </svg>
+      <div id="graph-note" class="graph-note"></div>
+    </div>
+
+    <div class="sbox">
+      <div class="slabel">Rates Matrix</div>
+      <div class="matrix-wrap">
+        <div id="matrix-grid" class="matrix-grid"></div>
+      </div>
+      <div id="matrix-note" class="matrix-note"></div>
+    </div>
+
+    <div class="sbox">
+      <div class="slabel">Edge Order</div>
+      <div id="edge-list" class="edge-list"></div>
+    </div>
+  </div>
+
+  <div id="right-panel">
+    <div class="sbox">
+      <div class="slabel">State</div>
+      <div class="meta-grid">
+        <div class="meta-card"><div class="meta-name">Source</div><div class="meta-value" id="source-val"></div><div class="meta-sub">fixed in code</div></div>
+        <div class="meta-card"><div class="meta-name">Pass</div><div class="meta-value" id="pass-val"></div><div class="meta-sub" id="pass-sub"></div></div>
+        <div class="meta-card"><div class="meta-name">Current Edge</div><div class="meta-value" id="edge-val"></div><div class="meta-sub" id="state-sub"></div></div>
+        <div class="meta-card"><div class="meta-name">Decision</div><div class="meta-value" id="result-val"></div><div class="meta-sub" id="decision-sub"></div></div>
+      </div>
+    </div>
+    <div class="sbox"><div class="slabel">dist[] / amount</div><div id="dist-grid" class="array-grid"></div></div>
+    <div class="sbox"><div class="slabel">prev[]</div><div id="prev-grid" class="array-grid"></div></div>
+    <div class="sbox"><div class="slabel">Formula / Decision</div><div id="formula-box" class="trace-line"></div></div>
+    <div class="sbox"><div class="slabel">Print(dist) Log</div><div id="print-log" class="log-list"></div></div>
+    <div class="sbox"><div class="slabel">Witness / Replay</div><div id="path-list" class="path-list"></div></div>
+    <div class="sbox"><div class="slabel">Code Notes</div><div id="bug-box" class="trace-line"></div></div>
+  </div>
+</div>
+
+<div id="code-panel">
+  <div id="code-title"></div>
+  <div id="code-body"></div>
+  <div id="code-note" class="code-note"></div>
+</div>
+
+<div id="nav">
+  <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+  <div class="help">ArrowLeft / ArrowRight / Home / End / Space / PageUp / PageDown</div>
+</div>
+
+<div class="control-targets" aria-hidden="true">
+  <button class="nbtn" id="prev" type="button">Prev</button>
+  <button class="nbtn" id="next" type="button">Next</button>
+  <button class="nbtn" id="reset" type="button">Home</button>
+  <button class="nbtn" id="auto-btn" type="button">Play</button>
+  <button class="nbtn" id="last" type="button">End</button>
+</div>
+
+<script>
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const NODE_RADIUS = 27;
+const CURVE_BEND = 24;
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'CAD'];
+const SOURCE = 0;
+const RATES = [
+  [1.0, 0.741, 0.657, 1.061, 1.005],
+  [1.349, 1.0, 0.888, 1.433, 1.366],
+  [1.521, 1.126, 1.0, 1.614, 1.538],
+  [0.942, 0.698, 0.619, 1.0, 0.953],
+  [0.995, 0.732, 0.650, 1.049, 1.0]
+];
+const POSITIONS = {
+  0: { x: 390, y: 72 },
+  1: { x: 640, y: 182 },
+  2: { x: 544, y: 372 },
+  3: { x: 236, y: 372 },
+  4: { x: 140, y: 182 }
+};
+const DIST_LABELS = {
+  0: { dx: 0, dy: -44, anchor: 'middle' },
+  1: { dx: 30, dy: -8, anchor: 'start' },
+  2: { dx: 18, dy: 32, anchor: 'start' },
+  3: { dx: -18, dy: 32, anchor: 'end' },
+  4: { dx: -30, dy: -8, anchor: 'end' }
+};
+
+const BUGGY_CODE = [
+  { no: 1, indent: 0, html: '<span class="kw">vector</span>&lt;<span class="tp">Edge</span>&gt; <span class="id">edges</span>;' },
+  { no: 2, indent: 0, html: '<span class="kw">for</span> (<span class="kw">int</span> <span class="id">i</span> = <span class="num">0</span>; <span class="id">i</span> &lt; <span class="id">V</span>; <span class="id">i</span>++)' },
+  { no: 3, indent: 1, html: '<span class="kw">for</span> (<span class="kw">int</span> <span class="id">j</span> = <span class="num">0</span>; <span class="id">j</span> &lt; <span class="id">V</span>; <span class="id">j</span>++)' },
+  { no: 4, indent: 2, html: '<span class="kw">if</span> (<span class="id">i</span> != <span class="id">j</span>) <span class="id">edges</span>.<span class="fn">push_back</span>({ <span class="id">i</span>, <span class="id">j</span>, <span class="id">rates</span>[<span class="id">i</span>][<span class="id">j</span>] });' },
+  { no: 5, indent: 0, html: '<span class="kw">vector</span>&lt;<span class="kw">double</span>&gt; <span class="id">dist</span>(<span class="id">V</span>, -<span class="id">kInf</span>);' },
+  { no: 6, indent: 0, html: '<span class="kw">vector</span>&lt;<span class="kw">int</span>&gt; <span class="id">prev</span>(<span class="id">V</span>, -<span class="num">1</span>);' },
+  { no: 7, indent: 0, html: '<span class="id">dist</span>[<span class="id">s</span>] = <span class="num">1.0</span>;' },
+  { no: 8, indent: 0, html: '<span class="kw">for</span> (<span class="kw">int</span> <span class="id">pass</span> = <span class="num">1</span>; <span class="id">pass</span> &lt; <span class="id">V</span>; <span class="id">pass</span>++) {' },
+  { no: 9, indent: 1, html: '<span class="kw">for</span> (<span class="kw">auto</span> <span class="id">e</span> : <span class="id">edges</span>) {' },
+  { no: 10, indent: 2, html: '<span class="kw">if</span> (<span class="id">dist</span>[<span class="id">e</span>.<span class="fn">From</span>()] * <span class="id">e</span>.<span class="id">weight</span> &gt; <span class="id">dist</span>[<span class="id">e</span>.<span class="fn">To</span>()]);' },
+  { no: 11, indent: 2, html: '{' },
+  { no: 12, indent: 3, html: '<span class="id">dist</span>[<span class="id">e</span>.<span class="fn">To</span>()] = <span class="id">dist</span>[<span class="id">e</span>.<span class="fn">From</span>()] + <span class="id">e</span>.<span class="id">weight</span>;' },
+  { no: 13, indent: 3, html: '<span class="id">prev</span>[<span class="id">e</span>.<span class="fn">To</span>()] = <span class="id">e</span>.<span class="fn">To</span>();' },
+  { no: 14, indent: 2, html: '}' },
+  { no: 15, indent: 1, html: '}' },
+  { no: 16, indent: 1, html: '<span class="fn">Print</span>(<span class="id">dist</span>);' },
+  { no: 17, indent: 0, html: '}' },
+  { no: 18, indent: 0, html: '<span class="kw">for</span> (<span class="kw">auto</span> <span class="id">e</span> : <span class="id">edges</span>) {' },
+  { no: 19, indent: 1, html: '<span class="kw">if</span> (<span class="id">dist</span>[<span class="id">e</span>.<span class="id">w</span>] &lt; <span class="id">dist</span>[<span class="id">e</span>.<span class="id">v</span>] * <span class="id">e</span>.<span class="id">weight</span>) {' },
+  { no: 20, indent: 2, html: '<span class="id">prev</span>[<span class="id">e</span>.<span class="id">w</span>] = <span class="id">e</span>.<span class="id">v</span>;' },
+  { no: 21, indent: 2, html: '<span class="cm">// build witness path and replay product</span>' },
+  { no: 22, indent: 1, html: '}' },
+  { no: 23, indent: 0, html: '}' }
+];
+
+const CORRECTED_CODE = [
+  { no: 1, indent: 0, html: '<span class="kw">vector</span>&lt;<span class="tp">Edge</span>&gt; <span class="id">edges</span>;' },
+  { no: 2, indent: 0, html: '<span class="kw">for</span> (<span class="kw">int</span> <span class="id">i</span> = <span class="num">0</span>; <span class="id">i</span> &lt; <span class="id">V</span>; <span class="id">i</span>++)' },
+  { no: 3, indent: 1, html: '<span class="kw">for</span> (<span class="kw">int</span> <span class="id">j</span> = <span class="num">0</span>; <span class="id">j</span> &lt; <span class="id">V</span>; <span class="id">j</span>++)' },
+  { no: 4, indent: 2, html: '<span class="kw">if</span> (<span class="id">i</span> != <span class="id">j</span>) <span class="id">edges</span>.<span class="fn">push_back</span>({ <span class="id">i</span>, <span class="id">j</span>, <span class="id">rates</span>[<span class="id">i</span>][<span class="id">j</span>] });' },
+  { no: 5, indent: 0, html: '<span class="kw">vector</span>&lt;<span class="kw">double</span>&gt; <span class="id">dist</span>(<span class="id">V</span>, -<span class="id">kInf</span>);' },
+  { no: 6, indent: 0, html: '<span class="kw">vector</span>&lt;<span class="kw">int</span>&gt; <span class="id">prev</span>(<span class="id">V</span>, -<span class="num">1</span>);' },
+  { no: 7, indent: 0, html: '<span class="id">dist</span>[<span class="id">s</span>] = <span class="num">1.0</span>;' },
+  { no: 8, indent: 0, html: '<span class="kw">for</span> (<span class="kw">int</span> <span class="id">pass</span> = <span class="num">1</span>; <span class="id">pass</span> &lt; <span class="id">V</span>; <span class="id">pass</span>++) {' },
+  { no: 9, indent: 1, html: '<span class="kw">for</span> (<span class="kw">auto</span> <span class="id">e</span> : <span class="id">edges</span>) {' },
+  { no: 10, indent: 2, html: '<span class="kw">double</span> <span class="id">candidate</span> = <span class="id">dist</span>[<span class="id">e</span>.<span class="fn">From</span>()] * <span class="id">e</span>.<span class="id">weight</span>;' },
+  { no: 11, indent: 2, html: '<span class="kw">if</span> (<span class="id">candidate</span> &gt; <span class="id">dist</span>[<span class="id">e</span>.<span class="fn">To</span>()]) {' },
+  { no: 12, indent: 3, html: '<span class="id">dist</span>[<span class="id">e</span>.<span class="fn">To</span>()] = <span class="id">candidate</span>;' },
+  { no: 13, indent: 3, html: '<span class="id">prev</span>[<span class="id">e</span>.<span class="fn">To</span>()] = <span class="id">e</span>.<span class="fn">From</span>();' },
+  { no: 14, indent: 2, html: '}' },
+  { no: 15, indent: 1, html: '}' },
+  { no: 16, indent: 1, html: '<span class="fn">Print</span>(<span class="id">dist</span>);' },
+  { no: 17, indent: 0, html: '}' },
+  { no: 18, indent: 0, html: '<span class="kw">for</span> (<span class="kw">auto</span> <span class="id">e</span> : <span class="id">edges</span>) {' },
+  { no: 19, indent: 1, html: '<span class="kw">if</span> (<span class="id">dist</span>[<span class="id">e</span>.<span class="id">v</span>] * <span class="id">e</span>.<span class="id">weight</span> &gt; <span class="id">dist</span>[<span class="id">e</span>.<span class="id">w</span>]) {' },
+  { no: 20, indent: 2, html: '<span class="kw">int</span> <span class="id">x</span> = <span class="id">e</span>.<span class="id">w</span>;' },
+  { no: 21, indent: 2, html: '<span class="kw">for</span> (<span class="kw">int</span> <span class="id">i</span> = <span class="num">0</span>; <span class="id">i</span> &lt; <span class="id">V</span>; <span class="id">i</span>++) <span class="id">x</span> = <span class="id">prev</span>[<span class="id">x</span>];' },
+  { no: 22, indent: 2, html: '<span class="cm">// x is now inside the profitable cycle</span>' },
+  { no: 23, indent: 2, html: '<span class="cm">// record cycle and replay product</span>' },
+  { no: 24, indent: 1, html: '}' },
+  { no: 25, indent: 0, html: '}' }
+];
+
+function buildEdges() {
+  const edges = [];
+  let order = 1;
+  for (let i = 0; i < CURRENCIES.length; i++) {
+    for (let j = 0; j < CURRENCIES.length; j++) {
+      if (i === j) continue;
+      edges.push({ index: edges.length, order: order++, from: i, to: j, weight: RATES[i][j] });
+    }
+  }
+  return edges;
+}
+
+const EDGES = buildEdges();
+
+function fmtRate(value) {
+  return value.toFixed(3);
+}
+
+function fmtAmount(value) {
+  if (!Number.isFinite(value)) return '-INF';
+  return value.toFixed(6);
+}
+
+function fmtRow(values) {
+  return '[' + values.map((value) => fmtAmount(value)).join(', ') + ']';
+}
+
+function edgeKey(from, to) {
+  return from + '-' + to;
+}
+
+function edgeLabel(edge) {
+  return CURRENCIES[edge.from] + ' -> ' + CURRENCIES[edge.to];
+}
+
+function prevLabel(value) {
+  if (value < 0) return '-';
+  return value + ' ' + CURRENCIES[value];
+}
+
+function cloneState(dist, prev, printLog) {
+  return {
+    dist: dist.slice(),
+    prev: prev.slice(),
+    printLog: printLog.slice()
+  };
+}
+
+function pushStep(steps, dist, prev, printLog, extra) {
+  steps.push(Object.assign(cloneState(dist, prev, printLog), extra));
+}
+
+function rewindIntoCycle(prev, start) {
+  const chain = [start];
+  let x = start;
+  for (let i = 0; i < CURRENCIES.length; i++) {
+    x = prev[x];
+    chain.push(x);
+  }
+  return { landing: x, chain };
+}
+
+function extractCycle(prev, start) {
+  const cycle = [start];
+  let current = prev[start];
+  while (current !== start) {
+    cycle.push(current);
+    current = prev[current];
+  }
+  cycle.push(start);
+  cycle.reverse();
+  return cycle;
+}
+
+function cycleEdgesFromPath(path) {
+  const result = [];
+  for (let i = 0; i < path.length - 1; i++) {
+    result.push(edgeKey(path[i], path[i + 1]));
+  }
+  return result;
+}
+
+function buildBuggySteps() {
+  const steps = [];
+  const emptyDist = new Array(CURRENCIES.length).fill(-Infinity);
+  const emptyPrev = new Array(CURRENCIES.length).fill(-1);
+  const rowEdges = {};
+  for (const edge of EDGES) {
+    if (!rowEdges[edge.from]) rowEdges[edge.from] = [];
+    rowEdges[edge.from].push(edge);
+  }
+
+  let builtEdgeCount = 0;
+  for (let row = 0; row < CURRENCIES.length; row++) {
+    builtEdgeCount += rowEdges[row].length;
+    pushStep(steps, emptyDist, emptyPrev, [], {
+      phase: 'build-row',
+      pass: 0,
+      passText: 'build',
+      passSub: 'rates -> edge list',
+      currentEdge: null,
+      currentEdgeIndex: null,
+      decisionLabel: 'row pushed',
+      decisionSub: CURRENCIES[row] + ' row',
+      desc: CURRENCIES[row] + ' 행에서 대각선을 제외한 4개 환율을 directed edge로 push_back한다.',
+      formula: 'for (j = 0 .. V-1), if (i != j) edges.push_back({ i, j, rates[i][j] })',
+      codeLines: [2, 3, 4],
+      builtEdgeCount,
+      rowFocus: row,
+      focusPrint: -1,
+      bugMode: 'buggy'
+    });
+  }
+
+  const dist = new Array(CURRENCIES.length).fill(-Infinity);
+  const prev = new Array(CURRENCIES.length).fill(-1);
+  const printLog = [];
+  dist[SOURCE] = 1.0;
+  printLog.push('P0 ' + fmtRow(dist));
+
+  pushStep(steps, dist, prev, printLog, {
+    phase: 'init',
+    pass: 0,
+    passText: 'init',
+    passSub: 'source = USD',
+    currentEdge: null,
+    currentEdgeIndex: null,
+    decisionLabel: 'initialize',
+    decisionSub: 'dist[USD] = 1.0',
+    desc: 'source 0 = USD 에서 시작하므로 dist[USD] = 1.0, 나머지는 -INF 로 둔다.',
+    formula: 'dist = [1.0, -INF, -INF, -INF, -INF], prev = [-1, -1, -1, -1, -1]',
+    codeLines: [5, 6, 7],
+    builtEdgeCount: EDGES.length,
+    rowFocus: null,
+    focusPrint: 0,
+    bugMode: 'buggy'
+  });
+
+  for (let pass = 1; pass < CURRENCIES.length; pass++) {
+    for (const edge of EDGES) {
+      const beforeDist = dist.slice();
+      const beforePrev = prev.slice();
+      const candidate = Number.isFinite(beforeDist[edge.from]) ? beforeDist[edge.from] * edge.weight : -Infinity;
+      const condition = candidate > beforeDist[edge.to];
+      dist[edge.to] = Number.isFinite(beforeDist[edge.from]) ? beforeDist[edge.from] + edge.weight : -Infinity;
+      prev[edge.to] = edge.to;
+
+      pushStep(steps, dist, prev, printLog, {
+        phase: 'forced-update',
+        pass,
+        passText: 'pass ' + pass,
+        passSub: 'buggy relax loop',
+        currentEdge: edge,
+        currentEdgeIndex: edge.index,
+        decisionLabel: condition ? 'forced update' : 'forced update',
+        decisionSub: condition ? 'condition true, but still buggy update rule' : 'condition false, but block still runs',
+        desc: '길이 pass ' + pass + ' 에서 ' + edgeLabel(edge) + ' 를 검사한다. stray semicolon 때문에 블록이 무조건 실행된다.',
+        formula:
+          'condition: dist[' + CURRENCIES[edge.from] + '] * ' + fmtRate(edge.weight) + ' = ' + fmtAmount(candidate) +
+          '<br>current: dist[' + CURRENCIES[edge.to] + '] = ' + fmtAmount(beforeDist[edge.to]) +
+          '<br>stored: dist[' + CURRENCIES[edge.to] + '] = dist[' + CURRENCIES[edge.from] + '] + ' + fmtRate(edge.weight) + ' = ' + fmtAmount(dist[edge.to]) +
+          '<br>prev[' + CURRENCIES[edge.to] + '] = ' + CURRENCIES[edge.to],
+        codeLines: [9, 10, 11, 12, 13],
+        builtEdgeCount: EDGES.length,
+        rowFocus: null,
+        updatedNode: edge.to,
+        prevFocus: edge.to,
+        focusPrint: printLog.length - 1,
+        condition,
+        bugMode: 'buggy'
+      });
+    }
+
+    printLog.push('P' + pass + ' ' + fmtRow(dist));
+    pushStep(steps, dist, prev, printLog, {
+      phase: 'print',
+      pass,
+      passText: 'pass ' + pass,
+      passSub: 'after full edge scan',
+      currentEdge: null,
+      currentEdgeIndex: null,
+      decisionLabel: 'Print(dist)',
+      decisionSub: 'snapshot after pass ' + pass,
+      desc: 'pass ' + pass + ' 의 전체 edge scan 이 끝났으므로 현재 dist[] 를 출력한다.',
+      formula: 'Print(dist) = ' + fmtRow(dist),
+      codeLines: [16],
+      builtEdgeCount: EDGES.length,
+      rowFocus: null,
+      focusPrint: printLog.length - 1,
+      bugMode: 'buggy'
+    });
+  }
+
+  let witnessEdge = null;
+  for (const edge of EDGES) {
+    const candidate = dist[edge.from] * edge.weight;
+    const better = dist[edge.to] < candidate;
+    pushStep(steps, dist, prev, printLog, {
+      phase: better ? 'cycle-hit' : 'cycle-check',
+      pass: CURRENCIES.length,
+      passText: 'cycle check',
+      passSub: 'final improving-edge scan',
+      currentEdge: edge,
+      currentEdgeIndex: edge.index,
+      decisionLabel: better ? 'witness edge' : 'no witness yet',
+      decisionSub: better ? 'the code stops here' : 'keep scanning',
+      desc: edgeLabel(edge) + ' 가 final scan 에서 여전히 개선되는지 검사한다.',
+      formula:
+        'dist[' + CURRENCIES[edge.to] + '] = ' + fmtAmount(dist[edge.to]) +
+        '<br>dist[' + CURRENCIES[edge.from] + '] * ' + fmtRate(edge.weight) + ' = ' + fmtAmount(candidate),
+      codeLines: [18, 19],
+      builtEdgeCount: EDGES.length,
+      rowFocus: null,
+      focusPrint: printLog.length - 1,
+      bugMode: 'buggy',
+      dangerEdge: better ? edgeKey(edge.from, edge.to) : null
+    });
+    if (better) {
+      witnessEdge = edge;
+      break;
+    }
+  }
+
+  if (witnessEdge) {
+    prev[witnessEdge.to] = witnessEdge.from;
+    pushStep(steps, dist, prev, printLog, {
+      phase: 'bug-path-start',
+      pass: CURRENCIES.length,
+      passText: 'cycle check',
+      passSub: 'override one prev entry',
+      currentEdge: witnessEdge,
+      currentEdgeIndex: witnessEdge.index,
+      decisionLabel: 'prev[w] = v',
+      decisionSub: 'only one entry is repaired',
+      desc: 'improving edge 를 찾자 prev[' + CURRENCIES[witnessEdge.to] + '] = ' + CURRENCIES[witnessEdge.from] + ' 로 바꾸고 경로 추적을 시작한다.',
+      formula: 'prev[' + CURRENCIES[witnessEdge.to] + '] = ' + CURRENCIES[witnessEdge.from] + ', but the other prev entries still point to themselves.',
+      codeLines: [19, 20],
+      builtEdgeCount: EDGES.length,
+      rowFocus: null,
+      focusPrint: printLog.length - 1,
+      prevFocus: witnessEdge.to,
+      bugMode: 'buggy',
+      dangerEdge: edgeKey(witnessEdge.from, witnessEdge.to)
+    });
+
+    const path = [];
+    let p = witnessEdge.to;
+    while (p >= 0) {
+      path.push(p);
+      pushStep(steps, dist, prev, printLog, {
+        phase: 'bug-path-walk',
+        pass: CURRENCIES.length,
+        passText: 'path walk',
+        passSub: 'code as written',
+        currentEdge: witnessEdge,
+        currentEdgeIndex: witnessEdge.index,
+        decisionLabel: 'push ' + CURRENCIES[p],
+        decisionSub: 'follow prev[]',
+        desc: 'path 에 ' + CURRENCIES[p] + ' 를 넣고 prev[' + CURRENCIES[p] + '] 를 따라간다.',
+        formula: 'current path = ' + path.map((node) => CURRENCIES[node]).join(' -> '),
+        codeLines: [20, 21],
+        builtEdgeCount: EDGES.length,
+        rowFocus: null,
+        focusPrint: printLog.length - 1,
+        bugMode: 'buggy',
+        invalidPath: path.slice(),
+        dangerEdge: edgeKey(witnessEdge.from, witnessEdge.to),
+        activeNode: p
+      });
+      const count = path.filter((value) => value === p).length;
+      if (count === 2) break;
+      p = prev[p];
+    }
+
+    const reversed = path.slice().reverse();
+    pushStep(steps, dist, prev, printLog, {
+      phase: 'bug-path-reversed',
+      pass: CURRENCIES.length,
+      passText: 'path reverse',
+      passSub: 'still not a valid cycle',
+      currentEdge: witnessEdge,
+      currentEdgeIndex: witnessEdge.index,
+      decisionLabel: 'reverse(path)',
+      decisionSub: 'code output order',
+      desc: 'code 는 path 를 뒤집어서 출력하지만, 지금 경로는 올바른 predecessor cycle 이 아니다.',
+      formula: 'reversed path = ' + reversed.map((node) => CURRENCIES[node]).join(' -> '),
+      codeLines: [21],
+      builtEdgeCount: EDGES.length,
+      rowFocus: null,
+      focusPrint: printLog.length - 1,
+      bugMode: 'buggy',
+      invalidPath: reversed,
+      dangerEdge: edgeKey(witnessEdge.from, witnessEdge.to)
+    });
+
+    const replay = [];
+    let product = 1.0;
+    for (let i = 0; i < reversed.length - 1; i++) {
+      const from = reversed[i];
+      const to = reversed[i + 1];
+      product *= RATES[from][to];
+      replay.push({ from, to, rate: RATES[from][to], product });
+      pushStep(steps, dist, prev, printLog, {
+        phase: 'bug-replay',
+        pass: CURRENCIES.length,
+        passText: 'replay',
+        passSub: 'product from broken path',
+        currentEdge: witnessEdge,
+        currentEdgeIndex: witnessEdge.index,
+        decisionLabel: 'replay step',
+        decisionSub: CURRENCIES[from] + ' -> ' + CURRENCIES[to],
+        desc: 'path 를 따라 rate 를 곱해 보지만, 이 경로는 broken prev[] 에서 만들어졌기 때문에 arbitrage witness 로 쓸 수 없다.',
+        formula: 't *= rates[' + CURRENCIES[from] + '][' + CURRENCIES[to] + '] = ' + fmtRate(RATES[from][to]) + ' -> ' + fmtAmount(product),
+        codeLines: [21],
+        builtEdgeCount: EDGES.length,
+        rowFocus: null,
+        focusPrint: printLog.length - 1,
+        bugMode: 'buggy',
+        invalidPath: reversed,
+        replay: replay.slice(),
+        dangerEdge: edgeKey(witnessEdge.from, witnessEdge.to),
+        matrixCycle: [edgeKey(from, to)]
+      });
+    }
+
+    pushStep(steps, dist, prev, printLog, {
+      phase: 'bug-done',
+      pass: CURRENCIES.length,
+      passText: 'stop',
+      passSub: 'false witness',
+      currentEdge: witnessEdge,
+      currentEdgeIndex: witnessEdge.index,
+      decisionLabel: 'false witness',
+      decisionSub: 'code exits too early',
+      desc: '이 탭은 제공된 코드를 그대로 따른 결과다. improving edge 는 잡았지만, predecessor chain 이 깨져 있어서 올바른 arbitrage cycle 을 증명하지 못한다.',
+      formula: 'result from code as written: path = ' + reversed.map((node) => CURRENCIES[node]).join(' -> ') + ', product = ' + fmtAmount(replay[replay.length - 1].product),
+      codeLines: [19, 20, 21],
+      builtEdgeCount: EDGES.length,
+      rowFocus: null,
+      focusPrint: printLog.length - 1,
+      bugMode: 'buggy',
+      invalidPath: reversed,
+      replay,
+      dangerEdge: edgeKey(witnessEdge.from, witnessEdge.to)
+    });
+  }
+
+  return steps;
+}
+
+function buildCorrectedSteps() {
+  const steps = [];
+  const emptyDist = new Array(CURRENCIES.length).fill(-Infinity);
+  const emptyPrev = new Array(CURRENCIES.length).fill(-1);
+  const rowEdges = {};
+  for (const edge of EDGES) {
+    if (!rowEdges[edge.from]) rowEdges[edge.from] = [];
+    rowEdges[edge.from].push(edge);
+  }
+
+  let builtEdgeCount = 0;
+  for (let row = 0; row < CURRENCIES.length; row++) {
+    builtEdgeCount += rowEdges[row].length;
+    pushStep(steps, emptyDist, emptyPrev, [], {
+      phase: 'build-row',
+      pass: 0,
+      passText: 'build',
+      passSub: 'rates -> edge list',
+      currentEdge: null,
+      currentEdgeIndex: null,
+      decisionLabel: 'row pushed',
+      decisionSub: CURRENCIES[row] + ' row',
+      desc: CURRENCIES[row] + ' 행에서 i != j 인 모든 환율을 directed edge 로 만든다.',
+      formula: 'row ' + CURRENCIES[row] + ' -> ' + rowEdges[row].map((edge) => edgeLabel(edge)).join(', '),
+      codeLines: [2, 3, 4],
+      builtEdgeCount,
+      rowFocus: row,
+      focusPrint: -1,
+      bugMode: 'corrected'
+    });
+  }
+
+  const dist = new Array(CURRENCIES.length).fill(-Infinity);
+  const prev = new Array(CURRENCIES.length).fill(-1);
+  const printLog = [];
+  dist[SOURCE] = 1.0;
+  printLog.push('P0 ' + fmtRow(dist));
+
+  pushStep(steps, dist, prev, printLog, {
+    phase: 'init',
+    pass: 0,
+    passText: 'init',
+    passSub: 'source = USD',
+    currentEdge: null,
+    currentEdgeIndex: null,
+    decisionLabel: 'initialize',
+    decisionSub: 'best known amount',
+    desc: 'source 0 = USD 에서 1.0 으로 시작한다. dist[x] 는 source 1달러를 x 화폐로 바꿨을 때 도달 가능한 최대 금액으로 해석한다.',
+    formula: 'dist = [1.0, -INF, -INF, -INF, -INF], prev = [-1, -1, -1, -1, -1]',
+    codeLines: [5, 6, 7],
+    builtEdgeCount: EDGES.length,
+    rowFocus: null,
+    focusPrint: 0,
+    bugMode: 'corrected'
+  });
+
+  for (let pass = 1; pass < CURRENCIES.length; pass++) {
+    for (const edge of EDGES) {
+      const beforeDist = dist.slice();
+      const candidate = Number.isFinite(beforeDist[edge.from]) ? beforeDist[edge.from] * edge.weight : -Infinity;
+      const better = candidate > beforeDist[edge.to];
+      if (better) {
+        dist[edge.to] = candidate;
+        prev[edge.to] = edge.from;
+      }
+
+      pushStep(steps, dist, prev, printLog, {
+        phase: better ? 'relax' : 'keep',
+        pass,
+        passText: 'pass ' + pass,
+        passSub: 'max-product relax',
+        currentEdge: edge,
+        currentEdgeIndex: edge.index,
+        decisionLabel: better ? 'relax' : 'keep',
+        decisionSub: better ? 'candidate beats current amount' : 'current amount stays better',
+        desc: 'pass ' + pass + ' 에서 ' + edgeLabel(edge) + ' 를 검사한다.',
+        formula:
+          'candidate = dist[' + CURRENCIES[edge.from] + '] * ' + fmtRate(edge.weight) + ' = ' + fmtAmount(candidate) +
+          '<br>current = dist[' + CURRENCIES[edge.to] + '] = ' + fmtAmount(beforeDist[edge.to]) +
+          (better
+            ? '<br>update: dist[' + CURRENCIES[edge.to] + '] = ' + fmtAmount(dist[edge.to]) + ', prev[' + CURRENCIES[edge.to] + '] = ' + CURRENCIES[edge.from]
+            : '<br>no change'),
+        codeLines: better ? [9, 10, 11, 12, 13] : [9, 10, 11],
+        builtEdgeCount: EDGES.length,
+        rowFocus: null,
+        updatedNode: better ? edge.to : null,
+        prevFocus: better ? edge.to : null,
+        focusPrint: printLog.length - 1,
+        bugMode: 'corrected'
+      });
+    }
+
+    printLog.push('P' + pass + ' ' + fmtRow(dist));
+    pushStep(steps, dist, prev, printLog, {
+      phase: 'print',
+      pass,
+      passText: 'pass ' + pass,
+      passSub: 'after full edge scan',
+      currentEdge: null,
+      currentEdgeIndex: null,
+      decisionLabel: 'Print(dist)',
+      decisionSub: 'snapshot after pass ' + pass,
+      desc: 'pass ' + pass + ' 이 끝났으므로 현재 최대 금액 배열을 출력한다.',
+      formula: 'Print(dist) = ' + fmtRow(dist),
+      codeLines: [16],
+      builtEdgeCount: EDGES.length,
+      rowFocus: null,
+      focusPrint: printLog.length - 1,
+      bugMode: 'corrected'
+    });
+  }
+
+  let witnessEdge = null;
+  let witnessCandidate = -Infinity;
+  for (const edge of EDGES) {
+    const candidate = dist[edge.from] * edge.weight;
+    const better = candidate > dist[edge.to];
+    pushStep(steps, dist, prev, printLog, {
+      phase: better ? 'cycle-hit' : 'cycle-check',
+      pass: CURRENCIES.length,
+      passText: 'cycle check',
+      passSub: 'look for improvement after V-1 passes',
+      currentEdge: edge,
+      currentEdgeIndex: edge.index,
+      decisionLabel: better ? 'witness edge' : 'no witness yet',
+      decisionSub: better ? 'reachable profitable cycle exists' : 'keep scanning',
+      desc: edgeLabel(edge) + ' 가 final scan 에서 아직도 dist[] 를 키울 수 있는지 확인한다.',
+      formula:
+        'candidate = dist[' + CURRENCIES[edge.from] + '] * ' + fmtRate(edge.weight) + ' = ' + fmtAmount(candidate) +
+        '<br>current = dist[' + CURRENCIES[edge.to] + '] = ' + fmtAmount(dist[edge.to]),
+      codeLines: [18, 19],
+      builtEdgeCount: EDGES.length,
+      rowFocus: null,
+      focusPrint: printLog.length - 1,
+      bugMode: 'corrected',
+      dangerEdge: better ? edgeKey(edge.from, edge.to) : null
+    });
+    if (better) {
+      witnessEdge = edge;
+      witnessCandidate = candidate;
+      break;
+    }
+  }
+
+  if (witnessEdge) {
+    const rewind = rewindIntoCycle(prev, witnessEdge.to);
+    pushStep(steps, dist, prev, printLog, {
+      phase: 'cycle-rewind',
+      pass: CURRENCIES.length,
+      passText: 'cycle rewind',
+      passSub: 'walk prev[] V times',
+      currentEdge: witnessEdge,
+      currentEdgeIndex: witnessEdge.index,
+      decisionLabel: 'land in cycle',
+      decisionSub: 'rewind through predecessor chain',
+      desc: '첫 improving edge 자체가 cycle edge 일 필요는 없다. prev[] 를 V 번 따라가면 reachable cycle 내부의 정점에 도달한다.',
+      formula: 'start = ' + CURRENCIES[witnessEdge.to] + '<br>rewind: ' + rewind.chain.map((node) => CURRENCIES[node]).join(' -> ') + '<br>landing node = ' + CURRENCIES[rewind.landing],
+      codeLines: [19, 20, 21],
+      builtEdgeCount: EDGES.length,
+      rowFocus: null,
+      focusPrint: printLog.length - 1,
+      bugMode: 'corrected',
+      rewindChain: rewind.chain,
+      dangerEdge: edgeKey(witnessEdge.from, witnessEdge.to),
+      activeNode: rewind.landing
+    });
+
+    const cyclePath = extractCycle(prev, rewind.landing);
+    const cycleEdges = cycleEdgesFromPath(cyclePath);
+    pushStep(steps, dist, prev, printLog, {
+      phase: 'cycle-extract',
+      pass: CURRENCIES.length,
+      passText: 'cycle extract',
+      passSub: 'record repeating predecessor loop',
+      currentEdge: witnessEdge,
+      currentEdgeIndex: witnessEdge.index,
+      decisionLabel: 'cycle found',
+      decisionSub: 'profitable exchange loop',
+      desc: 'prev[] 를 따라가며 반복되는 정점이 나올 때까지 기록하면 actual arbitrage cycle 을 얻는다.',
+      formula: 'cycle = ' + cyclePath.map((node) => CURRENCIES[node]).join(' -> '),
+      codeLines: [21, 22, 23],
+      builtEdgeCount: EDGES.length,
+      rowFocus: null,
+      focusPrint: printLog.length - 1,
+      bugMode: 'corrected',
+      cyclePath,
+      cycleEdges,
+      dangerEdge: edgeKey(witnessEdge.from, witnessEdge.to)
+    });
+
+    const replay = [];
+    let product = 1.0;
+    for (let i = 0; i < cyclePath.length - 1; i++) {
+      const from = cyclePath[i];
+      const to = cyclePath[i + 1];
+      product *= RATES[from][to];
+      replay.push({ from, to, rate: RATES[from][to], product });
+      pushStep(steps, dist, prev, printLog, {
+        phase: 'cycle-replay',
+        pass: CURRENCIES.length,
+        passText: 'replay',
+        passSub: 'multiply rates around cycle',
+        currentEdge: witnessEdge,
+        currentEdgeIndex: witnessEdge.index,
+        decisionLabel: 'replay step',
+        decisionSub: CURRENCIES[from] + ' -> ' + CURRENCIES[to],
+        desc: 'cycle 을 따라 환율을 차례대로 곱해 실제 이득이 생기는지 확인한다.',
+        formula: 't *= ' + fmtRate(RATES[from][to]) + ' -> ' + fmtAmount(product),
+        codeLines: [23],
+        builtEdgeCount: EDGES.length,
+        rowFocus: null,
+        focusPrint: printLog.length - 1,
+        bugMode: 'corrected',
+        cyclePath,
+        cycleEdges,
+        replay: replay.slice(),
+        matrixCycle: [edgeKey(from, to)]
+      });
+    }
+
+    pushStep(steps, dist, prev, printLog, {
+      phase: 'done',
+      pass: CURRENCIES.length,
+      passText: 'done',
+      passSub: 'arbitrage confirmed',
+      currentEdge: witnessEdge,
+      currentEdgeIndex: witnessEdge.index,
+      decisionLabel: 'arbitrage found',
+      decisionSub: 'final product > 1.0',
+      desc: 'GBP -> CHF -> EUR -> GBP 순환에서 곱이 1을 넘는다. 따라서 source 에서 reachable 한 차익 거래 기회가 존재한다.',
+      formula:
+        'witness edge = ' + edgeLabel(witnessEdge) + ' (candidate ' + fmtAmount(witnessCandidate) + ')' +
+        '<br>cycle = ' + cyclePath.map((node) => CURRENCIES[node]).join(' -> ') +
+        '<br>final product = ' + fmtAmount(replay[replay.length - 1].product),
+      codeLines: [18, 19, 20, 21, 22, 23],
+      builtEdgeCount: EDGES.length,
+      rowFocus: null,
+      focusPrint: printLog.length - 1,
+      bugMode: 'corrected',
+      cyclePath,
+      cycleEdges,
+      replay,
+      dangerEdge: edgeKey(witnessEdge.from, witnessEdge.to)
+    });
+  }
+
+  return steps;
+}
+
+const PAGES = [
+  {
+    id: 'buggy',
+    tabLabel: 'Code As Written',
+    title: 'Code As Written / 코드 그대로',
+    note: '제공된 C++를 그대로 추적한다. stray semicolon, 덧셈 갱신, self prev 때문에 숫자는 계속 커지지만 올바른 arbitrage 증명은 되지 않는다.',
+    codeTitle: 'Provided C++ / code as written',
+    codeNote: '이 탭은 의도한 알고리즘이 아니라 실제 소스 코드의 실행 흐름을 그대로 보여준다.',
+    graphNote: '그래프는 5개 통화와 20개 방향 간선을 모두 가진 complete digraph 이다. 읽기 쉽게 하기 위해 기본 간선은 매우 옅게 두고, 현재 간선과 witness 만 강하게 칠한다.',
+    steps: buildBuggySteps(),
+    codeLines: BUGGY_CODE
+  },
+  {
+    id: 'corrected',
+    tabLabel: 'Corrected Arbitrage',
+    title: 'Corrected Arbitrage / 수정한 차익 거래 판정',
+    note: '같은 환율 표를 Bellman-Ford 스타일의 max-product relax 로 해석한다. 비교와 저장을 모두 곱셈으로 맞추고, prev[w] = v 로 predecessor 를 보존한다.',
+    codeTitle: 'Corrected Pseudocode / multiplicative arbitrage check',
+    codeNote: '이 탭은 제공된 코드의 세 가지 핵심 문제를 바로잡은 학습용 버전이다.',
+    graphNote: '현재 간선은 주황색, 최종 cycle 은 초록색, final check 에서 improving edge 로 드러난 witness 는 파란/빨간 강조로 구분한다. witness edge 와 actual cycle edge 는 다를 수 있다.',
+    steps: buildCorrectedSteps(),
+    codeLines: CORRECTED_CODE
+  }
+];
+
+const refs = {
+  pageTabs: document.getElementById('page-tabs'),
+  pageTitle: document.getElementById('page-title'),
+  pageNote: document.getElementById('page-note'),
+  stepCounter: document.getElementById('step-counter'),
+  stepDesc: document.getElementById('step-desc'),
+  legend: document.getElementById('legend'),
+  graphNote: document.getElementById('graph-note'),
+  matrixGrid: document.getElementById('matrix-grid'),
+  matrixNote: document.getElementById('matrix-note'),
+  edgeList: document.getElementById('edge-list'),
+  sourceVal: document.getElementById('source-val'),
+  passVal: document.getElementById('pass-val'),
+  passSub: document.getElementById('pass-sub'),
+  edgeVal: document.getElementById('edge-val'),
+  stateSub: document.getElementById('state-sub'),
+  resultVal: document.getElementById('result-val'),
+  decisionSub: document.getElementById('decision-sub'),
+  distGrid: document.getElementById('dist-grid'),
+  prevGrid: document.getElementById('prev-grid'),
+  formulaBox: document.getElementById('formula-box'),
+  printLog: document.getElementById('print-log'),
+  pathList: document.getElementById('path-list'),
+  bugBox: document.getElementById('bug-box'),
+  codeTitle: document.getElementById('code-title'),
+  codeBody: document.getElementById('code-body'),
+  codeNote: document.getElementById('code-note'),
+  progressBar: document.getElementById('progress-bar'),
+  prevBtn: document.getElementById('prev'),
+  nextBtn: document.getElementById('next'),
+  resetBtn: document.getElementById('reset'),
+  autoBtn: document.getElementById('auto-btn'),
+  lastBtn: document.getElementById('last'),
+  svg: document.getElementById('gsvg'),
+  edgeGroup: document.getElementById('edge-group'),
+  weightGroup: document.getElementById('weight-group'),
+  nodeGroup: document.getElementById('node-group'),
+  distLabelGroup: document.getElementById('dist-label-group')
+};
+
+const graphRefs = {
+  edges: [],
+  nodes: [],
+  distTexts: []
+};
+
+let currentPageIndex = 0;
+let currentStepIndex = 0;
+let autoTimer = null;
+
+function normalize(dx, dy) {
+  const length = Math.hypot(dx, dy) || 1;
+  return { x: dx / length, y: dy / length };
+}
+
+function offsetPoint(point, direction, distance) {
+  return {
+    x: point.x + direction.x * distance,
+    y: point.y + direction.y * distance
+  };
+}
+
+function resolveCurve(edge) {
+  const startNode = POSITIONS[edge.from];
+  const endNode = POSITIONS[edge.to];
+  const low = Math.min(edge.from, edge.to);
+  const high = Math.max(edge.from, edge.to);
+  const lowPoint = POSITIONS[low];
+  const highPoint = POSITIONS[high];
+  const canonicalDir = normalize(highPoint.x - lowPoint.x, highPoint.y - lowPoint.y);
+  const canonicalNormal = { x: -canonicalDir.y, y: canonicalDir.x };
+  const sign = edge.from === low ? 1 : -1;
+  return {
+    cx: (startNode.x + endNode.x) / 2 + canonicalNormal.x * CURVE_BEND * sign,
+    cy: (startNode.y + endNode.y) / 2 + canonicalNormal.y * CURVE_BEND * sign
+  };
+}
+
+function computeEdgeGeometry(edge) {
+  const startNode = POSITIONS[edge.from];
+  const endNode = POSITIONS[edge.to];
+  const curve = resolveCurve(edge);
+  const control = { x: curve.cx, y: curve.cy };
+  const startDir = normalize(control.x - startNode.x, control.y - startNode.y);
+  const endDir = normalize(endNode.x - control.x, endNode.y - control.y);
+  const start = offsetPoint(startNode, startDir, NODE_RADIUS);
+  const end = offsetPoint(endNode, endDir, -(NODE_RADIUS + 1));
+  const tangent = { x: end.x - control.x, y: end.y - control.y };
+  const tangentDir = normalize(tangent.x, tangent.y);
+  const normal = { x: -tangentDir.y, y: tangentDir.x };
+  const labelPoint = {
+    x: 0.25 * start.x + 0.5 * control.x + 0.25 * end.x,
+    y: 0.25 * start.y + 0.5 * control.y + 0.25 * end.y
+  };
+  return {
+    path: 'M ' + start.x + ' ' + start.y + ' Q ' + control.x + ' ' + control.y + ' ' + end.x + ' ' + end.y,
+    arrow: [
+      end,
+      { x: end.x - tangentDir.x * 10 + normal.x * 5, y: end.y - tangentDir.y * 10 + normal.y * 5 },
+      { x: end.x - tangentDir.x * 10 - normal.x * 5, y: end.y - tangentDir.y * 10 - normal.y * 5 }
+    ],
+    labelPoint
+  };
+}
+
+function buildLegend() {
+  const items = [
+    ['#f7b267', 'current edge / 현재 간선'],
+    ['#569cd6', 'row focus / witness'],
+    ['#4ec9b0', 'confirmed cycle / 확정 cycle'],
+    ['#f44747', 'bug or invalid witness / 잘못된 증거']
+  ];
+  refs.legend.innerHTML = '';
+  for (const item of items) {
+    const wrap = document.createElement('div');
+    wrap.className = 'leg';
+    wrap.innerHTML = '<div class="leg-c" style="border-color:' + item[0] + ';background:' + item[0] + '33"></div><span>' + item[1] + '</span>';
+    refs.legend.appendChild(wrap);
+  }
+}
+
+function buildPageTabs() {
+  refs.pageTabs.innerHTML = '';
+  PAGES.forEach((page, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'page-btn' + (index === currentPageIndex ? ' active' : '');
+    button.textContent = page.tabLabel;
+    button.addEventListener('click', () => {
+      stopAuto();
+      currentPageIndex = index;
+      currentStepIndex = 0;
+      renderCode();
+      render();
+    });
+    refs.pageTabs.appendChild(button);
+  });
+}
+
+function buildCode() {
+  refs.codeBody.innerHTML = '';
+  const page = PAGES[currentPageIndex];
+  for (const line of page.codeLines) {
+    const row = document.createElement('div');
+    row.className = 'cline';
+    row.dataset.line = String(line.no);
+    const num = document.createElement('div');
+    num.className = 'lnum';
+    num.textContent = line.no;
+    const code = document.createElement('div');
+    code.className = 'lcode';
+    code.style.setProperty('--indent', String(line.indent));
+    code.innerHTML = line.html;
+    row.appendChild(num);
+    row.appendChild(code);
+    refs.codeBody.appendChild(row);
+  }
+}
+
+function buildGraph() {
+  refs.edgeGroup.innerHTML = '';
+  refs.weightGroup.innerHTML = '';
+  refs.nodeGroup.innerHTML = '';
+  refs.distLabelGroup.innerHTML = '';
+  graphRefs.edges = [];
+  graphRefs.nodes = [];
+  graphRefs.distTexts = [];
+
+  for (const edge of EDGES) {
+    const geometry = computeEdgeGeometry(edge);
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', geometry.path);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-width', '1.6');
+    path.setAttribute('stroke', '#454545');
+    path.setAttribute('opacity', '0.2');
+    refs.edgeGroup.appendChild(path);
+
+    const arrow = document.createElementNS(SVG_NS, 'polygon');
+    arrow.setAttribute('points', geometry.arrow.map((point) => point.x + ',' + point.y).join(' '));
+    arrow.setAttribute('fill', '#454545');
+    arrow.setAttribute('opacity', '0.2');
+    refs.edgeGroup.appendChild(arrow);
+
+    const label = document.createElementNS(SVG_NS, 'text');
+    label.setAttribute('x', geometry.labelPoint.x);
+    label.setAttribute('y', geometry.labelPoint.y);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('dominant-baseline', 'central');
+    label.setAttribute('font-size', '11');
+    label.setAttribute('font-weight', '700');
+    label.setAttribute('fill', '#d4d4d4');
+    label.setAttribute('paint-order', 'stroke');
+    label.setAttribute('stroke', '#1e1e1e');
+    label.setAttribute('stroke-width', '3');
+    label.textContent = fmtRate(edge.weight);
+    label.style.opacity = '0';
+    refs.weightGroup.appendChild(label);
+
+    graphRefs.edges.push({ path, arrow, label, geometry, edge });
+  }
+
+  CURRENCIES.forEach((currency, index) => {
+    const pos = POSITIONS[index];
+    const wrap = document.createElementNS(SVG_NS, 'g');
+
+    const circle = document.createElementNS(SVG_NS, 'circle');
+    circle.setAttribute('cx', pos.x);
+    circle.setAttribute('cy', pos.y);
+    circle.setAttribute('r', NODE_RADIUS);
+    circle.setAttribute('fill', '#252526');
+    circle.setAttribute('stroke', '#5a5a5a');
+    circle.setAttribute('stroke-width', '1.8');
+    wrap.appendChild(circle);
+
+    const label = document.createElementNS(SVG_NS, 'text');
+    label.setAttribute('x', pos.x);
+    label.setAttribute('y', pos.y - 3);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('dominant-baseline', 'central');
+    label.setAttribute('font-size', '13');
+    label.setAttribute('font-weight', '700');
+    label.setAttribute('fill', '#d4d4d4');
+    label.textContent = currency;
+    wrap.appendChild(label);
+
+    const sub = document.createElementNS(SVG_NS, 'text');
+    sub.setAttribute('x', pos.x);
+    sub.setAttribute('y', pos.y + 12);
+    sub.setAttribute('text-anchor', 'middle');
+    sub.setAttribute('dominant-baseline', 'central');
+    sub.setAttribute('font-size', '10');
+    sub.setAttribute('fill', '#858585');
+    sub.textContent = String(index);
+    wrap.appendChild(sub);
+
+    refs.nodeGroup.appendChild(wrap);
+    graphRefs.nodes.push({ wrap, circle, label, sub });
+
+    const offset = DIST_LABELS[index];
+    const distText = document.createElementNS(SVG_NS, 'text');
+    distText.setAttribute('x', pos.x + offset.dx);
+    distText.setAttribute('y', pos.y + offset.dy);
+    distText.setAttribute('text-anchor', offset.anchor || 'middle');
+    distText.setAttribute('dominant-baseline', 'central');
+    distText.setAttribute('font-size', '11');
+    distText.setAttribute('font-weight', '700');
+    distText.setAttribute('fill', '#9cdcfe');
+    distText.setAttribute('paint-order', 'stroke');
+    distText.setAttribute('stroke', '#1e1e1e');
+    distText.setAttribute('stroke-width', '3');
+    refs.distLabelGroup.appendChild(distText);
+    graphRefs.distTexts.push(distText);
+  });
+}
+
+function buildMatrix() {
+  refs.matrixGrid.innerHTML = '';
+  const empty = document.createElement('div');
+  empty.className = 'mcell header';
+  empty.innerHTML = '<div class="m-main">from \\ to</div>';
+  refs.matrixGrid.appendChild(empty);
+
+  CURRENCIES.forEach((currency, index) => {
+    const header = document.createElement('div');
+    header.className = 'mcell header';
+    header.dataset.headerCol = String(index);
+    header.innerHTML = '<div class="m-main">' + currency + '</div><div class="m-sub">' + index + '</div>';
+    refs.matrixGrid.appendChild(header);
+  });
+
+  CURRENCIES.forEach((currency, row) => {
+    const rowHeader = document.createElement('div');
+    rowHeader.className = 'mcell header';
+    rowHeader.dataset.headerRow = String(row);
+    rowHeader.innerHTML = '<div class="m-main">' + currency + '</div><div class="m-sub">' + row + '</div>';
+    refs.matrixGrid.appendChild(rowHeader);
+    CURRENCIES.forEach((_, col) => {
+      const cell = document.createElement('div');
+      cell.className = 'mcell' + (row === col ? ' diag' : '');
+      cell.dataset.row = String(row);
+      cell.dataset.col = String(col);
+      cell.innerHTML = row === col
+        ? '<div class="m-main">-</div><div class="m-sub">self</div>'
+        : '<div class="m-main">' + fmtRate(RATES[row][col]) + '</div><div class="m-sub">' + row + ' -> ' + col + '</div>';
+      refs.matrixGrid.appendChild(cell);
+    });
+  });
+}
+
+function buildArrayGrid(container, type) {
+  container.innerHTML = '';
+  CURRENCIES.forEach((currency, index) => {
+    const cell = document.createElement('div');
+    cell.className = 'arr-cell';
+    cell.dataset.index = String(index);
+    cell.innerHTML =
+      '<div class="arr-label">' + index + ' ' + currency + '</div>' +
+      '<div class="arr-main"></div>' +
+      '<div class="arr-sub"></div>';
+    container.appendChild(cell);
+  });
+}
+
+function buildEdgeList() {
+  refs.edgeList.innerHTML = '';
+  EDGES.forEach((edge) => {
+    const item = document.createElement('div');
+    item.className = 'edge-item';
+    item.dataset.index = String(edge.index);
+    item.innerHTML =
+      '<div class="edge-no">#' + String(edge.order).padStart(2, '0') + '</div>' +
+      '<div class="edge-main">' + edgeLabel(edge) + '<br><small>' + edge.from + ' -> ' + edge.to + '</small></div>' +
+      '<div class="edge-sub">' + fmtRate(edge.weight) + '</div>';
+    refs.edgeList.appendChild(item);
+  });
+}
+
+function renderCode() {
+  buildPageTabs();
+  buildCode();
+  refs.codeTitle.textContent = PAGES[currentPageIndex].codeTitle;
+  refs.codeNote.textContent = PAGES[currentPageIndex].codeNote;
+}
+
+function renderMatrix(step) {
+  const cells = Array.from(refs.matrixGrid.querySelectorAll('.mcell'));
+  cells.forEach((cell) => {
+    cell.classList.remove('active', 'row-focus', 'cycle', 'danger');
+  });
+
+  if (step.rowFocus !== null && step.rowFocus !== undefined) {
+    const rowHeader = refs.matrixGrid.querySelector('[data-header-row="' + step.rowFocus + '"]');
+    if (rowHeader) rowHeader.classList.add('row-focus');
+    Array.from(refs.matrixGrid.querySelectorAll('[data-row="' + step.rowFocus + '"]')).forEach((cell) => {
+      if (cell.dataset.row !== cell.dataset.col) cell.classList.add('row-focus');
+    });
+  }
+
+  if (step.currentEdge) {
+    const active = refs.matrixGrid.querySelector('[data-row="' + step.currentEdge.from + '"][data-col="' + step.currentEdge.to + '"]');
+    if (active) active.classList.add(step.bugMode === 'buggy' && (step.phase === 'cycle-hit' || step.phase === 'bug-path-start' || step.phase === 'bug-path-reversed' || step.phase === 'bug-replay' || step.phase === 'bug-done') ? 'danger' : 'active');
+    const rowHeader = refs.matrixGrid.querySelector('[data-header-row="' + step.currentEdge.from + '"]');
+    const colHeader = refs.matrixGrid.querySelector('[data-header-col="' + step.currentEdge.to + '"]');
+    if (rowHeader) rowHeader.classList.add('row-focus');
+    if (colHeader) colHeader.classList.add('row-focus');
+  }
+
+  if (step.matrixCycle) {
+    step.matrixCycle.forEach((key) => {
+      const parts = key.split('-');
+      const cell = refs.matrixGrid.querySelector('[data-row="' + parts[0] + '"][data-col="' + parts[1] + '"]');
+      if (cell) cell.classList.add(step.bugMode === 'buggy' ? 'danger' : 'cycle');
+    });
+  }
+
+  if (step.cycleEdges && step.bugMode !== 'buggy') {
+    step.cycleEdges.forEach((key) => {
+      const parts = key.split('-');
+      const cell = refs.matrixGrid.querySelector('[data-row="' + parts[0] + '"][data-col="' + parts[1] + '"]');
+      if (cell) cell.classList.add('cycle');
+    });
+  }
+
+  refs.matrixNote.innerHTML = matrixNote(step);
+}
+
+function matrixNote(step) {
+  if (step.phase === 'build-row') {
+    return CURRENCIES[step.rowFocus] + ' 행에서 대각선을 뺀 4개 값이 edge list 로 변환된다.';
+  }
+  if (step.currentEdge) {
+    return '현재 참조한 환율은 rates[' + CURRENCIES[step.currentEdge.from] + '][' + CURRENCIES[step.currentEdge.to] + '] = ' + fmtRate(step.currentEdge.weight) + ' 이다.';
+  }
+  if (step.phase === 'done') {
+    return 'cycle 에 들어 있는 세 셀을 차례대로 곱하면 최종 금액이 1.0 을 넘는다.';
+  }
+  return '행은 from, 열은 to 이다. 이 표 전체가 complete directed graph 의 가중치가 된다.';
+}
+
+function renderGraph(step) {
+  const visibleEdges = step.builtEdgeCount || 0;
+  const cycleSet = new Set(step.cycleEdges || []);
+  const matrixCycleSet = new Set(step.matrixCycle || []);
+  const dangerEdge = step.dangerEdge || null;
+  graphRefs.edges.forEach((ref, index) => {
+    const isBuilt = index < visibleEdges;
+    const key = edgeKey(ref.edge.from, ref.edge.to);
+    let stroke = '#454545';
+    let fill = '#454545';
+    let opacity = isBuilt ? 0.22 : 0.04;
+    let width = 1.6;
+    let labelOpacity = 0;
+
+    if (cycleSet.has(key)) {
+      stroke = '#4ec9b0';
+      fill = '#4ec9b0';
+      opacity = 0.88;
+      width = 2.8;
+      labelOpacity = 1;
+    }
+    if (matrixCycleSet.has(key)) {
+      stroke = step.bugMode === 'buggy' ? '#f44747' : '#4ec9b0';
+      fill = stroke;
+      opacity = 0.96;
+      width = 3;
+      labelOpacity = 1;
+    }
+    if (dangerEdge === key) {
+      stroke = step.bugMode === 'buggy' ? '#f44747' : '#569cd6';
+      fill = stroke;
+      opacity = 0.96;
+      width = 3;
+      labelOpacity = 1;
+    }
+    if (step.currentEdgeIndex === index) {
+      stroke = step.bugMode === 'buggy' && step.phase.startsWith('bug-') ? '#f44747' : '#f7b267';
+      fill = stroke;
+      opacity = 1;
+      width = 3.2;
+      labelOpacity = 1;
+    }
+
+    ref.path.setAttribute('stroke', stroke);
+    ref.path.setAttribute('stroke-width', width);
+    ref.path.setAttribute('opacity', opacity);
+    ref.arrow.setAttribute('fill', fill);
+    ref.arrow.setAttribute('opacity', opacity);
+    ref.label.setAttribute('fill', fill === '#454545' ? '#d4d4d4' : fill);
+    ref.label.style.opacity = String(labelOpacity);
+  });
+
+  graphRefs.nodes.forEach((ref, index) => {
+    let stroke = '#5a5a5a';
+    let fill = '#252526';
+    let labelFill = '#d4d4d4';
+    if (index === SOURCE) {
+      stroke = '#9cdcfe';
+      fill = 'rgba(156,220,254,0.08)';
+    }
+    if (step.cyclePath && step.cyclePath.includes(index) && step.bugMode !== 'buggy') {
+      stroke = '#4ec9b0';
+      fill = 'rgba(78,201,176,0.12)';
+      labelFill = '#cffff2';
+    }
+    if (step.invalidPath && step.invalidPath.includes(index)) {
+      stroke = '#f44747';
+      fill = 'rgba(244,71,71,0.1)';
+      labelFill = '#ffd7d7';
+    }
+    if (step.activeNode === index) {
+      stroke = step.bugMode === 'buggy' ? '#f44747' : '#569cd6';
+      fill = step.bugMode === 'buggy' ? 'rgba(244,71,71,0.12)' : 'rgba(86,156,214,0.12)';
+    }
+    if (step.currentEdge && (step.currentEdge.from === index || step.currentEdge.to === index)) {
+      stroke = step.bugMode === 'buggy' && step.phase.startsWith('bug-') ? '#f44747' : '#f7b267';
+      fill = step.bugMode === 'buggy' && step.phase.startsWith('bug-') ? 'rgba(244,71,71,0.1)' : 'rgba(247,178,103,0.12)';
+      labelFill = step.bugMode === 'buggy' && step.phase.startsWith('bug-') ? '#ffd7d7' : '#ffe4b8';
+    }
+    ref.circle.setAttribute('stroke', stroke);
+    ref.circle.setAttribute('fill', fill);
+    ref.label.setAttribute('fill', labelFill);
+  });
+
+  graphRefs.distTexts.forEach((text, index) => {
+    text.textContent = 'd=' + fmtAmount(step.dist[index]);
+    text.setAttribute('fill', index === SOURCE ? '#9cdcfe' : '#7dcfff');
+    if (step.currentEdge && step.currentEdge.to === index) {
+      text.setAttribute('fill', step.bugMode === 'buggy' ? '#fcb6b6' : '#f7b267');
+    }
+    if (step.cyclePath && step.cyclePath.includes(index) && step.bugMode !== 'buggy') {
+      text.setAttribute('fill', '#4ec9b0');
+    }
+  });
+}
+
+function renderEdgeList(step) {
+  Array.from(refs.edgeList.children).forEach((item, index) => {
+    item.className = 'edge-item';
+    if (index < (step.builtEdgeCount || 0)) item.classList.add('done');
+    if (index === step.currentEdgeIndex) item.classList.add(step.bugMode === 'buggy' && (step.phase.startsWith('bug-') || step.phase === 'cycle-hit') ? 'danger' : 'current');
+    if (step.dangerEdge && EDGES[index] && edgeKey(EDGES[index].from, EDGES[index].to) === step.dangerEdge) item.classList.add(step.bugMode === 'buggy' ? 'danger' : 'updated');
+    if (step.cycleEdges && step.cycleEdges.includes(edgeKey(EDGES[index].from, EDGES[index].to))) item.classList.add('updated');
+  });
+}
+
+function renderArrays(step) {
+  Array.from(refs.distGrid.children).forEach((cell, index) => {
+    cell.className = 'arr-cell';
+    if (index === SOURCE) cell.classList.add('source');
+    if (!Number.isFinite(step.dist[index])) cell.classList.add('idle');
+    if (step.updatedNode === index) cell.classList.add(step.bugMode === 'buggy' ? 'danger' : 'updated');
+    if (step.currentEdge && (step.currentEdge.from === index || step.currentEdge.to === index)) cell.classList.add('current');
+    if (step.cyclePath && step.cyclePath.includes(index) && step.bugMode !== 'buggy') cell.classList.add('cycle');
+    if (step.invalidPath && step.invalidPath.includes(index)) cell.classList.add('danger');
+    cell.querySelector('.arr-main').textContent = fmtAmount(step.dist[index]);
+    cell.querySelector('.arr-sub').textContent = index === SOURCE ? 'source' : 'amount';
+  });
+
+  Array.from(refs.prevGrid.children).forEach((cell, index) => {
+    cell.className = 'arr-cell';
+    if (index === SOURCE) cell.classList.add('source');
+    if (step.prevFocus === index) cell.classList.add(step.bugMode === 'buggy' ? 'danger' : 'prev-focus');
+    if (step.cyclePath && step.cyclePath.includes(index) && step.bugMode !== 'buggy') cell.classList.add('cycle');
+    if (step.invalidPath && step.invalidPath.includes(index)) cell.classList.add('danger');
+    cell.querySelector('.arr-main').textContent = prevLabel(step.prev[index]);
+    cell.querySelector('.arr-sub').textContent = step.prev[index] < 0 ? 'unset' : 'predecessor';
+  });
+}
+
+function renderPrintLog(step) {
+  refs.printLog.innerHTML = '';
+  if (!step.printLog.length) {
+    refs.printLog.innerHTML = '<div class="log-line">Print(dist) 가 아직 호출되지 않았다.</div>';
+    return;
+  }
+  step.printLog.forEach((line, index) => {
+    const item = document.createElement('div');
+    item.className = 'log-line' + (index === step.focusPrint ? ' focus' : '');
+    item.textContent = line;
+    refs.printLog.appendChild(item);
+  });
+}
+
+function renderPathList(step) {
+  refs.pathList.innerHTML = '';
+  const cards = [];
+
+  if (step.currentEdge && step.phase === 'cycle-hit') {
+    cards.push({
+      title: 'Witness Edge',
+      body: edgeLabel(step.currentEdge) + ' 가 final check 에서도 개선된다.',
+      tone: 'witness'
+    });
+  }
+
+  if (step.rewindChain) {
+    cards.push({
+      title: 'Rewind',
+      body: 'start at ' + CURRENCIES[step.currentEdge.to] + '<br>' + step.rewindChain.map((node) => CURRENCIES[node]).join(' -> '),
+      tone: 'witness'
+    });
+  }
+
+  if (step.cyclePath) {
+    cards.push({
+      title: 'Cycle',
+      body: step.cyclePath.map((node) => CURRENCIES[node]).join(' -> '),
+      tone: step.bugMode === 'buggy' ? 'invalid' : 'replay'
+    });
+  }
+
+  if (step.invalidPath) {
+    cards.push({
+      title: 'Broken Path',
+      body: step.invalidPath.map((node) => CURRENCIES[node]).join(' -> '),
+      tone: 'invalid'
+    });
+  }
+
+  if (step.replay && step.replay.length) {
+    cards.push({
+      title: 'Replay Product',
+      body: step.replay.map((item) => CURRENCIES[item.from] + ' -> ' + CURRENCIES[item.to] + ' : ' + fmtRate(item.rate) + ' -> ' + fmtAmount(item.product)).join('<br>'),
+      tone: step.bugMode === 'buggy' ? 'invalid' : 'replay'
+    });
+  }
+
+  if (!cards.length) {
+    cards.push({
+      title: 'Pending',
+      body: '아직 witness cycle 을 찾지 않았다.',
+      tone: ''
+    });
+  }
+
+  cards.forEach((card) => {
+    const el = document.createElement('div');
+    el.className = 'path-card' + (card.tone ? ' ' + card.tone : '');
+    el.innerHTML = '<div class="path-head">' + card.title + '</div><div class="path-body">' + card.body + '</div>';
+    refs.pathList.appendChild(el);
+  });
+}
+
+function renderBugBox(step) {
+  if (step.bugMode === 'buggy') {
+    refs.bugBox.innerHTML =
+      '<ul>' +
+      '<li><span class="id">if (...);</span> 뒤 세미콜론 때문에 조건문 본체가 항상 실행된다.</li>' +
+      '<li>비교는 곱셈인데 저장은 <span class="id">dist[from] + weight</span> 로 해서 의미가 깨진다.</li>' +
+      '<li><span class="id">prev[to] = to</span> 라서 predecessor chain 이 자기 자신을 가리킨다.</li>' +
+      (step.invalidPath ? '<li>현재 보이는 path 는 broken <span class="id">prev[]</span> 때문에 생긴 잘못된 witness 다.</li>' : '') +
+      '</ul>';
+    return;
+  }
+
+  refs.bugBox.innerHTML =
+    '<ul>' +
+    '<li>세미콜론 버그를 제거하고 <span class="id">candidate = dist[from] * rate</span> 만 계산한다.</li>' +
+    '<li>갱신도 곱셈으로 맞추고, <span class="id">prev[to] = from</span> 으로 predecessor 를 저장한다.</li>' +
+    '<li>improving edge 를 찾은 뒤에는 <span class="id">prev[]</span> 를 V 번 따라가 cycle 내부로 들어간다.</li>' +
+    (step.phase === 'done' ? '<li>첫 witness edge 는 cycle edge 와 다를 수 있다. 이번 예제에서는 witness 가 <span class="id">USD -> EUR</span> 이지만 actual cycle 은 <span class="id">GBP -> CHF -> EUR -> GBP</span> 다.</li>' : '') +
+    '</ul>';
+}
+
+function highlightCode(step) {
+  const lines = new Set(step.codeLines || []);
+  Array.from(refs.codeBody.querySelectorAll('.cline')).forEach((line) => {
+    line.classList.toggle('hl', lines.has(Number(line.dataset.line)));
+  });
+}
+
+function renderStepDesc(step, page) {
+  refs.stepDesc.innerHTML =
+    '<div class="desc-main">' + step.desc + '</div>' +
+    '<div class="desc-formula">' + step.formula + '</div>';
+  refs.pageTitle.textContent = page.title;
+  refs.pageNote.textContent = page.note;
+}
+
+function renderMeta(step) {
+  refs.sourceVal.textContent = SOURCE + ' ' + CURRENCIES[SOURCE];
+  refs.passVal.textContent = step.passText;
+  refs.passSub.textContent = step.passSub;
+  refs.edgeVal.textContent = step.currentEdge ? edgeLabel(step.currentEdge) : 'none';
+  refs.stateSub.textContent = step.currentEdge ? 'edge #' + String(step.currentEdge.order).padStart(2, '0') : 'no active edge';
+  refs.resultVal.textContent = step.decisionLabel;
+  refs.decisionSub.textContent = step.decisionSub;
+}
+
+function updateButtons() {
+  const page = PAGES[currentPageIndex];
+  refs.prevBtn.disabled = currentStepIndex === 0;
+  refs.nextBtn.disabled = currentStepIndex >= page.steps.length - 1;
+  refs.resetBtn.disabled = currentStepIndex === 0;
+  refs.lastBtn.disabled = currentStepIndex >= page.steps.length - 1;
+  refs.autoBtn.textContent = autoTimer ? 'Pause' : 'Play';
+}
+
+function render() {
+  const page = PAGES[currentPageIndex];
+  const step = page.steps[currentStepIndex];
+  refs.graphNote.textContent = page.graphNote;
+  renderStepDesc(step, page);
+  renderMeta(step);
+  renderMatrix(step);
+  renderGraph(step);
+  renderEdgeList(step);
+  renderArrays(step);
+  renderPrintLog(step);
+  renderPathList(step);
+  renderBugBox(step);
+  refs.formulaBox.innerHTML = step.formula;
+  refs.stepCounter.textContent = 'page ' + (currentPageIndex + 1) + ' / ' + PAGES.length + '  |  step ' + (currentStepIndex + 1) + ' / ' + page.steps.length;
+  refs.progressBar.style.width = ((currentStepIndex + 1) / page.steps.length * 100).toFixed(2) + '%';
+  highlightCode(step);
+  buildPageTabs();
+  updateButtons();
+}
+
+function setStep(index) {
+  const page = PAGES[currentPageIndex];
+  currentStepIndex = Math.max(0, Math.min(page.steps.length - 1, index));
+  render();
+}
+
+function nextStep() {
+  const page = PAGES[currentPageIndex];
+  if (currentStepIndex < page.steps.length - 1) {
+    currentStepIndex += 1;
+    render();
+  } else {
+    stopAuto();
+  }
+}
+
+function prevStep() {
+  if (currentStepIndex > 0) {
+    currentStepIndex -= 1;
+    render();
+  }
+}
+
+function stopAuto() {
+  if (autoTimer) {
+    clearInterval(autoTimer);
+    autoTimer = null;
+    updateButtons();
+  }
+}
+
+function toggleAuto() {
+  if (autoTimer) {
+    stopAuto();
+    return;
+  }
+  autoTimer = setInterval(() => {
+    const page = PAGES[currentPageIndex];
+    if (currentStepIndex >= page.steps.length - 1) {
+      stopAuto();
+      return;
+    }
+    currentStepIndex += 1;
+    render();
+  }, 1100);
+  updateButtons();
+}
+
+refs.prevBtn.addEventListener('click', prevStep);
+refs.nextBtn.addEventListener('click', nextStep);
+refs.resetBtn.addEventListener('click', () => setStep(0));
+refs.lastBtn.addEventListener('click', () => setStep(PAGES[currentPageIndex].steps.length - 1));
+refs.autoBtn.addEventListener('click', toggleAuto);
+
+document.addEventListener('keydown', (event) => {
+  const tag = event.target && event.target.tagName ? event.target.tagName.toLowerCase() : '';
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || (event.target && event.target.isContentEditable)) return;
+
+  if (event.key === 'End') {
+    event.preventDefault();
+    stopAuto();
+    setStep(PAGES[currentPageIndex].steps.length - 1);
+    return;
+  }
+  if (event.key === 'PageDown') {
+    event.preventDefault();
+    stopAuto();
+    nextStep();
+    return;
+  }
+  if (event.key === 'PageUp') {
+    event.preventDefault();
+    stopAuto();
+    prevStep();
+  }
+});
+
+buildLegend();
+buildGraph();
+buildMatrix();
+buildArrayGrid(refs.distGrid, 'dist');
+buildArrayGrid(refs.prevGrid, 'prev');
+buildEdgeList();
+renderCode();
+render();
+</script>
+<script src="../shared/viewer-controls.js"></script>
+</body>
+</html>
