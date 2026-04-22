@@ -455,7 +455,7 @@ function buildBuggySteps() {
           'candidate = dist[' + CURRENCIES[edge.from] + '] * ' + fmtRate(edge.weight) + ' = ' + fmtAmount(candidate) +
           '<br>current = dist[' + CURRENCIES[edge.to] + '] = ' + fmtAmount(beforeDist[edge.to]) +
           (better
-            ? '<br>update: dist[' + CURRENCIES[edge.to] + '] = ' + fmtAmount(dist[edge.to]) + ', prev[' + CURRENCIES[edge.to] + '] = ' + CURRENCIES[edge.from]
+            ? '<br>update: dist[' + CURRENCIES[edge.to] + '] = candidate = dist[' + CURRENCIES[edge.from] + '] * ' + fmtRate(edge.weight) + ' = ' + fmtAmount(dist[edge.to]) + ', prev[' + CURRENCIES[edge.to] + '] = ' + CURRENCIES[edge.from]
             : '<br>no change'),
         codeLines: better ? [10, 11, 12, 13] : [10, 11],
         builtEdgeCount: EDGES.length,
@@ -727,7 +727,7 @@ function buildCorrectedSteps() {
           'candidate = dist[' + CURRENCIES[edge.from] + '] * ' + fmtRate(edge.weight) + ' = ' + fmtAmount(candidate) +
           '<br>current = dist[' + CURRENCIES[edge.to] + '] = ' + fmtAmount(beforeDist[edge.to]) +
           (better
-            ? '<br>update: dist[' + CURRENCIES[edge.to] + '] = ' + fmtAmount(dist[edge.to]) + ', prev[' + CURRENCIES[edge.to] + '] = ' + CURRENCIES[edge.from]
+            ? '<br>update: dist[' + CURRENCIES[edge.to] + '] = candidate = dist[' + CURRENCIES[edge.from] + '] * ' + fmtRate(edge.weight) + ' = ' + fmtAmount(dist[edge.to]) + ', prev[' + CURRENCIES[edge.to] + '] = ' + CURRENCIES[edge.from]
             : '<br>no change'),
         codeLines: better ? [9, 10, 11, 12, 13] : [9, 10, 11],
         builtEdgeCount: EDGES.length,
@@ -1410,7 +1410,7 @@ function renderEdgeList(step) {
 function renderArrays(step) {
   Array.from(refs.distGrid.children).forEach((cell, index) => {
     cell.className = 'arr-cell';
-    if (index === SOURCE) cell.classList.add('source');
+    if (index === SOURCE && step.phase === 'init') cell.classList.add('source');
     if (!Number.isFinite(step.dist[index])) cell.classList.add('idle');
     if (step.updatedNode === index) cell.classList.add(step.bugMode === 'buggy' ? 'danger' : 'updated');
     if (step.currentEdge && (step.currentEdge.from === index || step.currentEdge.to === index)) cell.classList.add('current');
@@ -1422,7 +1422,7 @@ function renderArrays(step) {
 
   Array.from(refs.prevGrid.children).forEach((cell, index) => {
     cell.className = 'arr-cell';
-    if (index === SOURCE) cell.classList.add('source');
+    if (index === SOURCE && step.phase === 'init') cell.classList.add('source');
     if (step.prevFocus === index) cell.classList.add(step.bugMode === 'buggy' ? 'danger' : 'prev-focus');
     if (step.cyclePath && step.cyclePath.includes(index) && step.bugMode !== 'buggy') cell.classList.add('cycle');
     if (step.invalidPath && step.invalidPath.includes(index)) cell.classList.add('danger');
