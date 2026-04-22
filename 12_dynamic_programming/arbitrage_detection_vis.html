@@ -135,7 +135,7 @@
 <h1>Arbitrage Detection / 차익 거래 탐지</h1>
 <div class="subhead">
   <span class="badge">Single HTML</span>
-  <span class="badge">Code vs Corrected</span>
+  <span class="badge">Provided + Safe Cycle</span>
   <span class="badge">Rates Matrix + Directed Graph</span>
 </div>
 
@@ -246,12 +246,12 @@ const BUGGY_CODE = [
   { no: 5, indent: 0, html: '<span class="kw">vector</span>&lt;<span class="kw">double</span>&gt; <span class="id">dist</span>(<span class="id">V</span>, -<span class="id">kInf</span>);' },
   { no: 6, indent: 0, html: '<span class="kw">vector</span>&lt;<span class="kw">int</span>&gt; <span class="id">prev</span>(<span class="id">V</span>, -<span class="num">1</span>);' },
   { no: 7, indent: 0, html: '<span class="id">dist</span>[<span class="id">s</span>] = <span class="num">1.0</span>;' },
-  { no: 8, indent: 0, html: '<span class="kw">for</span> (<span class="kw">int</span> <span class="id">pass</span> = <span class="num">1</span>; <span class="id">pass</span> &lt; <span class="id">V</span>; <span class="id">pass</span>++) {' },
-  { no: 9, indent: 1, html: '<span class="kw">for</span> (<span class="kw">auto</span> <span class="id">e</span> : <span class="id">edges</span>) {' },
-  { no: 10, indent: 2, html: '<span class="kw">if</span> (<span class="id">dist</span>[<span class="id">e</span>.<span class="fn">From</span>()] * <span class="id">e</span>.<span class="id">weight</span> &gt; <span class="id">dist</span>[<span class="id">e</span>.<span class="fn">To</span>()]);' },
-  { no: 11, indent: 2, html: '{' },
-  { no: 12, indent: 3, html: '<span class="id">dist</span>[<span class="id">e</span>.<span class="fn">To</span>()] = <span class="id">dist</span>[<span class="id">e</span>.<span class="fn">From</span>()] + <span class="id">e</span>.<span class="id">weight</span>;' },
-  { no: 13, indent: 3, html: '<span class="id">prev</span>[<span class="id">e</span>.<span class="fn">To</span>()] = <span class="id">e</span>.<span class="fn">To</span>();' },
+  { no: 8, indent: 0, html: '<span class="fn">Print</span>(<span class="id">dist</span>);' },
+  { no: 9, indent: 0, html: '<span class="kw">for</span> (<span class="kw">int</span> <span class="id">v</span> = <span class="num">1</span>; <span class="id">v</span> &lt; <span class="id">V</span>; <span class="id">v</span>++) {' },
+  { no: 10, indent: 1, html: '<span class="kw">for</span> (<span class="kw">auto</span> <span class="id">e</span> : <span class="id">edges</span>) {' },
+  { no: 11, indent: 2, html: '<span class="kw">if</span> (<span class="id">dist</span>[<span class="id">e</span>.<span class="id">w</span>] &lt; <span class="id">dist</span>[<span class="id">e</span>.<span class="id">v</span>] * <span class="id">e</span>.<span class="id">weight</span>) {' },
+  { no: 12, indent: 3, html: '<span class="id">dist</span>[<span class="id">e</span>.<span class="id">w</span>] = <span class="id">dist</span>[<span class="id">e</span>.<span class="id">v</span>] * <span class="id">e</span>.<span class="id">weight</span>;' },
+  { no: 13, indent: 3, html: '<span class="id">prev</span>[<span class="id">e</span>.<span class="id">w</span>] = <span class="id">e</span>.<span class="id">v</span>;' },
   { no: 14, indent: 2, html: '}' },
   { no: 15, indent: 1, html: '}' },
   { no: 16, indent: 1, html: '<span class="fn">Print</span>(<span class="id">dist</span>);' },
@@ -259,9 +259,10 @@ const BUGGY_CODE = [
   { no: 18, indent: 0, html: '<span class="kw">for</span> (<span class="kw">auto</span> <span class="id">e</span> : <span class="id">edges</span>) {' },
   { no: 19, indent: 1, html: '<span class="kw">if</span> (<span class="id">dist</span>[<span class="id">e</span>.<span class="id">w</span>] &lt; <span class="id">dist</span>[<span class="id">e</span>.<span class="id">v</span>] * <span class="id">e</span>.<span class="id">weight</span>) {' },
   { no: 20, indent: 2, html: '<span class="id">prev</span>[<span class="id">e</span>.<span class="id">w</span>] = <span class="id">e</span>.<span class="id">v</span>;' },
-  { no: 21, indent: 2, html: '<span class="cm">// build witness path and replay product</span>' },
-  { no: 22, indent: 1, html: '}' },
-  { no: 23, indent: 0, html: '}' }
+  { no: 21, indent: 2, html: '<span class="cm">// follow prev[] until one vertex repeats</span>' },
+  { no: 22, indent: 2, html: '<span class="cm">// reverse(path), then replay product</span>' },
+  { no: 23, indent: 1, html: '}' },
+  { no: 24, indent: 0, html: '}' }
 ];
 
 const CORRECTED_CODE = [
@@ -396,13 +397,13 @@ function buildBuggySteps() {
       currentEdgeIndex: null,
       decisionLabel: 'row pushed',
       decisionSub: CURRENCIES[row] + ' row',
-      desc: CURRENCIES[row] + ' 행에서 대각선을 제외한 4개 환율을 directed edge로 push_back한다.',
+      desc: CURRENCIES[row] + ' 행에서 대각선을 제외한 4개 환율을 directed edge 로 push_back한다.',
       formula: 'for (j = 0 .. V-1), if (i != j) edges.push_back({ i, j, rates[i][j] })',
       codeLines: [2, 3, 4],
       builtEdgeCount,
       rowFocus: row,
       focusPrint: -1,
-      bugMode: 'buggy'
+      bugMode: 'provided'
     });
   }
 
@@ -420,48 +421,49 @@ function buildBuggySteps() {
     currentEdge: null,
     currentEdgeIndex: null,
     decisionLabel: 'initialize',
-    decisionSub: 'dist[USD] = 1.0',
+    decisionSub: 'best known amount',
     desc: 'source 0 = USD 에서 시작하므로 dist[USD] = 1.0, 나머지는 -INF 로 둔다.',
     formula: 'dist = [1.0, -INF, -INF, -INF, -INF], prev = [-1, -1, -1, -1, -1]',
-    codeLines: [5, 6, 7],
+    codeLines: [5, 6, 7, 8],
     builtEdgeCount: EDGES.length,
     rowFocus: null,
     focusPrint: 0,
-    bugMode: 'buggy'
+    bugMode: 'provided'
   });
 
   for (let pass = 1; pass < CURRENCIES.length; pass++) {
     for (const edge of EDGES) {
       const beforeDist = dist.slice();
-      const beforePrev = prev.slice();
       const candidate = Number.isFinite(beforeDist[edge.from]) ? beforeDist[edge.from] * edge.weight : -Infinity;
-      const condition = candidate > beforeDist[edge.to];
-      dist[edge.to] = Number.isFinite(beforeDist[edge.from]) ? beforeDist[edge.from] + edge.weight : -Infinity;
-      prev[edge.to] = edge.to;
+      const better = candidate > beforeDist[edge.to];
+      if (better) {
+        dist[edge.to] = candidate;
+        prev[edge.to] = edge.from;
+      }
 
       pushStep(steps, dist, prev, printLog, {
-        phase: 'forced-update',
+        phase: better ? 'relax' : 'keep',
         pass,
         passText: 'pass ' + pass,
-        passSub: 'buggy relax loop',
+        passSub: 'provided code',
         currentEdge: edge,
         currentEdgeIndex: edge.index,
-        decisionLabel: condition ? 'forced update' : 'forced update',
-        decisionSub: condition ? 'condition true, but still buggy update rule' : 'condition false, but block still runs',
-        desc: '길이 pass ' + pass + ' 에서 ' + edgeLabel(edge) + ' 를 검사한다. stray semicolon 때문에 블록이 무조건 실행된다.',
+        decisionLabel: better ? 'relax' : 'keep',
+        decisionSub: better ? 'candidate beats current amount' : 'current amount stays better',
+        desc: 'pass ' + pass + ' 에서 ' + edgeLabel(edge) + ' 를 검사한다.',
         formula:
-          'condition: dist[' + CURRENCIES[edge.from] + '] * ' + fmtRate(edge.weight) + ' = ' + fmtAmount(candidate) +
-          '<br>current: dist[' + CURRENCIES[edge.to] + '] = ' + fmtAmount(beforeDist[edge.to]) +
-          '<br>stored: dist[' + CURRENCIES[edge.to] + '] = dist[' + CURRENCIES[edge.from] + '] + ' + fmtRate(edge.weight) + ' = ' + fmtAmount(dist[edge.to]) +
-          '<br>prev[' + CURRENCIES[edge.to] + '] = ' + CURRENCIES[edge.to],
-        codeLines: [9, 10, 11, 12, 13],
+          'candidate = dist[' + CURRENCIES[edge.from] + '] * ' + fmtRate(edge.weight) + ' = ' + fmtAmount(candidate) +
+          '<br>current = dist[' + CURRENCIES[edge.to] + '] = ' + fmtAmount(beforeDist[edge.to]) +
+          (better
+            ? '<br>update: dist[' + CURRENCIES[edge.to] + '] = ' + fmtAmount(dist[edge.to]) + ', prev[' + CURRENCIES[edge.to] + '] = ' + CURRENCIES[edge.from]
+            : '<br>no change'),
+        codeLines: better ? [10, 11, 12, 13] : [10, 11],
         builtEdgeCount: EDGES.length,
         rowFocus: null,
-        updatedNode: edge.to,
-        prevFocus: edge.to,
+        updatedNode: better ? edge.to : null,
+        prevFocus: better ? edge.to : null,
         focusPrint: printLog.length - 1,
-        condition,
-        bugMode: 'buggy'
+        bugMode: 'provided'
       });
     }
 
@@ -481,7 +483,7 @@ function buildBuggySteps() {
       builtEdgeCount: EDGES.length,
       rowFocus: null,
       focusPrint: printLog.length - 1,
-      bugMode: 'buggy'
+      bugMode: 'provided'
     });
   }
 
@@ -497,16 +499,16 @@ function buildBuggySteps() {
       currentEdge: edge,
       currentEdgeIndex: edge.index,
       decisionLabel: better ? 'witness edge' : 'no witness yet',
-      decisionSub: better ? 'the code stops here' : 'keep scanning',
+      decisionSub: better ? 'the code enters path tracing here' : 'keep scanning',
       desc: edgeLabel(edge) + ' 가 final scan 에서 여전히 개선되는지 검사한다.',
       formula:
-        'dist[' + CURRENCIES[edge.to] + '] = ' + fmtAmount(dist[edge.to]) +
-        '<br>dist[' + CURRENCIES[edge.from] + '] * ' + fmtRate(edge.weight) + ' = ' + fmtAmount(candidate),
+        'current = dist[' + CURRENCIES[edge.to] + '] = ' + fmtAmount(dist[edge.to]) +
+        '<br>candidate = dist[' + CURRENCIES[edge.from] + '] * ' + fmtRate(edge.weight) + ' = ' + fmtAmount(candidate),
       codeLines: [18, 19],
       builtEdgeCount: EDGES.length,
       rowFocus: null,
       focusPrint: printLog.length - 1,
-      bugMode: 'buggy',
+      bugMode: 'provided',
       dangerEdge: better ? edgeKey(edge.from, edge.to) : null
     });
     if (better) {
@@ -518,22 +520,22 @@ function buildBuggySteps() {
   if (witnessEdge) {
     prev[witnessEdge.to] = witnessEdge.from;
     pushStep(steps, dist, prev, printLog, {
-      phase: 'bug-path-start',
+      phase: 'path-start',
       pass: CURRENCIES.length,
       passText: 'cycle check',
-      passSub: 'override one prev entry',
+      passSub: 'start path extraction',
       currentEdge: witnessEdge,
       currentEdgeIndex: witnessEdge.index,
       decisionLabel: 'prev[w] = v',
-      decisionSub: 'only one entry is repaired',
-      desc: 'improving edge 를 찾자 prev[' + CURRENCIES[witnessEdge.to] + '] = ' + CURRENCIES[witnessEdge.from] + ' 로 바꾸고 경로 추적을 시작한다.',
-      formula: 'prev[' + CURRENCIES[witnessEdge.to] + '] = ' + CURRENCIES[witnessEdge.from] + ', but the other prev entries still point to themselves.',
-      codeLines: [19, 20],
+      decisionSub: 'follow predecessor chain from w',
+      desc: 'improving edge 를 찾자 prev[' + CURRENCIES[witnessEdge.to] + '] = ' + CURRENCIES[witnessEdge.from] + ' 로 두고, p = w 에서 path 추적을 시작한다.',
+      formula: 'start at ' + CURRENCIES[witnessEdge.to] + ', then keep following prev[p] until one vertex appears twice.',
+      codeLines: [19, 20, 21],
       builtEdgeCount: EDGES.length,
       rowFocus: null,
       focusPrint: printLog.length - 1,
       prevFocus: witnessEdge.to,
-      bugMode: 'buggy',
+      bugMode: 'provided',
       dangerEdge: edgeKey(witnessEdge.from, witnessEdge.to)
     });
 
@@ -542,7 +544,7 @@ function buildBuggySteps() {
     while (p >= 0) {
       path.push(p);
       pushStep(steps, dist, prev, printLog, {
-        phase: 'bug-path-walk',
+        phase: 'path-walk',
         pass: CURRENCIES.length,
         passText: 'path walk',
         passSub: 'code as written',
@@ -556,8 +558,7 @@ function buildBuggySteps() {
         builtEdgeCount: EDGES.length,
         rowFocus: null,
         focusPrint: printLog.length - 1,
-        bugMode: 'buggy',
-        invalidPath: path.slice(),
+        bugMode: 'provided',
         dangerEdge: edgeKey(witnessEdge.from, witnessEdge.to),
         activeNode: p
       });
@@ -567,23 +568,25 @@ function buildBuggySteps() {
     }
 
     const reversed = path.slice().reverse();
+    const cycleEdges = cycleEdgesFromPath(reversed);
     pushStep(steps, dist, prev, printLog, {
-      phase: 'bug-path-reversed',
+      phase: 'path-reversed',
       pass: CURRENCIES.length,
       passText: 'path reverse',
-      passSub: 'still not a valid cycle',
+      passSub: 'reverse(path)',
       currentEdge: witnessEdge,
       currentEdgeIndex: witnessEdge.index,
       decisionLabel: 'reverse(path)',
-      decisionSub: 'code output order',
-      desc: 'code 는 path 를 뒤집어서 출력하지만, 지금 경로는 올바른 predecessor cycle 이 아니다.',
+      decisionSub: 'output order used by the code',
+      desc: 'code 는 path 를 뒤집어서 출력한다. 이번 입력에서는 reversed path 가 실제 arbitrage cycle 이 된다.',
       formula: 'reversed path = ' + reversed.map((node) => CURRENCIES[node]).join(' -> '),
-      codeLines: [21],
+      codeLines: [21, 22],
       builtEdgeCount: EDGES.length,
       rowFocus: null,
       focusPrint: printLog.length - 1,
-      bugMode: 'buggy',
-      invalidPath: reversed,
+      bugMode: 'provided',
+      cyclePath: reversed,
+      cycleEdges,
       dangerEdge: edgeKey(witnessEdge.from, witnessEdge.to)
     });
 
@@ -595,22 +598,23 @@ function buildBuggySteps() {
       product *= RATES[from][to];
       replay.push({ from, to, rate: RATES[from][to], product });
       pushStep(steps, dist, prev, printLog, {
-        phase: 'bug-replay',
+        phase: 'replay',
         pass: CURRENCIES.length,
         passText: 'replay',
-        passSub: 'product from broken path',
+        passSub: 'product from provided path',
         currentEdge: witnessEdge,
         currentEdgeIndex: witnessEdge.index,
         decisionLabel: 'replay step',
         decisionSub: CURRENCIES[from] + ' -> ' + CURRENCIES[to],
-        desc: 'path 를 따라 rate 를 곱해 보지만, 이 경로는 broken prev[] 에서 만들어졌기 때문에 arbitrage witness 로 쓸 수 없다.',
+        desc: 'reversed path 를 따라 rate 를 곱해 실제 이득이 나는지 확인한다.',
         formula: 't *= rates[' + CURRENCIES[from] + '][' + CURRENCIES[to] + '] = ' + fmtRate(RATES[from][to]) + ' -> ' + fmtAmount(product),
-        codeLines: [21],
+        codeLines: [22],
         builtEdgeCount: EDGES.length,
         rowFocus: null,
         focusPrint: printLog.length - 1,
-        bugMode: 'buggy',
-        invalidPath: reversed,
+        bugMode: 'provided',
+        cyclePath: reversed,
+        cycleEdges,
         replay: replay.slice(),
         dangerEdge: edgeKey(witnessEdge.from, witnessEdge.to),
         matrixCycle: [edgeKey(from, to)]
@@ -618,22 +622,23 @@ function buildBuggySteps() {
     }
 
     pushStep(steps, dist, prev, printLog, {
-      phase: 'bug-done',
+      phase: 'done',
       pass: CURRENCIES.length,
       passText: 'stop',
-      passSub: 'false witness',
+      passSub: 'arbitrage from provided code',
       currentEdge: witnessEdge,
       currentEdgeIndex: witnessEdge.index,
-      decisionLabel: 'false witness',
-      decisionSub: 'code exits too early',
-      desc: '이 탭은 제공된 코드를 그대로 따른 결과다. improving edge 는 잡았지만, predecessor chain 이 깨져 있어서 올바른 arbitrage cycle 을 증명하지 못한다.',
-      formula: 'result from code as written: path = ' + reversed.map((node) => CURRENCIES[node]).join(' -> ') + ', product = ' + fmtAmount(replay[replay.length - 1].product),
-      codeLines: [19, 20, 21],
+      decisionLabel: 'arbitrage found',
+      decisionSub: 'this dataset yields a valid cycle',
+      desc: '이번 입력에서는 provided code 의 path 추적이 EUR -> CAD -> USD -> EUR 순환을 만들고, 곱이 1.0 을 넘는다.',
+      formula: 'path = ' + reversed.map((node) => CURRENCIES[node]).join(' -> ') + '<br>final product = ' + fmtAmount(replay[replay.length - 1].product),
+      codeLines: [19, 20, 21, 22],
       builtEdgeCount: EDGES.length,
       rowFocus: null,
       focusPrint: printLog.length - 1,
-      bugMode: 'buggy',
-      invalidPath: reversed,
+      bugMode: 'provided',
+      cyclePath: reversed,
+      cycleEdges,
       replay,
       dangerEdge: edgeKey(witnessEdge.from, witnessEdge.to)
     });
@@ -893,24 +898,24 @@ function buildCorrectedSteps() {
 
 const PAGES = [
   {
-    id: 'buggy',
-    tabLabel: 'Code As Written',
-    title: 'Code As Written / 코드 그대로',
-    note: '제공된 C++를 그대로 추적한다. stray semicolon, 덧셈 갱신, self prev 때문에 숫자는 계속 커지지만 올바른 arbitrage 증명은 되지 않는다.',
-    codeTitle: 'Provided C++ / code as written',
-    codeNote: '이 탭은 의도한 알고리즘이 아니라 실제 소스 코드의 실행 흐름을 그대로 보여준다.',
-    graphNote: '그래프는 5개 통화와 20개 방향 간선을 모두 가진 complete digraph 이다. 읽기 쉽게 하기 위해 기본 간선은 매우 옅게 두고, 현재 간선과 witness 만 강하게 칠한다.',
+    id: 'provided',
+    tabLabel: 'Provided Code',
+    title: 'Provided Code / 제공된 코드',
+    note: '방금 준 C++를 그대로 추적한다. relax 루프는 정상이고, final detection 뒤에는 prev[] 를 따라가며 같은 정점이 두 번 나올 때까지 path 를 모은 뒤 reverse(path) 를 사용한다.',
+    codeTitle: 'Provided C++ / exact flow',
+    codeNote: '이 탭은 현재 제공된 C++의 실행 흐름을 그대로 보여준다.',
+    graphNote: '그래프는 5개 통화와 20개 방향 간선을 모두 가진 complete digraph 이다. 기본 간선은 옅게 두고, 현재 간선과 final witness, code 가 만든 cycle 을 강조한다.',
     steps: buildBuggySteps(),
     codeLines: BUGGY_CODE
   },
   {
-    id: 'corrected',
-    tabLabel: 'Corrected Arbitrage',
-    title: 'Corrected Arbitrage / 수정한 차익 거래 판정',
-    note: '같은 환율 표를 Bellman-Ford 스타일의 max-product relax 로 해석한다. 비교와 저장을 모두 곱셈으로 맞추고, prev[w] = v 로 predecessor 를 보존한다.',
-    codeTitle: 'Corrected Pseudocode / multiplicative arbitrage check',
-    codeNote: '이 탭은 제공된 코드의 세 가지 핵심 문제를 바로잡은 학습용 버전이다.',
-    graphNote: '현재 간선은 주황색, 최종 cycle 은 초록색, final check 에서 improving edge 로 드러난 witness 는 파란/빨간 강조로 구분한다. witness edge 와 actual cycle edge 는 다를 수 있다.',
+    id: 'safe-cycle',
+    tabLabel: 'Cycle-Safe Version',
+    title: 'Cycle-Safe Version / 안전한 사이클 추출',
+    note: '같은 relax 결과를 바탕으로, final witness 를 잡은 뒤 prev[] 를 V 번 따라가 cycle 내부로 진입한 다음 실제 cycle 을 추출한다. witness edge 와 actual cycle edge 가 다를 수 있다는 점을 명확히 보여준다.',
+    codeTitle: 'Cycle-Safe Pseudocode / robust witness extraction',
+    codeNote: '이 탭은 제공된 코드의 relax 부분은 유지하고, cycle 추출만 더 안전하게 정리한 학습용 버전이다.',
+    graphNote: '현재 간선은 주황색, 실제 cycle 은 초록색, final check 에서 처음 드러난 witness edge 는 파란색으로 구분한다. 첫 witness edge 자체가 cycle edge 일 필요는 없다.',
     steps: buildCorrectedSteps(),
     codeLines: CORRECTED_CODE
   }
@@ -1500,24 +1505,24 @@ function renderPathList(step) {
   });
 }
 
-function renderBugBox(step) {
-  if (step.bugMode === 'buggy') {
+function renderBugBox(step, page) {
+  if (page.id === 'provided') {
     refs.bugBox.innerHTML =
       '<ul>' +
-      '<li><span class="id">if (...);</span> 뒤 세미콜론 때문에 조건문 본체가 항상 실행된다.</li>' +
-      '<li>비교는 곱셈인데 저장은 <span class="id">dist[from] + weight</span> 로 해서 의미가 깨진다.</li>' +
-      '<li><span class="id">prev[to] = to</span> 라서 predecessor chain 이 자기 자신을 가리킨다.</li>' +
-      (step.invalidPath ? '<li>현재 보이는 path 는 broken <span class="id">prev[]</span> 때문에 생긴 잘못된 witness 다.</li>' : '') +
+      '<li>이번에 준 코드에서는 relax 루프가 이미 올바르게 고쳐져 있다. 비교와 갱신이 모두 곱셈이고, <span class="id">prev[w] = v</span> 도 맞다.</li>' +
+      '<li>final detection 뒤에는 <span class="id">p = e.w</span> 에서 시작해 같은 정점이 두 번 나올 때까지 <span class="id">prev[]</span> 를 따라간다.</li>' +
+      '<li>이 방식은 이번 데이터에서는 <span class="id">EUR -> CAD -> USD -> EUR</span> 를 얻어서 실제 arbitrage cycle 을 보여준다.</li>' +
+      '<li>다만 path 를 어디서 끊을지 witness edge 와 predecessor 배치에 의존하므로, 항상 가장 직접적인 cycle 을 주는 방식은 아니다.</li>' +
       '</ul>';
     return;
   }
 
   refs.bugBox.innerHTML =
     '<ul>' +
-    '<li>세미콜론 버그를 제거하고 <span class="id">candidate = dist[from] * rate</span> 만 계산한다.</li>' +
-    '<li>갱신도 곱셈으로 맞추고, <span class="id">prev[to] = from</span> 으로 predecessor 를 저장한다.</li>' +
-    '<li>improving edge 를 찾은 뒤에는 <span class="id">prev[]</span> 를 V 번 따라가 cycle 내부로 들어간다.</li>' +
-    (step.phase === 'done' ? '<li>첫 witness edge 는 cycle edge 와 다를 수 있다. 이번 예제에서는 witness 가 <span class="id">USD -> EUR</span> 이지만 actual cycle 은 <span class="id">GBP -> CHF -> EUR -> GBP</span> 다.</li>' : '') +
+    '<li>relax 단계는 제공된 코드와 같다. 차이는 cycle witness 를 뽑는 마지막 단계뿐이다.</li>' +
+    '<li>improving edge 를 찾은 뒤에는 <span class="id">prev[]</span> 를 V 번 따라가 reachable cycle 내부로 먼저 들어간다.</li>' +
+    '<li>그 다음 반복되는 정점이 다시 나올 때까지 cycle 을 기록하면 witness edge 와 actual cycle edge 가 달라도 안정적으로 cycle 을 얻을 수 있다.</li>' +
+    (step.phase === 'done' ? '<li>이번 예제에서는 첫 witness 가 <span class="id">USD -> EUR</span> 로 보이지만, 안전한 추출은 <span class="id">GBP -> CHF -> EUR -> GBP</span> cycle 도 보여줄 수 있다.</li>' : '') +
     '</ul>';
 }
 
@@ -1567,7 +1572,7 @@ function render() {
   renderArrays(step);
   renderPrintLog(step);
   renderPathList(step);
-  renderBugBox(step);
+  renderBugBox(step, page);
   refs.formulaBox.innerHTML = step.formula;
   refs.stepCounter.textContent = 'page ' + (currentPageIndex + 1) + ' / ' + PAGES.length + '  |  step ' + (currentStepIndex + 1) + ' / ' + page.steps.length;
   refs.progressBar.style.width = ((currentStepIndex + 1) / page.steps.length * 100).toFixed(2) + '%';
